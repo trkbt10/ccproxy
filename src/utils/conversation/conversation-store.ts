@@ -1,6 +1,7 @@
 /**
  * Represents the context of a conversation session
  */
+import { callIdRegistry } from "../id-management/unified-id-manager";
 // Type for message content
 type MessageContent = string | Record<string, unknown>;
 
@@ -96,6 +97,12 @@ export class ConversationStore {
     const now = Date.now();
     for (const [id, context] of this.conversations.entries()) {
       if (now - context.lastAccessedAt.getTime() > this.maxAge) {
+        // Clear associated call_id mappings when conversation is purged by TTL
+        try {
+          callIdRegistry.clearManager(id);
+        } catch {
+          // Best-effort cleanup; ignore errors
+        }
         this.conversations.delete(id);
       }
     }
@@ -108,6 +115,14 @@ export class ConversationStore {
   destroy() {
     if (this.cleanupInterval) {
       clearInterval(this.cleanupInterval);
+    }
+    // Clear all associated call_id managers before wiping conversations
+    for (const id of this.conversations.keys()) {
+      try {
+        callIdRegistry.clearManager(id);
+      } catch {
+        // Best-effort cleanup; ignore errors
+      }
     }
     this.conversations.clear();
   }

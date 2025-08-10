@@ -1,7 +1,7 @@
 /**
  * Represents the context of a conversation session
  */
-import { callIdRegistry } from "../id-management/unified-id-manager";
+import { UnifiedIdRegistry } from "../id-management/unified-id-manager";
 // Type for message content
 type MessageContent = string | Record<string, unknown>;
 
@@ -16,7 +16,6 @@ interface ConversationContext {
   messages: MessageContent[];
   lastToolCalls?: Record<string, ToolCall>;
   lastResponseId?: string;
-  callIdMapping?: Map<string, string>; // Maps OpenAI call_id to Claude tool_use_id
   createdAt: Date;
   lastAccessedAt: Date;
 }
@@ -28,7 +27,6 @@ export type ConversationUpdate = {
   conversationId: string;
   requestId: string;
   responseId?: string;
-  callIdMapping?: Map<string, string>;
 };
 
 /**
@@ -40,6 +38,7 @@ export class ConversationStore {
   private conversations = new Map<string, ConversationContext>();
   private cleanupInterval: NodeJS.Timeout;
   private readonly maxAge = 30 * 60 * 1000; // 30 minutes
+  private readonly unifiedIdRegistry = new UnifiedIdRegistry();
 
   /**
    * Creates a new ConversationStore instance.
@@ -98,11 +97,7 @@ export class ConversationStore {
     for (const [id, context] of this.conversations.entries()) {
       if (now - context.lastAccessedAt.getTime() > this.maxAge) {
         // Clear associated call_id mappings when conversation is purged by TTL
-        try {
-          callIdRegistry.clearManager(id);
-        } catch {
-          // Best-effort cleanup; ignore errors
-        }
+        this.unifiedIdRegistry.clearManager(id);
         this.conversations.delete(id);
       }
     }
@@ -118,30 +113,24 @@ export class ConversationStore {
     }
     // Clear all associated call_id managers before wiping conversations
     for (const id of this.conversations.keys()) {
-      try {
-        callIdRegistry.clearManager(id);
-      } catch {
-        // Best-effort cleanup; ignore errors
-      }
+      this.unifiedIdRegistry.clearManager(id);
     }
     this.conversations.clear();
   }
 
   /**
    * Updates conversation state with response details from an API call.
-   * Stores response IDs and tool call mappings for conversation continuity.
+   * Stores response IDs for conversation continuity.
    * 
    * @param params - Update parameters
    * @param params.conversationId - Unique identifier for the conversation
    * @param params.requestId - Current request ID for logging
    * @param params.responseId - OpenAI response ID to store for future requests
-   * @param params.callIdMapping - Mapping of OpenAI call_ids to Claude tool_use_ids
    */
   updateConversationState({
     conversationId,
     requestId,
     responseId,
-    callIdMapping,
   }: ConversationUpdate): void {
     const updates: Record<string, unknown> = {};
 
@@ -149,14 +138,6 @@ export class ConversationStore {
       updates.lastResponseId = responseId;
       console.log(
         `[Request ${requestId}] Stored response ID: ${responseId}`
-      );
-    }
-
-    if (callIdMapping && callIdMapping.size > 0) {
-      updates.callIdMapping = callIdMapping;
-      console.log(
-        `[Request ${requestId}] Stored call_id mappings:`,
-        Array.from(callIdMapping.entries())
       );
     }
 
@@ -174,6 +155,27 @@ export class ConversationStore {
    */
   getConversationContext(conversationId: string): ConversationContext {
     return this.getOrCreate(conversationId);
+  }
+
+  /**
+   * Gets the call ID mapping for a conversation from the registry.
+   * 
+   * @param conversationId - Unique identifier for the conversation
+   * @returns The call ID mapping as a Map
+   */
+  getCallIdMapping(conversationId: string): Map<string, string> {
+    const manager = this.unifiedIdRegistry.getManager(conversationId);
+    return manager.getMappingAsMap();
+  }
+
+  /**
+   * Gets the UnifiedIdManager for a specific conversation.
+   * 
+   * @param conversationId - Unique identifier for the conversation
+   * @returns The UnifiedIdManager instance for the conversation
+   */
+  getIdManager(conversationId: string) {
+    return this.unifiedIdRegistry.getManager(conversationId);
   }
 }
 

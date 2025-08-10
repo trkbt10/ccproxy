@@ -9,12 +9,11 @@ import { UnifiedIdManager as CallIdManager } from "../../../utils/id-management/
 
 export function convertOpenAIResponseToClaude(
   openaiResponse: OpenAIResponse,
-  existingManager?: CallIdManager
+  manager: CallIdManager
 ): { message: ClaudeMessage; callIdMapping: Map<string, string> } {
   // Collect all text content
   const textContent: string[] = [];
   const toolUseBlocks: ToolUseBlock[] = [];
-  const manager = existingManager || new CallIdManager();
   const callIdMapping = new Map<string, string>(); // For backward compatibility
 
   // Process output items

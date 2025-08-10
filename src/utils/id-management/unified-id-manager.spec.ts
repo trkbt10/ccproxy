@@ -1,5 +1,5 @@
 import { describe, test, expect } from "bun:test";
-import { UnifiedIdManager, IdFormat, unifiedIdRegistry } from "./unified-id-manager";
+import { UnifiedIdManager, IdFormat, UnifiedIdRegistry } from "./unified-id-manager";
 
 describe("UnifiedIdManager - ID lifecycle and mapping", () => {
   test("getOrCreateOpenAICallIdForToolUse creates mapping without marking used", () => {
@@ -97,8 +97,11 @@ describe("UnifiedIdManager - ID lifecycle and mapping", () => {
   });
 
   test("registry caches per conversation and clearManager removes state", () => {
-    const a1 = unifiedIdRegistry.getManager("conv-X");
-    const a2 = unifiedIdRegistry.getManager("conv-X");
+    // Create a local registry instance for this test
+    const registry = new UnifiedIdRegistry();
+    
+    const a1 = registry.getManager("conv-X");
+    const a2 = registry.getManager("conv-X");
     expect(a1).toBe(a2);
 
     const callId = IdFormat.generateOpenAIId();
@@ -106,8 +109,8 @@ describe("UnifiedIdManager - ID lifecycle and mapping", () => {
     a1.registerMapping(callId, toolUse);
     expect(a1.getOpenAICallId(toolUse)).toBe(callId);
 
-    unifiedIdRegistry.clearManager("conv-X");
-    const a3 = unifiedIdRegistry.getManager("conv-X");
+    registry.clearManager("conv-X");
+    const a3 = registry.getManager("conv-X");
     expect(a3).not.toBe(a1);
     // New manager should not have old mapping
     expect(a3.getOpenAICallId(toolUse)).toBeUndefined();

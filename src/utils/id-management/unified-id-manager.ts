@@ -751,10 +751,18 @@ class UnifiedIdRegistry {
   }
   
   clearManager(conversationId: string): void {
-    const manager = this.managers.get(conversationId);
-    if (manager) {
-      manager.clear();
-      this.managers.delete(conversationId);
+    try {
+      const manager = this.managers.get(conversationId);
+      if (manager) {
+        manager.clear();
+        this.managers.delete(conversationId);
+      }
+    } catch (error) {
+      // Log the error but don't throw - this is a cleanup operation
+      logWarn(
+        "Failed to clear UnifiedIdManager",
+        { conversationId, error: error instanceof Error ? error.message : String(error) }
+      );
     }
   }
   
@@ -768,16 +776,5 @@ class UnifiedIdRegistry {
   }
 }
 
-export const unifiedIdRegistry = new UnifiedIdRegistry();
-
-// ============================================================================
-// Convenience Exports for Backward Compatibility
-// ============================================================================
-
-// Export CallIdManager as alias to UnifiedIdManager for backward compatibility
-export { UnifiedIdManager as CallIdManager };
-export { unifiedIdRegistry as callIdRegistry };
-
-// Export types with old names for backward compatibility
-export type CallIdMappingEntry = IdMappingEntry;
-export type CallIdMappingStats = IdMappingStats;
+// Export only the registry class for consumers to instantiate
+export { UnifiedIdRegistry };

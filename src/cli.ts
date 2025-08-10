@@ -5,6 +5,8 @@ import { cmdConfigShow } from "./commands/config/show";
 import { cmdConfigList } from "./commands/config/list";
 import { cmdConfigGet } from "./commands/config/get";
 import { cmdConfigSet } from "./commands/config/set";
+import { getBanner } from "./utils/logo/banner"; // added static import
+import { loadRoutingConfigOnce } from "./execution/routing-config";
 
 function usage(): void {
   const invoked = process.argv[1] || "ccproxy";
@@ -31,9 +33,6 @@ Examples:
   console.log(msg);
 }
 
-
-
-
 async function main(): Promise<void> {
   const [, , cmd, subcmd, ...rest] = process.argv;
   switch (cmd) {
@@ -41,10 +40,25 @@ async function main(): Promise<void> {
       await cmdServe();
       return;
     case "banner": {
-      const text = subcmd || "CCPROXY";
-      const { getBanner } = await import("./utils/logo/banner");
-      console.log(getBanner(text));
-      return;
+      if (subcmd) {
+        // User provided custom text, use it as-is - no config needed
+        console.log(getBanner(subcmd.toUpperCase(), { color: "cyan" }));
+      } else {
+        // Default banner - only load config if we need to show provider info
+        console.log(getBanner("CCPROXY", { color: "cyan" }));
+        console.log(); // Add line spacing after banner
+        
+        // Only load config if --with-provider flag is passed
+        if (rest.includes("--with-provider")) {
+          const cfg = await loadRoutingConfigOnce();
+          const defaultProvider = cfg.providers?.default;
+          if (defaultProvider) {
+            const providerName = defaultProvider.type || "openai";
+            console.log(`\x1b[36m+ ${providerName.toUpperCase()}\x1b[0m`);
+          }
+        }
+      }
+      process.exit(0); // Exit immediately after banner
     }
     case "config": {
       switch (subcmd) {

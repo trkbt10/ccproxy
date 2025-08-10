@@ -1,10 +1,10 @@
 import { readFile } from "node:fs/promises";
-import { existsSync } from "node:fs";
 import path from "node:path";
 import OpenAI from "openai";
 import type { RoutingConfig, Provider } from "../config/types";
 import { expandConfig } from "../config/expansion";
 import { configureLogger } from "../utils/logging/enhanced-logger";
+import { resolveConfigPath } from "../config/paths";
 
 let cachedConfig: RoutingConfig | null = null;
 let loadingPromise: Promise<RoutingConfig> | null = null;
@@ -19,7 +19,7 @@ export async function loadRoutingConfigOnce(): Promise<RoutingConfig> {
 
   loadingPromise = (async () => {
     try {
-      const configPath = resolveRoutingConfigPath();
+      const configPath = resolveConfigPath();
       const raw = await readFile(configPath, "utf8");
       const json = JSON.parse(raw) as RoutingConfig;
       // Expand environment variables in the config
@@ -85,24 +85,7 @@ function ensureDefaultProvider(cfg: RoutingConfig): RoutingConfig {
   return result;
 }
 
-function resolveRoutingConfigPath(): string {
-  if (process.env.ROUTING_CONFIG_PATH) {
-    return path.resolve(process.env.ROUTING_CONFIG_PATH);
-  }
-  const candidates = [
-    path.join(process.cwd(), "ccproxy.config.json"),
-    path.join(process.cwd(), "config", "ccproxy.config.json"),
-    // Backward compatibility
-    path.join(process.cwd(), "config", "routing.json"),
-  ];
-  for (const p of candidates) {
-    if (existsSync(p)) {
-      return p;
-    }
-  }
-  // Default path even when not existing (caller handles)
-  return candidates[0];
-}
+// resolveConfigPath now provided from src/config/paths
 
 function resolveApiKeyFromHeader(
   provider: Provider,

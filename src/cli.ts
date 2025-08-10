@@ -6,6 +6,11 @@ import path from "node:path";
 import app from "./index";
 import { expandConfig } from "./config/expansion";
 import type { RoutingConfig } from "./config/types";
+import { printCcproxyBanner } from "./utils/logo/banner";
+import { resolveConfigPath } from "./config/paths";
+import { loadRoutingConfigOnce } from "./execution/routing-config";
+import { printStartupInfo } from "./utils/info/startup-info";
+import { extractEndpoints } from "./utils/info/hono-endpoints";
 
 function usage(): void {
   const invoked = process.argv[1] || "ccproxy";
@@ -54,21 +59,7 @@ function getConfigPath(): string {
   if (fromArg) {
     return path.resolve(fromArg);
   }
-  if (process.env.ROUTING_CONFIG_PATH) {
-    return path.resolve(process.env.ROUTING_CONFIG_PATH);
-  }
-  const candidates = [
-    path.join(process.cwd(), "ccproxy.config.json"),
-    path.join(process.cwd(), "config", "ccproxy.config.json"),
-    path.join(process.cwd(), "config", "routing.json"),
-  ];
-  for (const p of candidates) {
-    if (existsSync(p)) {
-      return p;
-    }
-  }
-  // default path (primary)
-  return candidates[0];
+  return resolveConfigPath();
 }
 
 async function readConfigRaw(filePath: string): Promise<RoutingConfig> {
@@ -138,13 +129,12 @@ function listSummary(cfg: RoutingConfig): Record<string, unknown> {
 async function cmdServe(): Promise<void> {
   const portStr = getArgFlag("port");
   const port = portStr ? parseInt(portStr, 10) : parseInt(process.env.PORT || "8082", 10);
-  console.log(`🚀 Server starting on http://localhost:${port}`);
-  console.log(`📝 Endpoints:`);
-  console.log(`   - GET  /health`);
-  console.log(`   - POST /v1/messages`);
-  console.log(`   - POST /v1/messages/count_tokens`);
-  console.log(`   - GET  /test-connection`);
-  serve({ fetch: app.fetch, port });
+  printCcproxyBanner();
+  serve({ fetch: app.fetch, port }, async (info) => {
+    const cfg = await loadRoutingConfigOnce();
+    const eps = extractEndpoints(app as any);
+    await printStartupInfo(info.port, cfg, eps);
+  });
 }
 
 async function cmdConfigShow(): Promise<void> {
@@ -230,6 +220,12 @@ async function main(): Promise<void> {
     case "serve":
       await cmdServe();
       return;
+    case "banner": {
+      const text = subcmd || "CCPROXY";
+      const { getBanner } = await import("./utils/logo/banner");
+      console.log(getBanner(text));
+      return;
+    }
     case "config": {
       switch (subcmd) {
         case "init":

@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 import type { ClaudeSSEWriter } from "./claude-sse-writer";
 import { ContentBlockManager } from "./content-block-manager";
 import { logUnexpected, logDebug, logWarn, logInfo } from "../logging/migrate-logger";
-import { getLogger, type LogContext } from "../logging/enhanced-logger";
+import type { LogContext } from "../logging/enhanced-logger";
 import { getMetadataHandler } from "./metadata-handler";
 import type {
   ResponseStreamEvent as OpenAIResponseStreamEvent,
@@ -82,8 +82,7 @@ export class StreamState {
       return;
     }
 
-    const logger = getLogger();
-    logger.logStreamEvent(ev, this.getLogContext());
+    logDebug("stream_event", ev, this.getLogContext());
 
     switch (ev.type) {
       case "response.created":

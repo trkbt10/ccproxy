@@ -1,8 +1,8 @@
 import { randomUUID } from "node:crypto";
 import type { ClaudeSSEWriter } from "./claude-sse-writer";
-import { EventLogger } from "../logging/logger";
 import { ContentBlockManager } from "./content-block-manager";
-import { logUnexpected, logDebug } from "../logging/migrate-logger";
+import { logUnexpected, logDebug, logWarn, logInfo } from "../logging/migrate-logger";
+import { getLogger, type LogContext } from "../logging/enhanced-logger";
 import { getMetadataHandler } from "./metadata-handler";
 import type {
   ResponseStreamEvent as OpenAIResponseStreamEvent,
@@ -23,7 +23,6 @@ export class StreamState {
   private messageStarted = false;
   private responseId?: string;
   private pingTimer?: NodeJS.Timeout;
-  private logger: EventLogger;
   private streamCompleted = false;
   private currentTextBlockId?: string;
   private callIdMapping: Map<string, string> = new Map(); // Maps OpenAI call_id to Claude tool_use_id
@@ -37,8 +36,14 @@ export class StreamState {
     requestId?: string
   ) {
     this.messageId = randomUUID();
-    this.logger = new EventLogger(process.env.LOG_DIR || "./logs", logEnabled);
     this.requestId = requestId;
+  }
+
+  private getLogContext(): LogContext {
+    return {
+      requestId: this.requestId,
+      messageId: this.messageId,
+    };
   }
 
   async greeting() {
@@ -69,14 +74,16 @@ export class StreamState {
   async handleEvent(ev: OpenAIResponseStreamEvent) {
     // Ignore events after stream is completed
     if (this.streamCompleted) {
-      console.warn(
-        "[StreamState] Ignoring event after stream completed:",
-        ev.type
+      logWarn(
+        "Ignoring event after stream completed",
+        { eventType: ev.type },
+        this.getLogContext()
       );
       return;
     }
 
-    this.logger.log("stream_event", ev);
+    const logger = getLogger();
+    logger.logStreamEvent(ev, this.getLogContext());
 
     switch (ev.type) {
       case "response.created":
@@ -84,7 +91,7 @@ export class StreamState {
         const createdEvent = ev as ResponseCreatedEvent;
         if (createdEvent.response?.id) {
           this.responseId = createdEvent.response.id;
-          console.log(`[StreamState] Captured response ID: ${this.responseId}`);
+          logInfo(`Captured response ID: ${this.responseId}`, undefined, this.getLogContext());
         }
         // Do not pre-create a text block here; wait until real content arrives
         // via output_text.delta or content_part.added to avoid empty/duplicate blocks.
@@ -113,12 +120,12 @@ export class StreamState {
 
       case "response.output_item.added":
         if (ev.item.type === "function_call" && this.isItemIdString(ev)) {
-          console.log(`[StreamState] function_call event:`, {
+          logDebug("function_call event", {
             id: ev.item.id,
             call_id: ev.item.call_id,
             name: ev.item.name,
             type: ev.item.type
-          });
+          }, this.getLogContext());
           
           const { block: toolBlock, metadata: toolMeta } = this.contentManager.addToolBlock(
             ev.item.id,
@@ -129,7 +136,7 @@ export class StreamState {
           // Store the mapping from call_id to tool_use_id
           if (ev.item.call_id) {
             this.callIdMapping.set(ev.item.call_id, ev.item.id);
-            console.log(`[StreamState] Stored mapping: call_id ${ev.item.call_id} -> tool_use_id ${ev.item.id}`);
+            logDebug(`Stored mapping: call_id ${ev.item.call_id} -> tool_use_id ${ev.item.id}`, undefined, this.getLogContext());
           }
           
           if (!toolMeta.started) {
@@ -165,14 +172,14 @@ export class StreamState {
         // They seem to be sent in addition to the delta events
         // Log for now to understand the flow better
         const contentAddedEvent = ev as ResponseContentPartAddedEvent;
-        console.log(
-          `[StreamState] content_part.added: type=${contentAddedEvent.part.type}, ` +
-            `item_id=${contentAddedEvent.item_id}, content_index=${contentAddedEvent.content_index}`
+        logDebug(
+          `content_part.added: type=${contentAddedEvent.part.type}, item_id=${contentAddedEvent.item_id}, content_index=${contentAddedEvent.content_index}`,
+          contentAddedEvent,
+          this.getLogContext()
         );
-        console.log(contentAddedEvent);
         if (contentAddedEvent.item_id) {
           this.responseId = contentAddedEvent.item_id;
-          console.log(`[StreamState] Captured response ID: ${this.responseId}`);
+          logInfo(`Captured response ID: ${this.responseId}`, undefined, this.getLogContext());
         }
         
         // Check if this might be metadata JSON (though usually empty at this stage)
@@ -207,11 +214,11 @@ export class StreamState {
       case "response.content_part.done": {
         // Log to understand the flow
         const contentDoneEvent = ev as ResponseContentPartDoneEvent;
-        console.log(
-          `[StreamState] content_part.done: type=${contentDoneEvent.part.type}, ` +
-            `item_id=${contentDoneEvent.item_id}, content_index=${contentDoneEvent.content_index}`
+        logDebug(
+          `content_part.done: type=${contentDoneEvent.part.type}, item_id=${contentDoneEvent.item_id}, content_index=${contentDoneEvent.content_index}`,
+          contentDoneEvent,
+          this.getLogContext()
         );
-        console.log(contentDoneEvent);
         
         // Check if the text is metadata - but still forward it to Claude
         if (contentDoneEvent.part.type === "output_text" && contentDoneEvent.part.text) {
@@ -250,8 +257,10 @@ export class StreamState {
         const doneToolBlockResult = this.contentManager.getToolBlock(ev.item_id);
         if (doneToolBlockResult && !doneToolBlockResult.metadata.completed) {
           // Don't mark as completed here - wait for output_item.done
-          console.log(
-            `[StreamState] Tool args done for: ${doneToolBlockResult.block.name}`
+          logDebug(
+            `Tool args done for: ${doneToolBlockResult.block.name}`,
+            undefined,
+            this.getLogContext()
           );
         }
         break;
@@ -361,7 +370,7 @@ export class StreamState {
       }
 
       default:
-        console.warn("Unknown event type:", ev.type);
+        logWarn("Unknown event type", { type: ev.type }, this.getLogContext());
         break;
     }
   }

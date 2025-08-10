@@ -3,7 +3,6 @@ import type { SSEStreamingApi } from "hono/streaming";
 import type { ResponseStreamEvent as OpenAIResponseStreamEvent } from "openai/resources/responses/responses";
 import { ClaudeSSEWriter } from "./claude-sse-writer";
 import { StreamState } from "./stream-state";
-import { EventLogger } from "../logging/logger";
 
 /**
  * Configuration for streaming pipeline
@@ -63,9 +62,7 @@ export class StreamingPipeline {
 
     if (event.type === "response.completed") {
       this.completed = true;
-      console.log(
-        `✅ [Request ${this.config.requestId}] response.completed`
-      );
+      console.log(`✅ [Request ${this.config.requestId}] response.completed`);
     }
   }
 
@@ -139,7 +136,9 @@ export class StreamingPipelineFactory {
     config: StreamingPipelineConfig
   ): StreamingPipeline {
     if (this.activePipelines.has(config.requestId)) {
-      throw new Error(`Pipeline already exists for request: ${config.requestId}`);
+      throw new Error(
+        `Pipeline already exists for request: ${config.requestId}`
+      );
     }
 
     const pipeline = new StreamingPipeline(stream, config);
@@ -183,7 +182,9 @@ export class StreamingPipelineFactory {
 
     for (const [requestId, pipeline] of this.activePipelines) {
       pipeline.cleanup();
-      console.log(`[StreamingPipelineFactory] Cleaned up pipeline: ${requestId}`);
+      console.log(
+        `[StreamingPipelineFactory] Cleaned up pipeline: ${requestId}`
+      );
     }
 
     this.activePipelines.clear();

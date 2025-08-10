@@ -1,8 +1,8 @@
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 import OpenAI from "openai";
-import type { RoutingConfig, Provider } from "./tool-model-planner";
-import { expandConfig } from "../utils/config-expansion";
+import type { RoutingConfig, Provider } from "../config/types";
+import { expandConfig } from "../config/expansion";
 
 let cachedConfig: RoutingConfig | null = null;
 let loadingPromise: Promise<RoutingConfig> | null = null;

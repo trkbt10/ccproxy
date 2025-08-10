@@ -18,7 +18,7 @@ import {
   logRequestResponse,
   logPerformance,
 } from "../utils/logging/migrate-logger";
-import type { RoutingConfig } from "../execution/tool-model-planner";
+import type { RoutingConfig } from "../config/types";
 
 export type ProcessorConfig = {
   requestId: string;

@@ -1,59 +1,5 @@
 import type { MessageCreateParams as ClaudeMessageCreateParams } from "@anthropic-ai/sdk/resources/messages";
-
-export type WhenClause = {
-  actionIn?: ("preview" | "plan" | "apply")[];
-};
-
-export type InternalStep = {
-  kind: "internal";
-  handler: string;
-  when?: WhenClause;
-  stopOn?: "handled" | "always" | "never";
-};
-
-export type ResponsesModelStep = {
-  kind: "responses_model";
-  providerId?: string;
-  model?: string;
-};
-
-export type Step = InternalStep | ResponsesModelStep;
-
-export type ToolRule = {
-  name: string;
-  enabled?: boolean;
-  steps: Step[];
-};
-
-export type Provider = {
-  type: "openai" | "claude" | "gemini";
-  baseURL?: string;
-  apiKey?: string;
-  api?: {
-    keys?: Record<string, string>;
-    keyHeader?: string;
-    keyByModelPrefix?: Record<string, string>;
-  };
-  defaultHeaders?: Record<string, string>;
-  instruction?: InstructionConfig;
-};
-
-export type PatternReplacement = {
-  regex: string;
-  replace: string;
-};
-
-export type InstructionConfig = {
-  text?: string;
-  mode: "override" | "append" | "prepend" | "replace";
-  patterns?: PatternReplacement[]; // Only used when mode is "replace"
-};
-
-export type RoutingConfig = {
-  providers?: Record<string, Provider>;
-  tools?: ToolRule[];
-  instruction?: InstructionConfig;
-};
+import type { RoutingConfig, Step } from "../config/types";
 
 // Select the provider and model for the current request
 export function selectProviderForRequest(
@@ -61,7 +7,8 @@ export function selectProviderForRequest(
   req: ClaudeMessageCreateParams,
   getHeader: (name: string) => string | null
 ): { providerId: string; model: string } {
-  const overrideModel = getHeader("x-openai-model");
+  const headerName = cfg.overrideHeader || "x-openai-model";
+  const overrideModel = getHeader(headerName);
   
   // Check tool-specific provider settings
   const toolNames = extractToolNames(req);

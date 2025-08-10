@@ -11,7 +11,7 @@ import { convertClaudeMessage } from "./message";
 import { convertClaudeToolToOpenAI } from "./tool";
 import { createWebSearchPreviewDefinition } from "./tool-definitions";
 import { UnifiedIdManager as CallIdManager } from "../../../utils/id-management/unified-id-manager";
-import type { RoutingConfig, InstructionConfig, PatternReplacement } from "../../../execution/tool-model-planner";
+import type { RoutingConfig, InstructionConfig, PatternReplacement } from "../../../config/types";
 import { logDebug } from "../../../utils/logging/migrate-logger";
 
 /**

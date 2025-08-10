@@ -15,7 +15,7 @@ import { convertToolResult } from "./tool";
 import { logDebug } from "../../../utils/logging/migrate-logger";
 import { UnifiedIdManager as CallIdManager } from "../../../utils/id-management/unified-id-manager";
 import { planToolExecution } from "../../../execution/tool-model-planner";
-import type { RoutingConfig } from "../../../execution/tool-model-planner";
+import type { RoutingConfig } from "../../../config/types";
 import { findHandler } from "../../../tools/internal/registry";
 import type { ToolResultBlockParam as ClaudeContentBlockToolResult } from "@anthropic-ai/sdk/resources/messages";
 

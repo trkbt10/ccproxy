@@ -519,6 +519,40 @@ export class UnifiedIdManager {
   }
 
   /**
+   * Find OpenAI call ID for a Claude tool_use ID without marking it as used
+   */
+  private peekOpenAICallId(claudeToolUseId: string): string | undefined {
+    // Direct lookup
+    const direct = this.reverseMapping.get(claudeToolUseId);
+    if (direct) return direct;
+    // Try by ignoring prefix
+    for (const [claudeId, openaiId] of this.reverseMapping.entries()) {
+      if (IdFormat.isSameIdIgnoringPrefix(claudeId, claudeToolUseId)) {
+        return openaiId;
+      }
+    }
+    return undefined;
+  }
+
+  /**
+   * Get existing or create a new OpenAI call_id for a given Claude tool_use_id,
+   * registering the mapping if it doesn't exist. Does NOT mark as used.
+   */
+  getOrCreateOpenAICallIdForToolUse(
+    claudeToolUseId: string,
+    toolName?: string,
+    context?: MappingContext
+  ): string {
+    const existing = this.peekOpenAICallId(claudeToolUseId);
+    if (existing) {
+      return existing;
+    }
+    const callId = IdFormat.generateOpenAIId();
+    this.registerMapping(callId, claudeToolUseId, toolName, context);
+    return callId;
+  }
+
+  /**
    * Purge mappings that have been used.
    * @param olderThanMs Only purge if usedAt is older than this threshold (default 0 = immediately)
    * @returns number of purged mappings

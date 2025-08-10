@@ -1,0 +1,56 @@
+{
+  "instruction": {
+    "text": "Always be concise and clear in your responses.",
+    "mode": "append"
+  },
+  "providers": {
+    "primary": {
+      "type": "openai",
+      "apiKey": "${OPENAI_API_KEY}",
+      "defaultHeaders": {
+        "OpenAI-Beta": "responses-2025-06-21"
+      },
+      "instruction": {
+        "text": "You are a helpful assistant specialized in technical documentation.",
+        "mode": "prepend"
+      }
+    },
+    "code-specialist": {
+      "type": "openai",
+      "apiKey": "${OPENAI_API_KEY_SECONDARY}",
+      "instruction": {
+        "text": "You are an expert programmer. Always provide working code examples with proper error handling.",
+        "mode": "override"
+      }
+    },
+    "filtered": {
+      "type": "openai",
+      "apiKey": "${OPENAI_API_KEY}",
+      "instruction": {
+        "mode": "replace",
+        "patterns": [
+          {
+            "regex": "\\b(dangerous|harmful)\\b",
+            "replace": "safe"
+          },
+          {
+            "regex": "Do not .* under any circumstances",
+            "replace": "Please be careful when"
+          }
+        ]
+      }
+    }
+  },
+  "tools": [
+    {
+      "name": "web_search_20250305",
+      "enabled": true,
+      "steps": [
+        {
+          "kind": "internal",
+          "handler": "web_search_preview"
+        }
+      ]
+    }
+  ]
+}

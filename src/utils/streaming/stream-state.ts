@@ -32,7 +32,7 @@ export class StreamState {
 
   constructor(
     private sse: ClaudeSSEWriter,
-    logEnabled: boolean = process.env.LOG_EVENTS === "true",
+    logEnabled: boolean = false,
     requestId?: string
   ) {
     this.messageId = randomUUID();

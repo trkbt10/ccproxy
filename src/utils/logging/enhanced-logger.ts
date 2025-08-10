@@ -309,13 +309,31 @@ export class EnhancedLogger {
 
 // Singleton instance
 let logger: EnhancedLogger | null = null;
+let loggerOptions: { dir?: string; enabled?: boolean; debugEnabled?: boolean } = {};
 
 /**
  * Get or create the singleton logger instance
  */
 export function getLogger(): EnhancedLogger {
   if (!logger) {
-    logger = new EnhancedLogger();
+    logger = new EnhancedLogger(
+      loggerOptions.dir || "./logs",
+      loggerOptions.enabled ?? true,
+      loggerOptions.debugEnabled ?? (process.env.DEBUG === "true")
+    );
   }
   return logger;
+}
+
+/**
+ * Configure the logger singleton options before first use
+ */
+export function configureLogger(options: {
+  dir?: string;
+  enabled?: boolean;
+  debugEnabled?: boolean;
+}): void {
+  // If already created, ignore for now to avoid mid-run reconfiguration
+  if (logger) return;
+  loggerOptions = { ...loggerOptions, ...options };
 }

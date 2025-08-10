@@ -141,7 +141,7 @@ async function processStreamingResponse(
   return streamSSE(c, async (stream) => {
     const pipeline = streamingPipelineFactory.create(stream, {
       requestId: config.requestId,
-      logEnabled: process.env.LOG_EVENTS === "true",
+      logEnabled: config.routingConfig?.logging?.eventsEnabled === true,
     });
 
     const context = {

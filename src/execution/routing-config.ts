@@ -3,6 +3,7 @@ import path from "node:path";
 import OpenAI from "openai";
 import type { RoutingConfig, Provider } from "../config/types";
 import { expandConfig } from "../config/expansion";
+import { configureLogger } from "../utils/logging/enhanced-logger";
 
 let cachedConfig: RoutingConfig | null = null;
 let loadingPromise: Promise<RoutingConfig> | null = null;
@@ -23,11 +24,27 @@ export async function loadRoutingConfigOnce(): Promise<RoutingConfig> {
 
       // Ensure a "default" provider exists by synthesizing from env when missing
       const ensured = ensureDefaultProvider(expanded);
+
+      // Apply logging configuration (dir/enabled) from config
+      if (ensured && (ensured as any).logging) {
+        const logging = (ensured as any).logging as {
+          dir?: string;
+          enabled?: boolean;
+          debugEnabled?: boolean;
+          eventsEnabled?: boolean;
+        };
+        configureLogger({
+          dir: logging.dir,
+          enabled: logging.enabled,
+          debugEnabled: logging.debugEnabled,
+        });
+      }
       cachedConfig = ensured;
       return ensured;
     } catch {
       // Fallback when no config file exists - empty providers
       const fallback: RoutingConfig = ensureDefaultProvider({ tools: [] });
+      // No config: use defaults for logger
       cachedConfig = fallback;
       return fallback;
     } finally {
@@ -43,12 +60,9 @@ export function getRoutingConfigCache(): RoutingConfig | null {
 }
 
 function synthesizeDefaultProviderFromEnv(): Provider {
-  const baseURL = process.env.OPENAI_BASE_URL;
   const apiKey = process.env.OPENAI_API_KEY;
   const provider: Provider = {
     type: "openai",
-    // Only set baseURL if provided to avoid overriding SDK default
-    ...(baseURL ? { baseURL } : {}),
     // Include apiKey if available; buildProviderClient will also fallback to env
     ...(apiKey ? { apiKey } : {}),
     defaultHeaders: {

@@ -5,10 +5,12 @@
   "main": "index.js",
   "scripts": {
     "serve": "bun run server.ts",
-    "dev": "bun run --hot server.ts",
+    "dev": "bun run --watch server.ts",
+    "cli": "bun run src/cli.ts",
     "dev:node": "tsx --watch server.ts",
     "start": "bun run server.ts",
     "start:node": "tsx server.ts",
+    "typecheck": "tsc --noEmit",
     "build": "bun build src/index.ts --outdir dist",
     "test": "bun test",
     "test:watch": "bun test --watch"

@@ -48,9 +48,14 @@ export type InstructionConfig = {
 };
 
 export type RoutingConfig = {
+  logging?: {
+    dir?: string;
+    enabled?: boolean;
+    debugEnabled?: boolean;
+    eventsEnabled?: boolean;
+  };
   overrideHeader?: string;
   providers?: Record<string, Provider>;
   tools?: ToolRule[];
   instruction?: InstructionConfig;
 };
-

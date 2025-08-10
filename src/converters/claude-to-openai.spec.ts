@@ -18,6 +18,7 @@ import type {
 import { convertClaudeImageToOpenAI } from "./message-converter/claude-to-openai/image";
 import { convertToolResult } from "./message-converter/claude-to-openai/tool";
 import { convertClaudeMessage } from "./message-converter/claude-to-openai/message";
+import { UnifiedIdManager as CallIdManager } from "../utils/id-management/unified-id-manager";
 
 describe("claude-to-openai converter", () => {
   beforeEach(() => {
@@ -83,9 +84,10 @@ describe("claude-to-openai converter", () => {
         content: "Result string",
       };
 
-      const callIdMapping = new Map([["call_456", "tool_123"]]);
+      const callIdManager = new CallIdManager();
+      callIdManager.registerMapping("call_456", "tool_123", "test_tool", { source: "test" });
 
-      const result = convertToolResult(toolResult, callIdMapping);
+      const result = convertToolResult(toolResult, callIdManager);
 
       expect(result).toEqual({
         id: "tool_123",
@@ -107,9 +109,10 @@ describe("claude-to-openai converter", () => {
         ],
       };
 
-      const callIdMapping = new Map([["call_999", "tool_789"]]);
+      const callIdManager = new CallIdManager();
+      callIdManager.registerMapping("call_999", "tool_789", "test_tool", { source: "test" });
 
-      const result = convertToolResult(toolResult, callIdMapping);
+      const result = convertToolResult(toolResult, callIdManager);
 
       expect(result).toEqual({
         id: "tool_789",
@@ -131,7 +134,8 @@ describe("claude-to-openai converter", () => {
         content: "Result",
       };
 
-      const result = convertToolResult(toolResult);
+      const callIdManager = new CallIdManager();
+      const result = convertToolResult(toolResult, callIdManager);
 
       expect(result).toEqual({
         id: "tool_no_mapping",
@@ -148,9 +152,9 @@ describe("claude-to-openai converter", () => {
         content: "Empty mapping result",
       };
 
-      const callIdMapping = new Map();
+      const callIdManager = new CallIdManager();
 
-      const result = convertToolResult(toolResult, callIdMapping);
+      const result = convertToolResult(toolResult, callIdManager);
 
       expect(result).toEqual({
         id: "tool_empty",
@@ -168,7 +172,8 @@ describe("claude-to-openai converter", () => {
         content: "Hello, world!",
       };
 
-      const result = convertClaudeMessage(message);
+      const callIdManager = new CallIdManager();
+      const result = convertClaudeMessage(message, callIdManager);
 
       expect(result).toEqual([
         {
@@ -189,7 +194,8 @@ describe("claude-to-openai converter", () => {
         ],
       };
 
-      const result = convertClaudeMessage(message);
+      const callIdManager = new CallIdManager();
+      const result = convertClaudeMessage(message, callIdManager);
 
       expect(result).toEqual([
         {
@@ -218,7 +224,8 @@ describe("claude-to-openai converter", () => {
         ],
       };
 
-      const result = convertClaudeMessage(message);
+      const callIdManager = new CallIdManager();
+      const result = convertClaudeMessage(message, callIdManager);
 
       expect(result).toEqual([
         {
@@ -243,7 +250,8 @@ describe("claude-to-openai converter", () => {
         ],
       };
 
-      const result = convertClaudeMessage(message);
+      const callIdManager = new CallIdManager();
+      const result = convertClaudeMessage(message, callIdManager);
 
       expect(result).toEqual([
         {
@@ -279,9 +287,10 @@ describe("claude-to-openai converter", () => {
         ],
       };
 
-      const callIdMapping = new Map([["call_001", "tool_001"]]);
+      const callIdManager = new CallIdManager();
+      callIdManager.registerMapping("call_001", "tool_001", "calculator", { source: "test" });
 
-      const result = convertClaudeMessage(message, callIdMapping);
+      const result = convertClaudeMessage(message, callIdManager);
 
       expect(result).toEqual([
         {
@@ -310,7 +319,8 @@ describe("claude-to-openai converter", () => {
         ],
       };
 
-      const result = convertClaudeMessage(message);
+      const callIdManager = new CallIdManager();
+      const result = convertClaudeMessage(message, callIdManager);
 
       expect(result).toEqual([
         {
@@ -334,9 +344,10 @@ describe("claude-to-openai converter", () => {
         ],
       };
 
-      const callIdMapping = new Map([["call_002", "tool_002"]]);
+      const callIdManager = new CallIdManager();
+      callIdManager.registerMapping("call_002", "tool_002", "get_weather", { source: "test" });
 
-      const result = convertClaudeMessage(message, callIdMapping);
+      const result = convertClaudeMessage(message, callIdManager);
 
       expect(result).toEqual([
         {
@@ -362,7 +373,8 @@ describe("claude-to-openai converter", () => {
         ],
       };
 
-      const result = convertClaudeMessage(message);
+      const callIdManager = new CallIdManager();
+      const result = convertClaudeMessage(message, callIdManager);
 
       expect(result).toEqual([
         {
@@ -405,12 +417,11 @@ describe("claude-to-openai converter", () => {
         ],
       };
 
-      const callIdMapping = new Map([
-        ["call_mixed_1", "tool_mixed_1"],
-        ["call_mixed_2", "tool_mixed_2"],
-      ]);
+      const callIdManager = new CallIdManager();
+      callIdManager.registerMapping("call_mixed_1", "tool_mixed_1", "analyze", { source: "test" });
+      callIdManager.registerMapping("call_mixed_2", "tool_mixed_2", "process", { source: "test" });
 
-      const result = convertClaudeMessage(message, callIdMapping);
+      const result = convertClaudeMessage(message, callIdManager);
 
       expect(result).toEqual([
         {
@@ -462,7 +473,8 @@ describe("claude-to-openai converter", () => {
         ],
       };
 
-      const result = convertClaudeMessage(message);
+      const callIdManager = new CallIdManager();
+      const result = convertClaudeMessage(message, callIdManager);
 
       expect(result).toEqual([
         {
@@ -501,7 +513,8 @@ describe("claude-to-openai converter", () => {
         content: [],
       };
 
-      const result = convertClaudeMessage(message);
+      const callIdManager = new CallIdManager();
+      const result = convertClaudeMessage(message, callIdManager);
 
       expect(result).toEqual([]);
     });
@@ -517,7 +530,8 @@ describe("claude-to-openai converter", () => {
         ],
       };
 
-      const result = convertClaudeMessage(message);
+      const callIdManager = new CallIdManager();
+      const result = convertClaudeMessage(message, callIdManager);
 
       expect(result).toEqual([
         {
@@ -538,8 +552,9 @@ describe("claude-to-openai converter", () => {
         content: "Assistant message",
       };
 
-      const userResult = convertClaudeMessage(userMessage)[0];
-      const assistantResult = convertClaudeMessage(assistantMessage)[0];
+      const callIdManager = new CallIdManager();
+      const userResult = convertClaudeMessage(userMessage, callIdManager)[0];
+      const assistantResult = convertClaudeMessage(assistantMessage, callIdManager)[0];
 
       // Check that the results are EasyInputMessage type with role property
       expect("role" in userResult && userResult.role).toBe("user");
@@ -561,7 +576,8 @@ describe("claude-to-openai converter", () => {
         ],
       };
 
-      const result = convertClaudeMessage(message);
+      const callIdManager = new CallIdManager();
+      const result = convertClaudeMessage(message, callIdManager);
 
       // Should only have the tool call, no empty text message
       expect(result).toHaveLength(1);
@@ -599,7 +615,8 @@ describe("claude-to-openai converter", () => {
         ],
       };
 
-      const result = convertClaudeMessage(message);
+      const callIdManager = new CallIdManager();
+      const result = convertClaudeMessage(message, callIdManager);
 
       expect(result).toHaveLength(5);
       expect(result[0]).toHaveProperty("content", "Text 1");

@@ -11,6 +11,7 @@ import { convertClaudeMessage } from "./message";
 import { convertClaudeToolToOpenAI } from "./tool";
 import { createWebSearchPreviewDefinition } from "./tool-definitions";
 import { UnifiedIdManager as CallIdManager } from "../../../utils/id-management/unified-id-manager";
+import type { RoutingConfig } from "../../../execution/tool-model-planner";
 
 /**
  * Convert Claude request to OpenAI Responses API request
@@ -18,21 +19,10 @@ import { UnifiedIdManager as CallIdManager } from "../../../utils/id-management/
 export function claudeToResponses(
   req: ClaudeMessageCreateParamsBase,
   modelResolver: (model: ClaudeModel) => OpenAIResponseModel,
+  callIdManager: CallIdManager,
   previousResponseId?: string,
-  callIdManager?: CallIdManager | Map<string, string>
+  routingConfig?: RoutingConfig
 ): OpenAIResponses.ResponseCreateParams {
-  // Ensure we have a CallIdManager instance
-  let manager: CallIdManager;
-  if (!callIdManager) {
-    manager = new CallIdManager();
-  } else if (callIdManager instanceof CallIdManager) {
-    manager = callIdManager;
-  } else if (callIdManager instanceof Map) {
-    manager = new CallIdManager();
-    manager.importFromMap(callIdManager, { source: "legacy-map-conversion" });
-  } else {
-    manager = new CallIdManager();
-  }
   const model: OpenAIResponseModel = modelResolver(req.model);
   const instructions = Array.isArray(req.system)
     ? req.system.map((b) => b.text).join("\n\n")
@@ -46,7 +36,7 @@ export function claudeToResponses(
   const toolResults = new Set<string>();
 
   for (const message of req.messages) {
-    const convertedItems = convertClaudeMessage(message, manager);
+    const convertedItems = convertClaudeMessage(message, callIdManager, routingConfig);
     input.push(...convertedItems);
 
     // Track tool calls and results for validation
@@ -85,7 +75,7 @@ export function claudeToResponses(
       );
       
       // Log validation results from CallIdManager
-      const validation = manager.validateMappings();
+      const validation = callIdManager.validateMappings();
       if (!validation.valid) {
         console.error(
           `[ERROR] Call ID mapping validation failed:`,

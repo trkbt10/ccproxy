@@ -14,7 +14,8 @@ import { convertToolResult } from "./tool";
 // Tool chain validator removed: mapping-only behavior
 import { logDebug } from "../../../utils/logging/migrate-logger";
 import { UnifiedIdManager as CallIdManager } from "../../../utils/id-management/unified-id-manager";
-import { shouldHandleInternally } from "../../../config/model-router";
+import { planToolExecution } from "../../../execution/tool-model-planner";
+import type { RoutingConfig } from "../../../execution/tool-model-planner";
 import { findHandler } from "../../../tools/internal/registry";
 import type { ToolResultBlockParam as ClaudeContentBlockToolResult } from "@anthropic-ai/sdk/resources/messages";
 
@@ -23,24 +24,9 @@ import type { ToolResultBlockParam as ClaudeContentBlockToolResult } from "@anth
  */
 export function convertClaudeMessage(
   message: ClaudeMessageParam,
-  callIdManager?: CallIdManager | Map<string, string>
+  callIdManager: CallIdManager,
+  routingConfig?: RoutingConfig
 ): OpenAIResponseInputItem[] {
-  // Ensure we have a CallIdManager instance
-  let manager: CallIdManager;
-  if (!callIdManager) {
-    manager = new CallIdManager();
-  } else if (callIdManager instanceof CallIdManager) {
-    manager = callIdManager;
-  } else if (callIdManager instanceof Map) {
-    // Convert legacy Map to CallIdManager
-    manager = new CallIdManager();
-    manager.importFromMap(callIdManager, { source: "legacy-map-conversion" });
-  } else {
-    manager = new CallIdManager();
-  }
-  
-  // Use manager throughout the function
-  const actualManager = manager;
   console.log(
     `[DEBUG] Converting Claude message: role=${
       message.role
@@ -84,65 +70,78 @@ export function convertClaudeMessage(
         flushBuffer();
 
         // Log the current mapping state
-        const stats = actualManager.getStats();
+        const stats = callIdManager.getStats();
         console.log(
           `[DEBUG] Current call_id mappings stats:`,
           stats
         );
 
-        const internal = shouldHandleInternally(block.name);
-        if (internal) {
-          // Ensure mapping exists
-          let callId = actualManager.getOpenAICallId(block.id);
-          if (!callId) {
-            callId = `call_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`;
-            actualManager.registerMapping(callId, block.id, block.name, { source: "message-conversion-internal" });
-          }
-
-          // Execute internally if handler is found
-          const handler = findHandler(block.name);
-          let content: string | object = { status: "skipped", reason: "no_handler" };
-          if (handler) {
+        const steps = routingConfig ? planToolExecution(routingConfig, block.name, block.input) : [];
+        let handled = false;
+        for (const step of steps) {
+          if (step.kind === "internal") {
+            const callId = callIdManager.getOrCreateOpenAICallIdForToolUse(
+              block.id,
+              block.name,
+              { source: "message-conversion-internal" }
+            );
+            const handler = findHandler(step.handler);
+            if (!handler) continue;
             try {
-              content = handler.execute(block.name, block.input, {});
+              const content = handler.execute(step.handler, block.input, {});
+              const contentValue = typeof content === "string" ? content : JSON.stringify(content);
+              const tr: ClaudeContentBlockToolResult = {
+                type: "tool_result",
+                tool_use_id: block.id,
+                content: contentValue,
+              };
+              const toolResult = convertToolResult(tr, callIdManager);
+              result.push(toolResult);
+              console.log(`[DEBUG] Handled tool_use internally via ${step.handler}`);
+              handled = true;
+              break;
             } catch (e) {
-              content = { status: "error", message: (e as Error).message };
+              console.warn(`[WARN] Internal handler failed: ${(e as Error).message}`);
             }
+          } else if (step.kind === "responses_model") {
+            const callId = callIdManager.getOrCreateOpenAICallIdForToolUse(
+              block.id,
+              block.name,
+              { source: "message-conversion-new" }
+            );
+            const toolCall: OpenAIResponseFunctionToolCall = {
+              type: "function_call",
+              call_id: callId,
+              name: block.name,
+              arguments: JSON.stringify(block.input),
+            };
+            result.push(toolCall);
+            console.log(`[DEBUG] Emitted function_call for tool: ${block.name}`);
+            handled = true;
+            break;
           }
-
-          const contentValue: string =
-            typeof content === "string" ? content : JSON.stringify(content);
-
-          const tr: ClaudeContentBlockToolResult = {
-            type: "tool_result",
-            tool_use_id: block.id,
-            content: contentValue,
-          };
-          const toolResult = convertToolResult(tr, actualManager);
-          result.push(toolResult);
-          console.log(`[DEBUG] Handled tool_use internally: ${block.name}`);
-        } else {
-          // Model-driven execution path: emit function_call and let next turn provide outputs
-          // Find the call_id for this tool_use_id
-          let callId = actualManager.getOpenAICallId(block.id);
-          if (!callId) {
-            callId = `call_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`;
-            actualManager.registerMapping(callId, block.id, block.name, { source: "message-conversion-new" });
-          }
+        }
+        if (!handled) {
+          const callId = callIdManager.getOrCreateOpenAICallIdForToolUse(
+            block.id,
+            block.name,
+            { source: "message-conversion-new" }
+          );
           const toolCall: OpenAIResponseFunctionToolCall = {
             type: "function_call",
             call_id: callId,
             name: block.name,
             arguments: JSON.stringify(block.input),
           };
+        
           result.push(toolCall);
-          console.log(`[DEBUG] Emitted function_call for tool: ${block.name}`);
+          console.log(`[DEBUG] Fallback: Emitted function_call for tool: ${block.name}`);
         }
         break;
 
       case "tool_result":
         flushBuffer();
-        const toolResult = convertToolResult(block, actualManager);
+        const toolResult = convertToolResult(block, callIdManager);
         result.push(toolResult);
 
         // Validation removed
@@ -152,10 +151,11 @@ export function convertClaudeMessage(
         // Handle image blocks
         flushBuffer();
         const imageContent = convertClaudeImageToOpenAI(block);
-        result.push({
+        const inputMessage: OpenAIResponseEasyInputMessage = {
           role: message.role,
           content: [imageContent],
-        });
+        };
+        result.push(inputMessage);
         break;
       }
     }
@@ -170,18 +170,20 @@ export function convertClaudeMessage(
       return;
     }
     if (buffer.length === 1 && "text" in buffer[0]) {
-      result.push({
+      const inputMessage: OpenAIResponseEasyInputMessage = {
         role: message.role,
         content: buffer[0].text,
-      });
+      };
+      result.push(inputMessage);
     } else {
       // For assistant messages, we just push them as simple text
       if (message.role === "assistant") {
         const textContent = buffer.map((b) => b.text).join("");
-        result.push({
+        const inputMessage: OpenAIResponseEasyInputMessage = {
           role: message.role,
           content: textContent,
-        });
+        };
+        result.push(inputMessage);
       } else {
         // For user messages, we use the content array format
         const content: OpenAIResponseInputMessageContentList = buffer.map(
@@ -197,10 +199,11 @@ export function convertClaudeMessage(
           }
         );
 
-        result.push({
+        const inputMessage: OpenAIResponseEasyInputMessage = {
           role: message.role,
           content,
-        });
+        };
+        result.push(inputMessage);
       }
     }
     buffer = [];

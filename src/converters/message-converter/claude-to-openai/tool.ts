@@ -25,20 +25,8 @@ import { UnifiedIdManager as CallIdManager, IdFormat } from "../../../utils/id-m
  */
 export function convertToolResult(
   block: ClaudeContentBlockToolResult,
-  callIdManager?: CallIdManager | Map<string, string>
+  callIdManager: CallIdManager
 ): OpenAIResponseFunctionToolCallOutputItem {
-  // Ensure we have a CallIdManager instance
-  let manager: CallIdManager;
-  if (!callIdManager) {
-    manager = new CallIdManager();
-  } else if (callIdManager instanceof CallIdManager) {
-    manager = callIdManager;
-  } else if (callIdManager instanceof Map) {
-    manager = new CallIdManager();
-    manager.importFromMap(callIdManager, { source: "legacy-map-conversion" });
-  } else {
-    manager = new CallIdManager();
-  }
   console.log(
     `[DEBUG] Converting tool_result: tool_use_id="${
       block.tool_use_id
@@ -46,11 +34,11 @@ export function convertToolResult(
   );
 
   // Log the current mapping state
-  const stats = manager.getStats();
+  const stats = callIdManager.getStats();
   console.log(`[DEBUG] Current call_id mappings stats:`, stats);
 
   // Find the call_id for this tool_use_id
-  let call_id = manager.getOpenAICallId(block.tool_use_id);
+  let call_id = callIdManager.getOpenAICallId(block.tool_use_id);
 
   if (!call_id) {
     console.error(

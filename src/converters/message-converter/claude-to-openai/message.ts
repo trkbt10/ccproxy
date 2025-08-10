@@ -11,7 +11,7 @@ import type {
 } from "openai/resources/responses/responses";
 import { convertClaudeImageToOpenAI } from "./image";
 import { convertToolResult } from "./tool";
-import { getToolChainValidator } from "../../../utils/validation/tool-chain-validator";
+// Tool chain validator removed: mapping-only behavior
 import { logDebug } from "../../../utils/logging/migrate-logger";
 import { UnifiedIdManager as CallIdManager } from "../../../utils/id-management/unified-id-manager";
 
@@ -122,17 +122,7 @@ export function convertClaudeMessage(
         const toolResult = convertToolResult(block, actualManager);
         result.push(toolResult);
 
-        // Validate tool result
-        const validator = getToolChainValidator("message-conversion");
-        validator.recordToolResult({
-          tool_use_id: block.tool_use_id,
-          content: block.content,
-        });
-        
-        logDebug(
-          `Added tool_result for call_id="${toolResult.call_id}"`,
-          { tool_use_id: block.tool_use_id, call_id: toolResult.call_id }
-        );
+        // Validation removed
         break;
 
       case "image": {

@@ -4,7 +4,6 @@ import { EventLogger } from "../logging/logger";
 import { ContentBlockManager } from "./content-block-manager";
 import { logUnexpected, logDebug } from "../logging/migrate-logger";
 import { getMetadataHandler } from "./metadata-handler";
-import { getToolChainValidator } from "../validation/tool-chain-validator";
 import type {
   ResponseStreamEvent as OpenAIResponseStreamEvent,
   ResponseOutputItemAddedEvent as OpenAIResponseOutputItemAddedEvent,
@@ -30,7 +29,7 @@ export class StreamState {
   private callIdMapping: Map<string, string> = new Map(); // Maps OpenAI call_id to Claude tool_use_id
   private requestId?: string;
   private metadataHandler = getMetadataHandler(this.requestId || "unknown");
-  private toolValidator = getToolChainValidator(this.requestId || "unknown");
+  // Tool chain validation removed; keep mapping-only behavior
 
   constructor(
     private sse: ClaudeSSEWriter,
@@ -121,13 +120,6 @@ export class StreamState {
             type: ev.item.type
           });
           
-          // Record tool call for validation
-          this.toolValidator.recordToolCall({
-            id: ev.item.id,
-            call_id: ev.item.call_id,
-            name: ev.item.name,
-          });
-          
           const { block: toolBlock, metadata: toolMeta } = this.contentManager.addToolBlock(
             ev.item.id,
             ev.item.name,
@@ -139,9 +131,6 @@ export class StreamState {
             this.callIdMapping.set(ev.item.call_id, ev.item.id);
             console.log(`[StreamState] Stored mapping: call_id ${ev.item.call_id} -> tool_use_id ${ev.item.id}`);
           }
-          
-          // Validate the mapping
-          this.toolValidator.validateMapping(this.callIdMapping);
           
           if (!toolMeta.started) {
             await this.sse.toolStart(toolMeta.index, {

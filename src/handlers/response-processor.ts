@@ -12,15 +12,18 @@ import { conversationStore } from "../utils/conversation/conversation-store";
 import { claudeToResponses } from "../converters/message-converter/claude-to-openai/request";
 import { logError, logInfo, logDebug, logUnexpected, logRequestResponse, logPerformance } from "../utils/logging/migrate-logger";
 import { unifiedIdRegistry as callIdRegistry } from "../utils/id-management/unified-id-manager";
+import type { RoutingConfig } from "../execution/tool-model-planner";
 
 export type ProcessorConfig = {
   requestId: string;
   conversationId: string;
   openai: OpenAI;
   claudeReq: ClaudeMessageCreateParams;
-  modelResolver: (model: ClaudeMessageCreateParams['model']) => string;
+  // Resolved OpenAI model for this request
+  model: string;
   stream: boolean;
   signal?: AbortSignal; // Support for request cancellation
+  routingConfig?: RoutingConfig;
 };
 
 export type ProcessorResult = {
@@ -227,9 +230,10 @@ export const createResponseProcessor = (config: ProcessorConfig) => {
   // Convert Claude request to OpenAI format
   const openaiReq = claudeToResponses(
     config.claudeReq,
-    config.modelResolver,
+    () => config.model,
+    manager,
     context.lastResponseId,
-    manager
+    config.routingConfig
   );
 
   // Session-use semantics: drop mappings that were consumed while building this request

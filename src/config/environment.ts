@@ -1,6 +1,8 @@
 export function checkEnvironmentVariables() {
   if (!process.env.OPENAI_API_KEY) {
-    throw new Error("OPENAI_API_KEY environment variable is required");
+    console.warn(
+      "OPENAI_API_KEY is not set. Will rely on routing-config based key selection if configured."
+    );
   }
 
   if (!process.env.OPENAI_MODEL) {

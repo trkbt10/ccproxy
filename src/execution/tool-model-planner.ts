@@ -1,9 +1,4 @@
 import type { MessageCreateParams as ClaudeMessageCreateParams } from "@anthropic-ai/sdk/resources/messages";
-import fs from "node:fs";
-import path from "node:path";
-
-// V2 routing model: Each tool has an ordered list of steps to try.
-// The first matching step wins; internal can be declined and fall through.
 
 export type WhenClause = {
   actionIn?: ("preview" | "plan" | "apply")[];
@@ -11,17 +6,17 @@ export type WhenClause = {
 
 export type InternalStep = {
   kind: "internal";
-  handler: string; // Name of InternalToolHandler to invoke
+  handler: string;
   when?: WhenClause;
   stopOn?: "handled" | "always" | "never";
 };
 
 export type ResponsesModelStep = {
   kind: "responses_model";
-  preferModel?: string; // Hint for request-level model selection
+  preferModel?: string;
 };
 
-export type Step = InternalStep | ResponsesModelStep; // Extendable later
+export type Step = InternalStep | ResponsesModelStep;
 
 export type ToolRule = {
   name: string;
@@ -29,45 +24,37 @@ export type ToolRule = {
   steps: Step[];
 };
 
-export type RoutingConfig = {
-  defaultModel: string;
-  overrideHeader?: string; // e.g. "x-openai-model"
-  tools?: ToolRule[];
+export type OpenAIClientConfig = {
+  // Extra headers to send to OpenAI
+  defaultHeaders?: Record<string, string>;
+  // Header name that carries an API key identifier (e.g., "x-openai-key-id")
+  apiKeyHeader?: string;
+  // Map from key-id to environment variable name that stores the actual key
+  apiKeys?: Record<string, string>;
+  // Map from model prefix to environment variable name for the API key
+  apiKeyByModelPrefix?: Record<string, string>;
 };
 
-let cachedConfig: RoutingConfig | null = null;
+export type RoutingConfig = {
+  defaultModel: string;
+  overrideHeader?: string;
+  tools?: ToolRule[];
+  // Optional OpenAI client configuration and API key routing
+  openai?: OpenAIClientConfig;
+};
 
-export function loadConfig(): RoutingConfig {
-  if (cachedConfig) return cachedConfig;
-  const configPath = process.env.ROUTING_CONFIG_PATH || path.join(process.cwd(), "config", "routing.json");
-  try {
-    const raw = fs.readFileSync(configPath, "utf8");
-    const json = JSON.parse(raw) as RoutingConfig;
-    cachedConfig = json;
-    return json;
-  } catch {
-    const fallback: RoutingConfig = {
-      defaultModel: process.env.OPENAI_MODEL || "gpt-4.1-mini",
-      overrideHeader: "x-openai-model",
-      tools: [],
-    };
-    cachedConfig = fallback;
-    return fallback;
-  }
-}
-
-// Pick request-level model based on header override, then first responses_model.preferModel encountered
-export function pickRequestModel(
+// Select the OpenAI model for the current request
+export function selectModelForRequest(
+  cfg: RoutingConfig,
   req: ClaudeMessageCreateParams,
   getHeader: (name: string) => string | null
 ): string {
-  const cfg = loadConfig();
   const override = getHeader(cfg.overrideHeader || "x-openai-model");
   if (override && override.trim()) return override.trim();
 
   const toolNames = extractToolNames(req);
   for (const name of toolNames) {
-    const steps = getExecutionPlan(name, undefined); // when filtering applied per step
+    const steps = planToolExecution(cfg, name, undefined);
     for (const s of steps) {
       if (s.kind === "responses_model" && s.preferModel) {
         return s.preferModel;
@@ -77,9 +64,8 @@ export function pickRequestModel(
   return cfg.defaultModel;
 }
 
-// Return the ordered list of steps for a tool, filtering out steps whose when-clause doesn't match the input
-export function getExecutionPlan(toolName: string, input: unknown): Step[] {
-  const cfg = loadConfig();
+// Create the execution plan (ordered steps) for a given tool and input
+export function planToolExecution(cfg: RoutingConfig, toolName: string, input: unknown): Step[] {
   const rule = cfg.tools?.find((r) => r.enabled !== false && r.name === toolName);
   if (!rule || !rule.steps) return [];
   return rule.steps.filter((step) => matchesWhen(step, input));
@@ -94,8 +80,6 @@ function matchesWhen(step: Step, input: unknown): boolean {
   }
   return true;
 }
-
-// Helpers --------------------------------------------------------------------
 
 function extractToolNames(req: ClaudeMessageCreateParams): string[] {
   const result: string[] = [];
@@ -122,7 +106,7 @@ function extractAction(input: unknown): "preview" | "plan" | "apply" | undefined
   if (typeof input !== "object" || input === null) return undefined;
   const rec = input as Record<string, unknown> & { action?: unknown; dryRun?: unknown };
   const a = rec.action;
-  if (a === "preview" || a === "plan" || a === "apply") return a as any;
+  if (a === "preview" || a === "plan" || a === "apply") return a as "preview" | "plan" | "apply";
   if (rec.dryRun === true) return "preview";
   return undefined;
 }

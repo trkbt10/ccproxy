@@ -1,6 +1,7 @@
 import { appendFile, mkdir } from "node:fs/promises";
 import { join, dirname } from "node:path";
 import { existsSync } from "node:fs";
+import { sanitizeRequestForLogging } from "../security/sanitize-request";
 
 export type LogLevel = "info" | "warn" | "error" | "debug" | "unexpected";
 
@@ -177,8 +178,8 @@ export class EnhancedLogger {
       isError ? "error" : "info",
       "Request/Response",
       {
-        request,
-        response,
+        request: sanitizeRequestForLogging(request),
+        response: sanitizeRequestForLogging(response),
         duration,
       },
       context

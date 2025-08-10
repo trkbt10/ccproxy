@@ -163,7 +163,7 @@ export class StreamHandler {
     return {
       id: this.responseId!,
       object: "response",
-      model: this.model as any, // Model type mismatch between APIs
+      model: (this.model ?? "unknown") as unknown as OpenAIResponse["model"],
       created_at: this.created!,
       output_text: outputText,
       error: null,

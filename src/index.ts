@@ -4,6 +4,7 @@ import type { MessageCreateParams as ClaudeMessageCreateParams } from "@anthropi
 import { countTokens } from "./handlers/token-counter";
 import { checkEnvironmentVariables } from "./config/environment";
 import { createResponseProcessor } from "./handlers/response-processor";
+import { resolveModel } from "./config/model-router";
 
 // Bun automatically loads .env file, but we still check for required variables
 checkEnvironmentVariables();
@@ -138,13 +139,16 @@ app.post("/v1/messages", async (c) => {
   }
 
   // Create and execute the appropriate processor with abort signal
+  const resolvedModel = resolveModel(claudeReq, (name) => c.req.header(name) ?? null);
+
   const processor = createResponseProcessor({
     requestId,
     conversationId,
     openai,
     claudeReq,
     modelResolver: (model) => {
-      return process.env.OPENAI_MODEL ?? "gpt-4.1-mini";
+      // Ignore Claude-provided model and use our router decision
+      return resolvedModel;
     },
     stream,
     signal: abortController.signal, // Pass the abort signal

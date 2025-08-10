@@ -66,7 +66,7 @@ describe("claude-to-openai converter", () => {
     test("throws error for unsupported image source", () => {
       const claudeImage: ImageBlockParam = {
         type: "image",
-        source: { type: "unsupported" } as any,
+        source: { type: "unsupported" } as unknown as Base64ImageSource,
       };
 
       expect(() => convertClaudeImageToOpenAI(claudeImage)).toThrow(

@@ -14,6 +14,9 @@ import { convertToolResult } from "./tool";
 // Tool chain validator removed: mapping-only behavior
 import { logDebug } from "../../../utils/logging/migrate-logger";
 import { UnifiedIdManager as CallIdManager } from "../../../utils/id-management/unified-id-manager";
+import { shouldHandleInternally } from "../../../config/model-router";
+import { findHandler } from "../../../tools/internal/registry";
+import type { ToolResultBlockParam as ClaudeContentBlockToolResult } from "@anthropic-ai/sdk/resources/messages";
 
 /**
  * Convert Claude message to OpenAI input items
@@ -87,34 +90,54 @@ export function convertClaudeMessage(
           stats
         );
 
-        // Find the call_id for this tool_use_id
-        let callId = actualManager.getOpenAICallId(block.id);
-        
-        if (!callId) {
-          // Generate a new OpenAI-style call_id for this tool use
-          // This happens when Claude initiates a tool call that hasn't been through OpenAI yet
-          callId = `call_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`;
-          actualManager.registerMapping(callId, block.id, block.name, { source: "message-conversion-new" });
-          console.log(
-            `[DEBUG] Generated new OpenAI call_id: ${callId} -> ${block.id}`
-          );
-        } else {
-          console.log(
-            `[DEBUG] Found existing call_id ${callId} for tool_use_id ${block.id}`
-          );
-        }
+        const internal = shouldHandleInternally(block.name);
+        if (internal) {
+          // Ensure mapping exists
+          let callId = actualManager.getOpenAICallId(block.id);
+          if (!callId) {
+            callId = `call_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`;
+            actualManager.registerMapping(callId, block.id, block.name, { source: "message-conversion-internal" });
+          }
 
-        // For function_call, we only need call_id, name, and arguments
-        const toolCall: OpenAIResponseFunctionToolCall = {
-          type: "function_call",
-          call_id: callId,
-          name: block.name,
-          arguments: JSON.stringify(block.input),
-        };
-        result.push(toolCall);
-        console.log(
-          `[DEBUG] Created function_call with call_id="${toolCall.call_id}"`
-        );
+          // Execute internally if handler is found
+          const handler = findHandler(block.name);
+          let content: string | object = { status: "skipped", reason: "no_handler" };
+          if (handler) {
+            try {
+              content = handler.execute(block.name, block.input, {});
+            } catch (e) {
+              content = { status: "error", message: (e as Error).message };
+            }
+          }
+
+          const contentValue: string =
+            typeof content === "string" ? content : JSON.stringify(content);
+
+          const tr: ClaudeContentBlockToolResult = {
+            type: "tool_result",
+            tool_use_id: block.id,
+            content: contentValue,
+          };
+          const toolResult = convertToolResult(tr, actualManager);
+          result.push(toolResult);
+          console.log(`[DEBUG] Handled tool_use internally: ${block.name}`);
+        } else {
+          // Model-driven execution path: emit function_call and let next turn provide outputs
+          // Find the call_id for this tool_use_id
+          let callId = actualManager.getOpenAICallId(block.id);
+          if (!callId) {
+            callId = `call_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`;
+            actualManager.registerMapping(callId, block.id, block.name, { source: "message-conversion-new" });
+          }
+          const toolCall: OpenAIResponseFunctionToolCall = {
+            type: "function_call",
+            call_id: callId,
+            name: block.name,
+            arguments: JSON.stringify(block.input),
+          };
+          result.push(toolCall);
+          console.log(`[DEBUG] Emitted function_call for tool: ${block.name}`);
+        }
         break;
 
       case "tool_result":

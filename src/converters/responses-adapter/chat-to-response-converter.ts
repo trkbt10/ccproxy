@@ -40,7 +40,7 @@ export const convertChatCompletionToResponse = (
   return {
     id: completion.id,
     object: "response",
-    model: completion.model as any, // Model type mismatch between APIs
+    model: completion.model as unknown as OpenAIResponse["model"],
     created_at: completion.created,
     output_text: outputText,
     error: null,

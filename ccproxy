@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+ENTRY_DIST="$DIR/dist/cli.js"
+ENTRY_SRC="$DIR/src/cli.ts"
+
+if [[ -f "$ENTRY_DIST" ]]; then
+  exec bun run "$ENTRY_DIST" "$@"
+elif [[ -f "$ENTRY_SRC" ]]; then
+  exec bun run "$ENTRY_SRC" "$@"
+else
+  echo "ccproxy: CLI entry not found. Build with 'bun run build:cli' or run via 'bun run src/cli.ts'." >&2
+  exit 1
+fi
+

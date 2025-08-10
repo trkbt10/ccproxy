@@ -1,0 +1,64 @@
+{
+  "providers": {
+    "default": {
+      "type": "openai",
+      "apiKey": "${OPENAI_API_KEY}",
+      "defaultHeaders": {
+        "OpenAI-Beta": "responses-2025-06-21"
+      }
+    },
+    "openai-gpt4": {
+      "type": "openai",
+      "apiKey": "${OPENAI_API_KEY_GPT4:-${OPENAI_API_KEY}}",
+      "defaultHeaders": {
+        "OpenAI-Beta": "responses-2025-06-21"
+      }
+    },
+    "openai-mini": {
+      "type": "openai",
+      "apiKey": "${OPENAI_API_KEY}",
+      "defaultHeaders": {
+        "OpenAI-Beta": "responses-2025-06-21"
+      }
+    },
+    "openai-custom": {
+      "type": "openai",
+      "baseURL": "${OPENAI_BASE_URL:-https://api.openai.com/v1}",
+      "api": {
+        "keyHeader": "x-openai-key-id",
+        "keys": {
+          "key1": "${OPENAI_API_KEY_1}",
+          "key2": "${OPENAI_API_KEY_2}"
+        },
+        "keyByModelPrefix": {
+          "gpt-4": "${OPENAI_API_KEY_GPT4}",
+          "gpt-3.5": "${OPENAI_API_KEY_GPT35}"
+        }
+      },
+      "defaultHeaders": {
+        "OpenAI-Beta": "responses-2025-06-21"
+      }
+    }
+  },
+  "tools": [
+    {
+      "name": "text_editor",
+      "steps": [
+        { "kind": "internal", "handler": "text_editor", "when": { "actionIn": ["preview", "plan"] } },
+        { "kind": "responses_model", "providerId": "openai-gpt4", "model": "gpt-4.1" }
+      ]
+    },
+    {
+      "name": "bash",
+      "steps": [
+        { "kind": "responses_model", "providerId": "openai-gpt4", "model": "gpt-4.1" }
+      ]
+    },
+    {
+      "name": "web_search",
+      "steps": [
+        { "kind": "responses_model", "providerId": "openai-mini", "model": "gpt-4o-mini" }
+      ]
+    }
+  ]
+}

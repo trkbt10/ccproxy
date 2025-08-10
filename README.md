@@ -43,7 +43,7 @@ None.
 
 ## Sample .env
 
-Example .env (when not using providers in routing.json):
+Example .env (when not using providers in a config file):
 
 ```env
 OPENAI_API_KEY=sk-xxxxxxxxxxxxxxxx   # Optional if providers[*].apiKey is set
@@ -64,9 +64,15 @@ claude messages create ...
 
 ```bash
 bun install
-bun run --env-file=.env ./src/server.ts
-# or use CLI
-bun run src/cli.ts serve --port 8082
+
+# Build CLI (optional; launcher falls back to src/cli.ts if not built)
+bun run build:cli
+
+# Make launcher executable (first time only)
+chmod +x ./ccproxy
+
+# Start server via CLI
+./ccproxy serve --port 8082
 ```
 
 If `config/routing.json` is absent, the server still works using the synthesized `default` provider from environment variables.
@@ -84,13 +90,27 @@ This proxy supports dynamic provider and model routing through a JSON configurat
 
 ### Configuration File
 
-The routing configuration is loaded from `config/routing.json` by default. You can override this location with the `ROUTING_CONFIG_PATH` environment variable.
+Configuration is unified into `ccproxy.config.json`.
+
+Search order:
+- `ROUTING_CONFIG_PATH` (if set)
+- `./ccproxy.config.json`
+- `./config/ccproxy.config.json`
+- `./config/routing.json` (example layout also supported)
+
+Initialize a minimal default config:
+
+```bash
+./ccproxy config init
+# overwrite if it already exists
+./ccproxy config init --force
+```
 
 ### Configuration Structure
 
 ```json
 {
-  "overrideHeader": "x-openai-model",
+  
   "logging": {
     "enabled": true,
     "eventsEnabled": false,
@@ -141,7 +161,6 @@ The routing configuration is loaded from `config/routing.json` by default. You c
 
 ### Configuration Options
 
-- `overrideHeader`: HTTP header name to override the model selection (default: `x-openai-model`)
 - `logging`: Logging configuration
   - `enabled`: Enable file logging (default: true)
   - `eventsEnabled`: Enable verbose streaming event logs (default: false)
@@ -211,31 +230,31 @@ The project provides a simple CLI for starting the server and managing routing c
 Usage:
 
 ```bash
-bun run src/cli.ts serve [--port 8082] [--config ./config/routing.json]
-bun run src/cli.ts config show [--config ./config/routing.json] [--expanded]
-bun run src/cli.ts config list [--config ./config/routing.json]
-bun run src/cli.ts config get <path> [--config ./config/routing.json]
-bun run src/cli.ts config set <path> <value> [--config ./config/routing.json]
+./ccproxy serve [--port 8082] [--config ./config/routing.json]
+./ccproxy config show [--config ./config/routing.json] [--expanded]
+./ccproxy config list [--config ./config/routing.json]
+./ccproxy config get <path> [--config ./config/routing.json]
+./ccproxy config set <path> <value> [--config ./config/routing.json]
 ```
 
 Examples:
 
 ```bash
 # Start server on port 8082
-bun run src/cli.ts serve --port 8082
+./ccproxy serve --port 8082
 
 # Show current config (raw)
-bun run src/cli.ts config show
+./ccproxy config show
 
 # Show expanded config (with env var expansion)
-bun run src/cli.ts config show --expanded
+./ccproxy config show --expanded
 
 # List summary (providers and tools)
-bun run src/cli.ts config list
+./ccproxy config list
 
 # Get a specific value
-bun run src/cli.ts config get providers.default.apiKey
+./ccproxy config get providers.default.apiKey
 
 # Set a specific value (value can be JSON literals: true, false, 123, {"a":1}, "text")
-bun run src/cli.ts config set logging.enabled true
+./ccproxy config set logging.enabled true
 ```

@@ -11,7 +11,8 @@
     "start": "bun run server.ts",
     "start:node": "tsx server.ts",
     "typecheck": "tsc --noEmit",
-    "build": "bun build src/index.ts --outdir dist",
+    "build": "bun build --target=bun src/index.ts src/cli.ts --outdir dist",
+    "build:cli": "bun build --target=bun src/cli.ts --outdir dist",
     "test": "bun test",
     "test:watch": "bun test --watch"
   },

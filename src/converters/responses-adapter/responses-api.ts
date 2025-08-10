@@ -53,10 +53,10 @@ export class ResponsesAPI {
   ): Promise<OpenAIResponse>;
   async create(
     params: ResponseCreateParamsStreaming
-  ): Promise<AsyncIterable<OpenAIResponse>>;
+  ): Promise<AsyncIterable<ResponseStreamEvent>>;
   async create(
     params: ResponseCreateParams
-  ): Promise<OpenAIResponse | AsyncIterable<OpenAIResponse>> {
+  ): Promise<OpenAIResponse | AsyncIterable<ResponseStreamEvent>> {
     
     // Convert ResponseInput to chat messages
     const messages = this.convertInputToMessages(params);
@@ -154,15 +154,14 @@ export class ResponsesAPI {
 
   private async handleStreamingResponse(
     chatParams: OpenAI.Chat.ChatCompletionCreateParams
-  ): Promise<AsyncIterable<OpenAIResponse>> {
+  ): Promise<AsyncIterable<ResponseStreamEvent>> {
     const stream = await this.openai.chat.completions.create({
       ...chatParams,
       stream: true,
     });
 
-    const handler = new StreamHandler(this.callIdMapping);
-    
-    // Return the async generator that yields OpenAIResponse objects
+    const handler = new StreamHandler();
+    // Return the async generator that yields ResponseStreamEvent objects
     return handler.handleStream(stream);
   }
 

@@ -1,8 +1,8 @@
-import { encoding_for_model } from "tiktoken";
+import { getTokenizerForModel } from "../config/models";
 import type { MessageCreateParams as ClaudeMessageCreateParams } from "@anthropic-ai/sdk/resources/messages";
 
 export function countTokens(claudeReq: ClaudeMessageCreateParams): number {
-  const encoder = encoding_for_model("gpt-4o-mini");
+  const encoder = getTokenizerForModel();
 
   let totalText = "";
   if (typeof claudeReq.system === "string") {

@@ -1,63 +1,146 @@
-import type { 
-  OpenAIResponse,
-  ResponseOutputItem,
-  ResponseOutputMessage,
-  ResponseFunctionToolCall,
-  ResponseOutputText,
+import type {
+  ResponseCreatedEvent,
+  ResponseTextDeltaEvent,
+  ResponseTextDoneEvent,
+  ResponseFunctionCallArgumentsDeltaEvent,
+  ResponseOutputItemAddedEvent,
+  ResponseOutputItemDoneEvent,
+  ResponseCompletedEvent,
+} from "openai/resources/responses/responses";
+import type {
   ResponseStreamEvent,
   ChatCompletionChunk,
-  StreamChunkData,
-  ToolCall
+  OpenAIResponse,
+  ResponseOutputItem,
+  ResponseFunctionToolCall,
+  ChatCompletionMessageToolCall,
 } from "./types";
 
 export class StreamHandler {
-  private callIdMapping: Map<string, string>;
   private responseId: string | undefined;
   private model: string | undefined;
   private created: number | undefined;
-  private accumulatedContent: string = "";
-  private currentToolCall: ToolCall | undefined;
-  private inputTokens: number = 0;
-  private outputTokens: number = 0;
+  private currentFunctionItemId: string | undefined;
+  private currentFunctionCallId: string | undefined;
+  private textItemId: string | undefined;
+  private sequenceNumber = 0;
+  private outputIndex = 0;
+  private contentIndex = 0;
+  private accumulatedText = "";
 
-  constructor(callIdMapping: Map<string, string>) {
-    this.callIdMapping = callIdMapping;
-  }
+  constructor() {}
 
   async *handleStream(
     stream: AsyncIterable<ChatCompletionChunk>
-  ): AsyncGenerator<OpenAIResponse, void, unknown> {
+  ): AsyncGenerator<ResponseStreamEvent, void, unknown> {
     for await (const chunk of stream) {
       yield* this.processChunk(chunk);
     }
   }
 
-  private *processChunk(chunk: ChatCompletionChunk): Generator<OpenAIResponse, void, unknown> {
-    // Initialize metadata on first chunk
+  private *processChunk(chunk: ChatCompletionChunk): Generator<ResponseStreamEvent, void, unknown> {
     if (!this.responseId) {
       this.initializeMetadata(chunk);
+      const response: OpenAIResponse = {
+        id: this.responseId!,
+        created_at: this.created!,
+        output_text: "",
+        error: null,
+        incomplete_details: null,
+        instructions: null,
+        metadata: null,
+        model: (this.model || "unknown"),
+        object: "response",
+        output: [],
+        parallel_tool_calls: true,
+        temperature: null,
+        tool_choice: "auto",
+        tools: [],
+        top_p: null,
+        status: "in_progress",
+      };
+      const created: ResponseCreatedEvent = { type: 'response.created', response, sequence_number: this.nextSeq() };
+      yield created as ResponseStreamEvent;
     }
-
-    // Update token counts if available
-    this.updateTokenCounts(chunk);
 
     const delta = chunk.choices[0]?.delta;
     if (!delta) return;
 
-    // Handle content delta
-    if (delta.content) {
-      yield* this.handleContentDelta(delta.content);
+    if (typeof delta.content === "string" && delta.content.length > 0) {
+      if (!this.textItemId) this.textItemId = this.generateId('msg');
+      const deltaEv: ResponseTextDeltaEvent = {
+        type: 'response.output_text.delta',
+        delta: delta.content,
+        item_id: this.textItemId,
+        output_index: this.outputIndex,
+        content_index: this.contentIndex,
+        logprobs: [],
+        sequence_number: this.nextSeq(),
+      };
+      this.accumulatedText += delta.content;
+      yield deltaEv as ResponseStreamEvent;
     }
 
-    // Handle tool calls
-    if (delta.tool_calls) {
-      yield* this.handleToolCallsDelta(delta.tool_calls);
+    if (Array.isArray(delta.tool_calls) && delta.tool_calls.length > 0) {
+      yield* this.handleToolCallsDelta(delta.tool_calls as Array<ChatCompletionMessageToolCall>);
     }
 
-    // Handle finish reason
     const finishReason = chunk.choices[0]?.finish_reason;
     if (finishReason) {
-      yield* this.handleFinish(finishReason);
+      if (this.currentFunctionItemId) {
+        const doneItem: ResponseOutputItem = ({
+          type: 'function_call',
+          id: this.currentFunctionItemId!,
+          name: '',
+          call_id: this.currentFunctionCallId!,
+          arguments: '',
+        } as ResponseFunctionToolCall & { id: string }) as ResponseOutputItem;
+        const doneEv: ResponseOutputItemDoneEvent = {
+          type: 'response.output_item.done',
+          item: doneItem,
+          output_index: this.outputIndex,
+          sequence_number: this.nextSeq(),
+        };
+        yield doneEv as ResponseStreamEvent;
+        this.currentFunctionItemId = undefined;
+        this.currentFunctionCallId = undefined;
+      }
+      if (this.textItemId) {
+        const textDone: ResponseTextDoneEvent = {
+          type: 'response.output_text.done',
+          item_id: this.textItemId,
+          output_index: this.outputIndex,
+          content_index: this.contentIndex,
+          logprobs: [],
+          sequence_number: this.nextSeq(),
+          text: this.accumulatedText,
+        };
+        yield textDone as ResponseStreamEvent;
+      }
+      const finalResponse: OpenAIResponse = {
+        id: this.responseId!,
+        created_at: this.created!,
+        output_text: this.accumulatedText,
+        error: null,
+        incomplete_details: finishReason === 'length' ? { reason: 'max_output_tokens' } : null,
+        instructions: null,
+        metadata: null,
+        model: (this.model || 'unknown'),
+        object: 'response',
+        output: [],
+        parallel_tool_calls: true,
+        temperature: null,
+        tool_choice: 'auto',
+        tools: [],
+        top_p: null,
+        status: finishReason === 'length' ? 'incomplete' : 'completed',
+      };
+      const completed: ResponseCompletedEvent = {
+        type: 'response.completed',
+        response: finalResponse,
+        sequence_number: this.nextSeq(),
+      };
+      yield completed as ResponseStreamEvent;
     }
   }
 
@@ -67,140 +150,56 @@ export class StreamHandler {
     this.created = chunk.created;
   }
 
-  private updateTokenCounts(chunk: ChatCompletionChunk): void {
-    if (chunk.usage) {
-      this.inputTokens = chunk.usage.prompt_tokens ?? this.inputTokens;
-      this.outputTokens = chunk.usage.completion_tokens ?? this.outputTokens;
-    }
-  }
-
-  private *handleContentDelta(content: string): Generator<OpenAIResponse, void, unknown> {
-    this.accumulatedContent += content;
-    
-    const textOutput: ResponseOutputText = {
-      type: "output_text",
-      text: content,
-      annotations: [],
-    };
-
-    const messageOutput: ResponseOutputMessage = {
-      type: "message",
-      id: this.generateId("msg"),
-      content: [textOutput],
-      role: "assistant",
-      status: "completed",
-    };
-
-    yield this.createResponse([messageOutput], "completed");
-  }
-
-  private *handleToolCallsDelta(
-    toolCallDeltas: Array<any>
-  ): Generator<OpenAIResponse, void, unknown> {
-    for (const toolCallDelta of toolCallDeltas) {
-      if (toolCallDelta.id) {
-        // Start of a new tool call
-        if (this.currentToolCall) {
-          // Yield the previous tool call
-          yield this.createToolCallResponse(this.currentToolCall);
+  private *handleToolCallsDelta(toolCallDeltas: Array<ChatCompletionMessageToolCall>): Generator<ResponseStreamEvent, void, unknown> {
+    for (const t of toolCallDeltas) {
+      if (t.id && (!this.currentFunctionCallId || this.currentFunctionCallId !== t.id)) {
+        if (this.currentFunctionItemId) {
+        const doneItem: ResponseOutputItem = ({
+          type: 'function_call',
+          id: this.currentFunctionItemId!,
+          name: '',
+          call_id: this.currentFunctionCallId!,
+          arguments: '',
+        } as ResponseFunctionToolCall & { id: string }) as ResponseOutputItem;
+          const doneEv: ResponseOutputItemDoneEvent = {
+            type: 'response.output_item.done',
+            item: doneItem,
+            output_index: this.outputIndex,
+            sequence_number: this.nextSeq(),
+          };
+          yield doneEv as ResponseStreamEvent;
         }
-
-        const toolUseId = this.generateId("toolu");
-        this.callIdMapping.set(toolCallDelta.id, toolUseId);
-
-        this.currentToolCall = {
-          id: toolUseId,
-          call_id: toolCallDelta.id,
-          name: toolCallDelta.function?.name ?? "",
-          arguments: toolCallDelta.function?.arguments ?? "",
+        this.currentFunctionCallId = t.id;
+        this.currentFunctionItemId = this.generateId('fc');
+        const name = t.type === 'function' ? (t.function?.name ?? '') : '';
+        const args = t.type === 'function' ? (t.function?.arguments ?? '') : '';
+        const item: ResponseFunctionToolCall & { id: string } = {
+          type: 'function_call',
+          id: this.currentFunctionItemId,
+          name,
+          call_id: t.id,
+          arguments: args,
         };
-      } else if (this.currentToolCall && toolCallDelta.function) {
-        // Accumulate tool call data
-        if (toolCallDelta.function.name) {
-          this.currentToolCall.name += toolCallDelta.function.name;
-        }
-        if (toolCallDelta.function.arguments) {
-          this.currentToolCall.arguments += toolCallDelta.function.arguments;
-        }
+        const addedEv: ResponseOutputItemAddedEvent = {
+          type: 'response.output_item.added',
+          item: item as ResponseOutputItem,
+          output_index: this.outputIndex,
+          sequence_number: this.nextSeq(),
+        };
+        yield addedEv as ResponseStreamEvent;
+      }
+      const args = t.type === 'function' ? t.function?.arguments : undefined;
+      if (typeof args === 'string' && args.length > 0 && this.currentFunctionItemId) {
+        const argsEv: ResponseFunctionCallArgumentsDeltaEvent = {
+          type: 'response.function_call_arguments.delta',
+          item_id: this.currentFunctionItemId,
+          output_index: this.outputIndex,
+          sequence_number: this.nextSeq(),
+          delta: args,
+        };
+        yield argsEv as ResponseStreamEvent;
       }
     }
-  }
-
-  private *handleFinish(finishReason: string): Generator<OpenAIResponse, void, unknown> {
-    // Yield any pending tool call
-    if (this.currentToolCall) {
-      yield this.createToolCallResponse(this.currentToolCall);
-      this.currentToolCall = undefined;
-    }
-
-    // Determine final status
-    const status = finishReason === "length" ? "incomplete" : "completed";
-    const incompleteDetails = finishReason === "length" 
-      ? { reason: "max_output_tokens" as const } 
-      : undefined;
-
-    // Send final response with status
-    yield this.createResponse([], status, incompleteDetails);
-  }
-
-  private createResponse(
-    output: ResponseOutputItem[],
-    status: "completed" | "incomplete",
-    incompleteDetails?: { reason: "max_output_tokens" }
-  ): OpenAIResponse {
-    // Build the text content from output items
-    const outputText = output
-      .filter(item => item.type === "message")
-      .map(item => {
-        const msgItem = item as ResponseOutputMessage;
-        return msgItem.content
-          .filter(c => 'text' in c)
-          .map(c => (c as ResponseOutputText).text)
-          .join("");
-      })
-      .join("");
-
-    return {
-      id: this.responseId!,
-      object: "response",
-      model: (this.model ?? "unknown") as unknown as OpenAIResponse["model"],
-      created_at: this.created!,
-      output_text: outputText,
-      error: null,
-      incomplete_details: incompleteDetails ?? null,
-      instructions: null,
-      metadata: null,
-      output,
-      parallel_tool_calls: true,
-      temperature: null,
-      tool_choice: "auto",
-      tools: [],
-      top_p: null,
-      usage: {
-        input_tokens: this.inputTokens,
-        output_tokens: this.outputTokens,
-        total_tokens: this.inputTokens + this.outputTokens,
-        input_tokens_details: {
-          cached_tokens: 0,
-        },
-        output_tokens_details: {
-          reasoning_tokens: 0,
-        },
-      },
-      status,
-    };
-  }
-
-  private createToolCallResponse(toolCall: ToolCall): OpenAIResponse {
-    const functionCall: ResponseFunctionToolCall = {
-      type: "function_call",
-      id: toolCall.id,
-      call_id: toolCall.call_id,
-      name: toolCall.name,
-      arguments: toolCall.arguments,
-    };
-
-    return this.createResponse([functionCall], "completed");
   }
 
   private generateId(prefix: string): string {
@@ -208,13 +207,21 @@ export class StreamHandler {
     return `${prefix}_${randomPart}`;
   }
 
+  private nextSeq(): number {
+    this.sequenceNumber += 1;
+    return this.sequenceNumber;
+  }
+
   reset(): void {
     this.responseId = undefined;
     this.model = undefined;
     this.created = undefined;
-    this.accumulatedContent = "";
-    this.currentToolCall = undefined;
-    this.inputTokens = 0;
-    this.outputTokens = 0;
+    this.currentFunctionItemId = undefined;
+    this.currentFunctionCallId = undefined;
+    this.textItemId = undefined;
+    this.sequenceNumber = 0;
+    this.outputIndex = 0;
+    this.contentIndex = 0;
+    this.accumulatedText = "";
   }
 }

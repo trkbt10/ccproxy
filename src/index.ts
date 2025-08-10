@@ -3,8 +3,8 @@ import type { MessageCreateParams as ClaudeMessageCreateParams } from "@anthropi
 import { countTokens } from "./handlers/token-counter";
 import { checkEnvironmentVariables } from "./config/environment";
 import { createResponseProcessor } from "./handlers/response-processor";
-import { selectModelForRequest } from "./execution/tool-model-planner";
-import { loadRoutingConfigOnce, buildOpenAIClientForRequest } from "./execution/routing-config";
+import { selectProviderForRequest } from "./execution/tool-model-planner";
+import { loadRoutingConfigOnce, buildProviderClient } from "./execution/routing-config";
 import { requestIdMiddleware } from "./middleware/request-id";
 import { clientDisconnectMiddleware } from "./middleware/client-disconnect";
 
@@ -97,17 +97,23 @@ app.post("/v1/messages", async (c) => {
   // Create and execute the appropriate processor with abort signal from middleware
   const routingConfig = await routingConfigPromise;
 
-  const resolvedModel = selectModelForRequest(
+  const providerSelection = selectProviderForRequest(
     routingConfig,
     claudeReq,
     (name) => c.req.header(name) ?? null
   );
 
-  // Build an OpenAI client for this request (supports API key switching)
-  const openai = buildOpenAIClientForRequest(
-    routingConfig,
+  const provider = routingConfig.providers?.[providerSelection.providerId];
+  
+  if (!provider && providerSelection.providerId !== "default") {
+    throw new Error(`Provider '${providerSelection.providerId}' not found`);
+  }
+
+  // Build provider client for this request (supports API key switching)
+  const openai = buildProviderClient(
+    provider,
     (name) => c.req.header(name) ?? null,
-    resolvedModel
+    providerSelection.model
   );
 
   const processor = createResponseProcessor({
@@ -115,8 +121,9 @@ app.post("/v1/messages", async (c) => {
     conversationId,
     openai,
     claudeReq,
-    model: resolvedModel,
+    model: providerSelection.model,
     routingConfig: routingConfig,
+    providerId: providerSelection.providerId,
     stream,
     signal: abortController.signal, // Pass the abort signal
   });
@@ -148,8 +155,10 @@ app.post("/v1/messages/count_tokens", async (c) => {
 // テスト接続エンドポイント
 app.get("/test-connection", async (c) => {
   const routingConfig = await routingConfigPromise;
-  const openai = buildOpenAIClientForRequest(
-    routingConfig,
+  // Use default provider for test connection
+  const defaultProvider = routingConfig.providers?.["default"];
+  const openai = buildProviderClient(
+    defaultProvider,
     (name) => c.req.header(name) ?? null
   );
   // OpenAI APIの簡単なテスト

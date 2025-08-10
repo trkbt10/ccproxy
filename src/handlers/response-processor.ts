@@ -30,6 +30,7 @@ export type ProcessorConfig = {
   stream: boolean;
   signal?: AbortSignal; // Support for request cancellation
   routingConfig?: RoutingConfig;
+  providerId?: string;
 };
 
 export type ProcessorResult = {
@@ -239,7 +240,8 @@ export const createResponseProcessor = (config: ProcessorConfig) => {
     () => config.model,
     manager,
     context.lastResponseId,
-    config.routingConfig
+    config.routingConfig,
+    config.providerId
   );
 
   // Session-use semantics: drop mappings that were consumed while building this request

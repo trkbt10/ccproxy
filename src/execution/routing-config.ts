@@ -1,7 +1,8 @@
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 import OpenAI from "openai";
-import type { RoutingConfig } from "./tool-model-planner";
+import type { RoutingConfig, Provider } from "./tool-model-planner";
+import { expandConfig } from "../utils/config-expansion";
 
 let cachedConfig: RoutingConfig | null = null;
 let loadingPromise: Promise<RoutingConfig> | null = null;
@@ -17,14 +18,16 @@ export async function loadRoutingConfigOnce(): Promise<RoutingConfig> {
         path.join(process.cwd(), "config", "routing.json");
       const raw = await readFile(configPath, "utf8");
       const json = JSON.parse(raw) as RoutingConfig;
-      cachedConfig = json;
-      return json;
+      // Expand environment variables in the config
+      const expanded = expandConfig(json);
+
+      // Ensure a "default" provider exists by synthesizing from env when missing
+      const ensured = ensureDefaultProvider(expanded);
+      cachedConfig = ensured;
+      return ensured;
     } catch {
-      const fallback: RoutingConfig = {
-        defaultModel: process.env.OPENAI_MODEL || "gpt-4.1-mini",
-        overrideHeader: "x-openai-model",
-        tools: [],
-      };
+      // Fallback when no config file exists - empty providers
+      const fallback: RoutingConfig = ensureDefaultProvider({ tools: [] });
       cachedConfig = fallback;
       return fallback;
     } finally {
@@ -39,68 +42,112 @@ export function getRoutingConfigCache(): RoutingConfig | null {
   return cachedConfig;
 }
 
+function synthesizeDefaultProviderFromEnv(): Provider {
+  const baseURL = process.env.OPENAI_BASE_URL;
+  const apiKey = process.env.OPENAI_API_KEY;
+  const provider: Provider = {
+    type: "openai",
+    // Only set baseURL if provided to avoid overriding SDK default
+    ...(baseURL ? { baseURL } : {}),
+    // Include apiKey if available; buildProviderClient will also fallback to env
+    ...(apiKey ? { apiKey } : {}),
+    defaultHeaders: {
+      "OpenAI-Beta": "responses-2025-06-21",
+    },
+  };
+  return provider;
+}
+
+function ensureDefaultProvider(cfg: RoutingConfig): RoutingConfig {
+  const result: RoutingConfig = { ...cfg };
+  const providers = { ...(cfg.providers || {}) } as Record<string, Provider>;
+  if (!providers["default"]) {
+    providers["default"] = synthesizeDefaultProviderFromEnv();
+  }
+  result.providers = providers;
+  return result;
+}
+
 function resolveApiKeyFromHeader(
-  cfg: RoutingConfig,
+  provider: Provider,
   getHeader: (name: string) => string | null
 ): string | null {
-  const apiKeyDirect = getHeader("x-openai-api-key");
-  if (apiKeyDirect) return apiKeyDirect;
-
-  const keyIdHeader = cfg.openai?.apiKeyHeader;
+  const keyIdHeader = provider.api?.keyHeader;
   if (!keyIdHeader) return null;
   const id = getHeader(keyIdHeader);
   if (!id) return null;
-  const envName = cfg.openai?.apiKeys?.[id];
-  if (!envName) return null;
-  return process.env[envName] ?? null;
+  const apiKey = provider.api?.keys?.[id];
+  return apiKey ?? null;
 }
 
 function resolveApiKeyByModelPrefix(
-  cfg: RoutingConfig,
+  provider: Provider,
   modelHint?: string
 ): string | null {
   if (!modelHint) return null;
-  const mapping = cfg.openai?.apiKeyByModelPrefix;
+  const mapping = provider.api?.keyByModelPrefix;
   if (!mapping) return null;
   // Check longest matching prefix first for determinism
   const entries = Object.entries(mapping).sort((a, b) => b[0].length - a[0].length);
-  for (const [prefix, envName] of entries) {
+  for (const [prefix, apiKey] of entries) {
     if (modelHint.startsWith(prefix)) {
-      const key = process.env[envName];
-      if (key) return key;
+      return apiKey;
     }
   }
   return null;
 }
 
-export function buildOpenAIClientForRequest(
-  cfg: RoutingConfig,
+export function buildProviderClient(
+  provider: Provider | undefined,
   getHeader: (name: string) => string | null,
   modelHint?: string
 ): OpenAI {
-  // Choose API key in the following order:
-  // 1) x-openai-api-key header (direct)
-  // 2) apiKeyHeader + id -> cfg.openai.apiKeys[id] -> env var
-  // 3) apiKeyByModelPrefix match -> env var
-  // 4) process.env.OPENAI_API_KEY
-  const keyFromHeader = resolveApiKeyFromHeader(cfg, getHeader);
-  const keyFromModel = resolveApiKeyByModelPrefix(cfg, modelHint);
+  // If no provider is defined, it means providers config doesn't exist
+  // Fall back to environment variables
+  if (!provider) {
+    const apiKey = process.env.OPENAI_API_KEY;
+    if (!apiKey) {
+      throw new Error(
+        "No OpenAI API key available. Provide OPENAI_API_KEY environment variable or configure providers."
+      );
+    }
+    
+    return new OpenAI({
+      apiKey,
+      defaultHeaders: {
+        "OpenAI-Beta": "responses-2025-06-21",
+      },
+    });
+  }
 
-  const apiKey = keyFromHeader || keyFromModel || process.env.OPENAI_API_KEY || null;
+  if (provider.type !== "openai") {
+    throw new Error(`Provider type '${provider.type}' is not supported yet`);
+  }
+
+  // Choose API key in the following order (all from configuration/ENV):
+  // 1) provider.apiKey (direct from config)
+  // 2) apiKeyHeader + id -> provider.api.keys[id]
+  // 3) apiKeyByModelPrefix match
+  // 4) process.env.OPENAI_API_KEY (as ultimate fallback)
+  const keyFromProvider = provider.apiKey;
+  const keyFromApiHeader = resolveApiKeyFromHeader(provider, getHeader);
+  const keyFromModel = resolveApiKeyByModelPrefix(provider, modelHint);
+
+  const apiKey = keyFromProvider || keyFromApiHeader || keyFromModel || process.env.OPENAI_API_KEY || null;
   if (!apiKey) {
     throw new Error(
-      "No OpenAI API key available. Provide OPENAI_API_KEY or configure routingConfig.openai."
+      "No OpenAI API key available. Configure provider apiKey or provide OPENAI_API_KEY environment variable."
     );
   }
 
-  // Merge headers: ensure Responses API beta header is present by default
-  const defaultHeaders: Record<string, string> = {
-    "OpenAI-Beta": "responses-2025-06-21",
-    ...(cfg.openai?.defaultHeaders || {}),
+  const options: ConstructorParameters<typeof OpenAI>[0] = {
+    apiKey,
+    defaultHeaders: provider.defaultHeaders,
   };
 
-  return new OpenAI({
-    apiKey,
-    defaultHeaders,
-  });
+  if (provider.baseURL) {
+    options.baseURL = provider.baseURL;
+  }
+
+  return new OpenAI(options);
 }

@@ -11,7 +11,117 @@ import { convertClaudeMessage } from "./message";
 import { convertClaudeToolToOpenAI } from "./tool";
 import { createWebSearchPreviewDefinition } from "./tool-definitions";
 import { UnifiedIdManager as CallIdManager } from "../../../utils/id-management/unified-id-manager";
-import type { RoutingConfig } from "../../../execution/tool-model-planner";
+import type { RoutingConfig, InstructionConfig, PatternReplacement } from "../../../execution/tool-model-planner";
+import { logDebug } from "../../../utils/logging/migrate-logger";
+
+/**
+ * Apply instruction modifications to the system prompt
+ * Applies both global and provider-specific instructions in order
+ */
+function applyInstructionModifications(
+  originalInstructions: string | undefined,
+  globalInstruction: InstructionConfig | undefined,
+  providerInstruction: InstructionConfig | undefined
+): string | undefined {
+  let instructions = originalInstructions;
+  
+  // First apply global instruction if present
+  if (globalInstruction) {
+    instructions = applyInstructionModification(instructions, globalInstruction, "global");
+  }
+  
+  // Then apply provider-specific instruction if present
+  if (providerInstruction) {
+    instructions = applyInstructionModification(instructions, providerInstruction, "provider");
+  }
+  
+  return instructions;
+}
+
+/**
+ * Apply pattern replacements to text
+ */
+function applyPatternReplacements(
+  text: string,
+  patterns: PatternReplacement[]
+): string {
+  let result = text;
+  
+  for (const pattern of patterns) {
+    try {
+      const regex = new RegExp(pattern.regex, 'gm');
+      const before = result;
+      result = result.replace(regex, pattern.replace);
+      
+      if (before !== result) {
+        logDebug(
+          "Applied pattern replacement",
+          { 
+            pattern: pattern.regex,
+            replacedLength: before.length - result.length + pattern.replace.length
+          }
+        );
+      }
+    } catch (error) {
+      logDebug(
+        "Invalid regex pattern",
+        { 
+          pattern: pattern.regex,
+          error: error instanceof Error ? error.message : String(error)
+        }
+      );
+    }
+  }
+  
+  return result;
+}
+
+/**
+ * Apply a single instruction modification
+ */
+function applyInstructionModification(
+  originalInstructions: string | undefined,
+  instructionConfig: InstructionConfig,
+  source: string
+): string | undefined {
+  const { text, mode, patterns } = instructionConfig;
+  
+  logDebug(
+    `Applying ${source} instruction modification`,
+    { 
+      mode, 
+      originalLength: originalInstructions?.length || 0,
+      hasText: !!text,
+      hasPatterns: !!patterns?.length
+    }
+  );
+  
+  switch (mode) {
+    case "override":
+      return text || "";
+    
+    case "append":
+      if (!text) return originalInstructions;
+      return originalInstructions 
+        ? `${originalInstructions}\n\n${text}`
+        : text;
+    
+    case "prepend":
+      if (!text) return originalInstructions;
+      return originalInstructions
+        ? `${text}\n\n${originalInstructions}`
+        : text;
+    
+    case "replace":
+      if (!patterns || patterns.length === 0) {
+        return originalInstructions;
+      }
+      return applyPatternReplacements(originalInstructions || "", patterns);
+    
+    default:
+      return originalInstructions;
+  }
+}
 
 /**
  * Convert Claude request to OpenAI Responses API request
@@ -21,12 +131,27 @@ export function claudeToResponses(
   modelResolver: (model: ClaudeModel) => OpenAIResponseModel,
   callIdManager: CallIdManager,
   previousResponseId?: string,
-  routingConfig?: RoutingConfig
+  routingConfig?: RoutingConfig,
+  providerId?: string
 ): OpenAIResponses.ResponseCreateParams {
   const model: OpenAIResponseModel = modelResolver(req.model);
-  const instructions = Array.isArray(req.system)
+  
+  // Extract system instructions from Claude request
+  const originalInstructions = Array.isArray(req.system)
     ? req.system.map((b) => b.text).join("\n\n")
     : req.system ?? undefined;
+  
+  // Get provider-specific instruction if available
+  const providerInstruction = providerId && routingConfig?.providers?.[providerId]?.instruction
+    ? routingConfig.providers[providerId].instruction
+    : undefined;
+  
+  // Apply instruction modifications (global first, then provider-specific)
+  const instructions = applyInstructionModifications(
+    originalInstructions,
+    routingConfig?.instruction,
+    providerInstruction
+  );
 
   let input: OpenAIResponses.ResponseInputItem[] = [];
 

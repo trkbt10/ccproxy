@@ -39,18 +39,22 @@ export class EnhancedLogger {
   ) {
     this.enabled = enabled;
     this.debugEnabled = debugEnabled;
-    
+
     const timestamp = new Date();
     const dateStr = `${timestamp.getFullYear()}-${String(
       timestamp.getMonth() + 1
     ).padStart(2, "0")}-${String(timestamp.getDate()).padStart(2, "0")}`;
-    
+
     // Separate log files for different categories
     this.normalLogPath = join(logDir, "normal", `events-${dateStr}.jsonl`);
     this.errorLogPath = join(logDir, "errors", `errors-${dateStr}.jsonl`);
-    this.unexpectedLogPath = join(logDir, "unexpected", `unexpected-${dateStr}.jsonl`);
+    this.unexpectedLogPath = join(
+      logDir,
+      "unexpected",
+      `unexpected-${dateStr}.jsonl`
+    );
     this.debugLogPath = join(logDir, "debug", `debug-${dateStr}.jsonl`);
-    
+
     // Ensure directories exist
     this.ensureDirectories();
   }
@@ -62,7 +66,7 @@ export class EnhancedLogger {
       dirname(this.unexpectedLogPath),
       dirname(this.debugLogPath),
     ];
-    
+
     for (const dir of dirs) {
       if (!existsSync(dir)) {
         try {
@@ -96,19 +100,26 @@ export class EnhancedLogger {
    */
   error(message: string, error?: Error | any, context?: LogContext): void {
     if (!this.enabled) return;
-    
+
     // Skip LLM execution errors (rate limits, timeouts, etc.)
     if (this.isLLMExecutionError(error)) {
-      this.debug("LLM execution error (skipped)", { error: error?.message }, context);
+      this.debug(
+        "LLM execution error (skipped)",
+        { error: error?.message },
+        context
+      );
       return;
     }
-    
-    const errorData = error instanceof Error ? {
-      message: error.message,
-      stack: error.stack,
-      name: error.name,
-    } : error;
-    
+
+    const errorData =
+      error instanceof Error
+        ? {
+            message: error.message,
+            stack: error.stack,
+            name: error.name,
+          }
+        : error;
+
     this.writeLog(this.errorLogPath, "error", message, errorData, context);
   }
 
@@ -118,17 +129,21 @@ export class EnhancedLogger {
    */
   unexpected(behavior: UnexpectedBehavior, context?: LogContext): void {
     if (!this.enabled) return;
-    
+
     const data = {
       ...behavior,
       timestamp: new Date().toISOString(),
       context: { ...behavior.context, ...context },
     };
-    
-    this.writeLog(this.unexpectedLogPath, "unexpected", 
-      `Unexpected: Expected ${behavior.expected} but got ${behavior.actual}`, 
-      data, context);
-    
+
+    this.writeLog(
+      this.unexpectedLogPath,
+      "unexpected",
+      `Unexpected: Expected ${behavior.expected} but got ${behavior.actual}`,
+      data,
+      context
+    );
+
     // Also log to console in development
     if (this.debugEnabled) {
       console.warn("[UNEXPECTED]", behavior);
@@ -153,15 +168,21 @@ export class EnhancedLogger {
     context?: LogContext
   ): void {
     if (!this.enabled) return;
-    
+
     const isError = response?.error || response?.status >= 400;
     const logPath = isError ? this.errorLogPath : this.normalLogPath;
-    
-    this.writeLog(logPath, isError ? "error" : "info", "Request/Response", {
-      request,
-      response,
-      duration,
-    }, context);
+
+    this.writeLog(
+      logPath,
+      isError ? "error" : "info",
+      "Request/Response",
+      {
+        request,
+        response,
+        duration,
+      },
+      context
+    );
   }
 
   /**
@@ -174,15 +195,18 @@ export class EnhancedLogger {
     error: string,
     context?: LogContext
   ): void {
-    this.unexpected({
-      expected: `Successful conversion from ${from} to ${to}`,
-      actual: error,
-      context: {
-        from,
-        to,
-        input,
+    this.unexpected(
+      {
+        expected: `Successful conversion from ${from} to ${to}`,
+        actual: error,
+        context: {
+          from,
+          to,
+          input,
+        },
       },
-    }, context);
+      context
+    );
   }
 
   /**
@@ -190,7 +214,7 @@ export class EnhancedLogger {
    */
   private isLLMExecutionError(error: any): boolean {
     if (!error) return false;
-    
+
     const message = error.message?.toLowerCase() || "";
     const llmErrors = [
       "rate limit",
@@ -204,8 +228,8 @@ export class EnhancedLogger {
       "503 service unavailable",
       "429 too many requests",
     ];
-    
-    return llmErrors.some(err => message.includes(err));
+
+    return llmErrors.some((err) => message.includes(err));
   }
 
   /**
@@ -234,7 +258,10 @@ export class EnhancedLogger {
           await appendFile(logPath, JSON.stringify(logEntry) + "\n");
         } catch (error) {
           // Only log to console, don't disrupt main flow
-          console.error(`[EnhancedLogger] Failed to write to ${logPath}:`, error);
+          console.error(
+            `[EnhancedLogger] Failed to write to ${logPath}:`,
+            error
+          );
         }
       })
       .catch(() => {
@@ -245,7 +272,11 @@ export class EnhancedLogger {
   /**
    * Utility to capture current state for debugging
    */
-  captureState(label: string, state: Record<string, any>, context?: LogContext): void {
+  captureState(
+    label: string,
+    state: Record<string, any>,
+    context?: LogContext
+  ): void {
     this.debug(`State capture: ${label}`, state, context);
   }
 
@@ -263,9 +294,13 @@ export class EnhancedLogger {
       duration,
       metadata,
     };
-    
+
     if (duration > 5000) {
-      this.warn(`Slow operation: ${operation} took ${duration}ms`, data, context);
+      this.warn(
+        `Slow operation: ${operation} took ${duration}ms`,
+        data,
+        context
+      );
     } else {
       this.info(`Performance: ${operation}`, data, context);
     }
@@ -284,8 +319,3 @@ export function getLogger(): EnhancedLogger {
   }
   return logger;
 }
-
-/**
- * Alias for getLogger for backward compatibility
- */
-export const getEnhancedLogger = getLogger;

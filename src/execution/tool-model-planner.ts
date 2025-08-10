@@ -13,7 +13,8 @@ export type InternalStep = {
 
 export type ResponsesModelStep = {
   kind: "responses_model";
-  preferModel?: string;
+  providerId?: string;
+  model?: string;
 };
 
 export type Step = InternalStep | ResponsesModelStep;
@@ -24,44 +25,68 @@ export type ToolRule = {
   steps: Step[];
 };
 
-export type OpenAIClientConfig = {
-  // Extra headers to send to OpenAI
+export type Provider = {
+  type: "openai" | "claude" | "gemini";
+  baseURL?: string;
+  apiKey?: string;
+  api?: {
+    keys?: Record<string, string>;
+    keyHeader?: string;
+    keyByModelPrefix?: Record<string, string>;
+  };
   defaultHeaders?: Record<string, string>;
-  // Header name that carries an API key identifier (e.g., "x-openai-key-id")
-  apiKeyHeader?: string;
-  // Map from key-id to environment variable name that stores the actual key
-  apiKeys?: Record<string, string>;
-  // Map from model prefix to environment variable name for the API key
-  apiKeyByModelPrefix?: Record<string, string>;
+  instruction?: InstructionConfig;
+};
+
+export type PatternReplacement = {
+  regex: string;
+  replace: string;
+};
+
+export type InstructionConfig = {
+  text?: string;
+  mode: "override" | "append" | "prepend" | "replace";
+  patterns?: PatternReplacement[]; // Only used when mode is "replace"
 };
 
 export type RoutingConfig = {
-  defaultModel: string;
-  overrideHeader?: string;
+  providers?: Record<string, Provider>;
   tools?: ToolRule[];
-  // Optional OpenAI client configuration and API key routing
-  openai?: OpenAIClientConfig;
+  instruction?: InstructionConfig;
 };
 
-// Select the OpenAI model for the current request
-export function selectModelForRequest(
+// Select the provider and model for the current request
+export function selectProviderForRequest(
   cfg: RoutingConfig,
   req: ClaudeMessageCreateParams,
   getHeader: (name: string) => string | null
-): string {
-  const override = getHeader(cfg.overrideHeader || "x-openai-model");
-  if (override && override.trim()) return override.trim();
-
+): { providerId: string; model: string } {
+  const overrideModel = getHeader("x-openai-model");
+  
+  // Check tool-specific provider settings
   const toolNames = extractToolNames(req);
   for (const name of toolNames) {
     const steps = planToolExecution(cfg, name, undefined);
     for (const s of steps) {
-      if (s.kind === "responses_model" && s.preferModel) {
-        return s.preferModel;
+      if (s.kind === "responses_model") {
+        const providerId = s.providerId || "default";
+        const model = overrideModel || s.model || process.env.OPENAI_MODEL || "gpt-4.1-mini";
+        
+        // Verify provider exists if not using default
+        if (providerId !== "default" && cfg.providers && !cfg.providers[providerId]) {
+          throw new Error(`Provider '${providerId}' not found in providers`);
+        }
+        
+        return { providerId, model };
       }
     }
   }
-  return cfg.defaultModel;
+  
+  // Use default provider
+  return {
+    providerId: "default",
+    model: overrideModel || process.env.OPENAI_MODEL || "gpt-4.1-mini"
+  };
 }
 
 // Create the execution plan (ordered steps) for a given tool and input

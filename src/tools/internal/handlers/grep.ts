@@ -30,8 +30,9 @@ export const grepHandler: InternalToolHandler = {
   canHandle: (toolName) => toolName === "Grep",
   async execute(_toolName, input) {
     const i: GrepInput = input as GrepInput;
-    if (!i || typeof i.pattern !== "string" || i.pattern.length === 0)
+    if (!i || typeof i.pattern !== "string" || i.pattern.length === 0) {
       return { matches: [] };
+    }
     const root = resolve(i.path || process.cwd());
     let files = await listAllFiles(root);
     if (i.glob) files = matchGlob(files, root, i.glob);
@@ -86,8 +87,12 @@ export const grepHandler: InternalToolHandler = {
         if (head && count >= head) break;
       }
     }
-    if (mode === "count") return { count };
-    if (mode === "files_with_matches") return { files: filesWithMatches };
+    if (mode === "count") {
+      return { count };
+    }
+    if (mode === "files_with_matches") {
+      return { files: filesWithMatches };
+    }
     return { matches };
   },
 };

@@ -7,10 +7,16 @@ interface LSInput {
   ignore?: string[];
 }
 function isLSInput(v: unknown): v is LSInput {
-  if (!v || typeof v !== "object") return false;
+  if (!v || typeof v !== "object") {
+    return false;
+  }
   const o = v as Record<string, unknown>;
-  if (typeof o.path !== "string") return false;
-  if (o.ignore && !Array.isArray(o.ignore)) return false;
+  if (typeof o.path !== "string") {
+    return false;
+  }
+  if (o.ignore && !Array.isArray(o.ignore)) {
+    return false;
+  }
   return true;
 }
 
@@ -18,9 +24,13 @@ export const lsHandler: InternalToolHandler = {
   name: "LS",
   canHandle: (toolName) => toolName === "LS",
   execute(_toolName, input) {
-    if (!isLSInput(input)) return { error: "invalid_input" };
+    if (!isLSInput(input)) {
+      return { error: "invalid_input" };
+    }
     const { path, ignore } = input;
-    if (!path.startsWith("/")) return { error: "absolute path required" };
+    if (!path.startsWith("/")) {
+      return { error: "absolute path required" };
+    }
     const target = resolve(path);
     let entries = readdirSync(target, { withFileTypes: true }).map((e) => ({
       name: e.name,

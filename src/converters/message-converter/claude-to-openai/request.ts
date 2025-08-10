@@ -101,13 +101,17 @@ function applyInstructionModification(
       return text || "";
     
     case "append":
-      if (!text) return originalInstructions;
+      if (!text) {
+        return originalInstructions;
+      }
       return originalInstructions 
         ? `${originalInstructions}\n\n${text}`
         : text;
     
     case "prepend":
-      if (!text) return originalInstructions;
+      if (!text) {
+        return originalInstructions;
+      }
       return originalInstructions
         ? `${text}\n\n${originalInstructions}`
         : text;

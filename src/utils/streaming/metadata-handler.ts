@@ -20,7 +20,9 @@ export class MetadataHandler {
    * Check if text content is metadata JSON
    */
   isMetadata(text: string): boolean {
-    if (!text) return false;
+    if (!text) {
+      return false;
+    }
     
     const trimmed = text.trim();
     if (!trimmed.startsWith("{") || !trimmed.endsWith("}")) {

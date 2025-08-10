@@ -40,7 +40,9 @@ async function walk(root: string, dir: string, out: string[]) {
 export async function listAllFiles(root: string) {
   const now = Date.now();
   const norm = normalizeRoot(root);
-  if (cache && cache.root === norm && cache.expires > now) return cache.files;
+  if (cache && cache.root === norm && cache.expires > now) {
+    return cache.files;
+  }
   const files: string[] = [];
   await walk(norm, norm, files);
   cache = { root: norm, files, expires: now + ttl };
@@ -86,9 +88,12 @@ export async function readFileLimited(
   } catch {
     return { skipped: true, reason: "stat_failed" };
   }
-  if (!st.isFile()) return { skipped: true, reason: "not_file" };
-  if (st.size > maxBytes)
+  if (!st.isFile()) {
+    return { skipped: true, reason: "not_file" };
+  }
+  if (st.size > maxBytes) {
     return { skipped: true, reason: "too_large", size: st.size };
+  }
   try {
     const data = await readFile(path, "utf8");
     return { content: data };
@@ -98,6 +103,8 @@ export async function readFileLimited(
 }
 
 export function invalidateFsCache(root?: string) {
-  if (!cache) return;
+  if (!cache) {
+    return;
+  }
   if (!root || cache.root === normalizeRoot(root)) cache = null;
 }

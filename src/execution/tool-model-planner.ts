@@ -39,16 +39,22 @@ export function selectProviderForRequest(
 // Create the execution plan (ordered steps) for a given tool and input
 export function planToolExecution(cfg: RoutingConfig, toolName: string, input: unknown): Step[] {
   const rule = cfg.tools?.find((r) => r.enabled !== false && r.name === toolName);
-  if (!rule || !rule.steps) return [];
+  if (!rule || !rule.steps) {
+    return [];
+  }
   return rule.steps.filter((step) => matchesWhen(step, input));
 }
 
 function matchesWhen(step: Step, input: unknown): boolean {
-  if (step.kind !== "internal" || !step.when) return true;
+  if (step.kind !== "internal" || !step.when) {
+    return true;
+  }
   const { actionIn } = step.when;
   if (actionIn && actionIn.length > 0) {
     const act = extractAction(input);
-    if (!act || !actionIn.includes(act)) return false;
+    if (!act || !actionIn.includes(act)) {
+      return false;
+    }
   }
   return true;
 }
@@ -69,16 +75,24 @@ type UnknownBlock = Record<string, unknown>;
 type ToolUseShape = { type: "tool_use"; name: string };
 
 function isToolUseBlock(b: unknown): b is ToolUseShape {
-  if (typeof b !== "object" || b === null) return false;
+  if (typeof b !== "object" || b === null) {
+    return false;
+  }
   const rec = b as UnknownBlock;
   return rec.type === "tool_use" && typeof rec.name === "string";
 }
 
 function extractAction(input: unknown): "preview" | "plan" | "apply" | undefined {
-  if (typeof input !== "object" || input === null) return undefined;
+  if (typeof input !== "object" || input === null) {
+    return undefined;
+  }
   const rec = input as Record<string, unknown> & { action?: unknown; dryRun?: unknown };
   const a = rec.action;
-  if (a === "preview" || a === "plan" || a === "apply") return a as "preview" | "plan" | "apply";
-  if (rec.dryRun === true) return "preview";
+  if (a === "preview" || a === "plan" || a === "apply") {
+    return a as "preview" | "plan" | "apply";
+  }
+  if (rec.dryRun === true) {
+    return "preview";
+  }
   return undefined;
 }

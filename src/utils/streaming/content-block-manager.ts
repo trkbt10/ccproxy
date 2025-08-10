@@ -124,7 +124,9 @@ export class ContentBlockManager {
     id: string
   ): { block: ContentBlock; metadata: StreamingMetadata } | undefined {
     const metadata = this.metadata.get(id);
-    if (!metadata) return undefined;
+    if (!metadata) {
+      return undefined;
+    }
 
     const block = this.blocks[metadata.index];
     return { block, metadata };
@@ -137,7 +139,9 @@ export class ContentBlockManager {
     id: string
   ): { block: ToolUseBlock; metadata: StreamingMetadata } | undefined {
     const result = this.getBlock(id);
-    if (!result || result.block.type !== "tool_use") return undefined;
+    if (!result || result.block.type !== "tool_use") {
+      return undefined;
+    }
 
     return { block: result.block as ToolUseBlock, metadata: result.metadata };
   }
@@ -151,8 +155,9 @@ export class ContentBlockManager {
     | { block: WebSearchToolResultBlock; metadata: StreamingMetadata }
     | undefined {
     const result = this.getBlock(id);
-    if (!result || result.block.type !== "web_search_tool_result")
+    if (!result || result.block.type !== "web_search_tool_result") {
       return undefined;
+    }
 
     return {
       block: result.block as WebSearchToolResultBlock,
@@ -248,7 +253,9 @@ export class ContentBlockManager {
    */
   updateTextContent(id: string, text: string): void {
     const metadata = this.metadata.get(id);
-    if (!metadata) return;
+    if (!metadata) {
+      return;
+    }
 
     const block = this.blocks[metadata.index];
     if (block.type === "text") {

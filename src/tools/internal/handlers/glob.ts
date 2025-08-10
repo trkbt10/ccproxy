@@ -7,7 +7,9 @@ interface GlobInput {
   path?: string;
 }
 function isGlobInput(v: unknown): v is GlobInput {
-  if (!v || typeof v !== "object") return false;
+  if (!v || typeof v !== "object") {
+    return false;
+  }
   const o = v as Record<string, unknown>;
   return (
     typeof o.pattern === "string" &&
@@ -19,9 +21,13 @@ export const globHandler: InternalToolHandler = {
   name: "Glob",
   canHandle: (toolName) => toolName === "Glob",
   async execute(_toolName, input) {
-    if (!isGlobInput(input)) return { error: "invalid_input" };
+    if (!isGlobInput(input)) {
+      return { error: "invalid_input" };
+    }
     const { pattern, path } = input;
-    if (!pattern.trim()) return { files: [] };
+    if (!pattern.trim()) {
+      return { files: [] };
+    }
     const root = resolve(path || process.cwd());
     const files = await listAllFiles(root);
     const matched = matchGlob(files, root, pattern).sort();

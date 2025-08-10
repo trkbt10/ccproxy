@@ -524,7 +524,9 @@ export class UnifiedIdManager {
   private peekOpenAICallId(claudeToolUseId: string): string | undefined {
     // Direct lookup
     const direct = this.reverseMapping.get(claudeToolUseId);
-    if (direct) return direct;
+    if (direct) {
+      return direct;
+    }
     // Try by ignoring prefix
     for (const [claudeId, openaiId] of this.reverseMapping.entries()) {
       if (IdFormat.isSameIdIgnoringPrefix(claudeId, claudeToolUseId)) {

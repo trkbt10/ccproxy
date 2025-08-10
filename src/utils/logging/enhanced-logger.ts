@@ -213,7 +213,9 @@ export class EnhancedLogger {
    * Check if an error is an expected LLM execution error
    */
   private isLLMExecutionError(error: any): boolean {
-    if (!error) return false;
+    if (!error) {
+      return false;
+    }
 
     const message = error.message?.toLowerCase() || "";
     const llmErrors = [

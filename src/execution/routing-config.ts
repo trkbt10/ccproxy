@@ -9,8 +9,12 @@ let cachedConfig: RoutingConfig | null = null;
 let loadingPromise: Promise<RoutingConfig> | null = null;
 
 export async function loadRoutingConfigOnce(): Promise<RoutingConfig> {
-  if (cachedConfig) return cachedConfig;
-  if (loadingPromise) return loadingPromise;
+  if (cachedConfig) {
+    return cachedConfig;
+  }
+  if (loadingPromise) {
+    return loadingPromise;
+  }
 
   loadingPromise = (async () => {
     try {
@@ -87,9 +91,13 @@ function resolveApiKeyFromHeader(
   getHeader: (name: string) => string | null
 ): string | null {
   const keyIdHeader = provider.api?.keyHeader;
-  if (!keyIdHeader) return null;
+  if (!keyIdHeader) {
+    return null;
+  }
   const id = getHeader(keyIdHeader);
-  if (!id) return null;
+  if (!id) {
+    return null;
+  }
   const apiKey = provider.api?.keys?.[id];
   return apiKey ?? null;
 }
@@ -98,9 +106,13 @@ function resolveApiKeyByModelPrefix(
   provider: Provider,
   modelHint?: string
 ): string | null {
-  if (!modelHint) return null;
+  if (!modelHint) {
+    return null;
+  }
   const mapping = provider.api?.keyByModelPrefix;
-  if (!mapping) return null;
+  if (!mapping) {
+    return null;
+  }
   // Check longest matching prefix first for determinism
   const entries = Object.entries(mapping).sort((a, b) => b[0].length - a[0].length);
   for (const [prefix, apiKey] of entries) {

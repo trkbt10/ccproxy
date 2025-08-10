@@ -232,6 +232,16 @@ export const createResponseProcessor = (config: ProcessorConfig) => {
     manager
   );
 
+  // Session-use semantics: drop mappings that were consumed while building this request
+  const purged = manager.purgeUsed(0);
+  if (purged > 0) {
+    logDebug(
+      "Purged used call_id mappings after request conversion",
+      { purged },
+      { requestId: config.requestId, conversationId: config.conversationId }
+    );
+  }
+
   if (context.lastResponseId) {
     logDebug(
       "Using previous_response_id",

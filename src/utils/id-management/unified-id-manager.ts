@@ -517,7 +517,36 @@ export class UnifiedIdManager {
       errors,
     };
   }
-  
+
+  /**
+   * Purge mappings that have been used.
+   * @param olderThanMs Only purge if usedAt is older than this threshold (default 0 = immediately)
+   * @returns number of purged mappings
+   */
+  purgeUsed(olderThanMs: number = 0): number {
+    const now = Date.now();
+    let purged = 0;
+    for (const [openaiId, entry] of this.mappings.entries()) {
+      if (entry.status === "used" && entry.usedAt) {
+        const age = now - entry.usedAt.getTime();
+        if (age >= olderThanMs) {
+          // remove reverse mapping first
+          this.reverseMapping.delete(entry.claudeToolUseId);
+          this.mappings.delete(openaiId);
+          purged++;
+        }
+      }
+    }
+    if (purged > 0) {
+      logDebug(
+        "Purged used call_id mappings",
+        { purged, thresholdMs: olderThanMs, remaining: this.mappings.size },
+        { conversationId: this.conversationId }
+      );
+    }
+    return purged;
+  }
+
   /**
    * Validate all mappings
    */

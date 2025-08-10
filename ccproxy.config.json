@@ -1,0 +1,9 @@
+{
+  "logging": {
+    "enabled": true,
+    "eventsEnabled": false,
+    "dir": "./logs"
+  },
+  "providers": {},
+  "tools": []
+}

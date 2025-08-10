@@ -54,7 +54,6 @@ export type RoutingConfig = {
     debugEnabled?: boolean;
     eventsEnabled?: boolean;
   };
-  overrideHeader?: string;
   providers?: Record<string, Provider>;
   tools?: ToolRule[];
   instruction?: InstructionConfig;

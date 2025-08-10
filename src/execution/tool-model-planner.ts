@@ -7,8 +7,8 @@ export function selectProviderForRequest(
   req: ClaudeMessageCreateParams,
   getHeader: (name: string) => string | null
 ): { providerId: string; model: string } {
-  const headerName = cfg.overrideHeader || "x-openai-model";
-  const overrideModel = getHeader(headerName);
+  // Model is determined by tool step or env/defaults; no header override
+  const overrideModel = undefined;
   
   // Check tool-specific provider settings
   const toolNames = extractToolNames(req);
@@ -17,7 +17,7 @@ export function selectProviderForRequest(
     for (const s of steps) {
       if (s.kind === "responses_model") {
         const providerId = s.providerId || "default";
-        const model = overrideModel || s.model || process.env.OPENAI_MODEL || "gpt-4.1-mini";
+        const model = s.model || process.env.OPENAI_MODEL || "gpt-4.1-mini";
         
         // Verify provider exists if not using default
         if (providerId !== "default" && cfg.providers && !cfg.providers[providerId]) {
@@ -32,7 +32,7 @@ export function selectProviderForRequest(
   // Use default provider
   return {
     providerId: "default",
-    model: overrideModel || process.env.OPENAI_MODEL || "gpt-4.1-mini"
+    model: process.env.OPENAI_MODEL || "gpt-4.1-mini"
   };
 }
 

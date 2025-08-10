@@ -4,7 +4,7 @@ import type { MessageCreateParams as ClaudeMessageCreateParams } from "@anthropi
 import { countTokens } from "./handlers/token-counter";
 import { checkEnvironmentVariables } from "./config/environment";
 import { createResponseProcessor } from "./handlers/response-processor";
-import { resolveModel } from "./config/model-router";
+import { pickRequestModel } from "./config/model-router";
 
 // Bun automatically loads .env file, but we still check for required variables
 checkEnvironmentVariables();
@@ -139,7 +139,7 @@ app.post("/v1/messages", async (c) => {
   }
 
   // Create and execute the appropriate processor with abort signal
-  const resolvedModel = resolveModel(claudeReq, (name) => c.req.header(name) ?? null);
+  const resolvedModel = pickRequestModel(claudeReq, (name) => c.req.header(name) ?? null);
 
   const processor = createResponseProcessor({
     requestId,

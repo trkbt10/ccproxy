@@ -5,7 +5,7 @@ export interface InternalToolContext {
 
 export interface InternalToolHandler {
   name: string;
-  canHandle: (toolName: string) => boolean;
+  canHandle: (toolName: string, input?: unknown) => boolean;
   execute: (toolName: string, input: unknown, context: InternalToolContext) => string | object;
 }
 
@@ -16,7 +16,7 @@ export function registerHandler(h: InternalToolHandler) {
 }
 
 export function findHandler(toolName: string): InternalToolHandler | undefined {
-  return handlers.find((h) => h.canHandle(toolName));
+  return handlers.find((h) => h.name === toolName);
 }
 
 // Built-in simple handlers ----------------------------------------------------
@@ -30,15 +30,43 @@ registerHandler({
 });
 
 // Example stub: text_editor (no filesystem writes here by default)
+type TextEditorEdit = { path: string; find?: string; replace?: string };
+type TextEditorInput = { action?: "preview" | "apply" | "plan"; edits?: TextEditorEdit[]; dryRun?: boolean };
+
 registerHandler({
   name: "text_editor",
-  canHandle: (toolName) => toolName === "text_editor",
+  canHandle: (toolName, input) => {
+    if (toolName !== "text_editor") return false;
+    const i = input as Partial<TextEditorInput> | null | undefined;
+    const action = i?.action;
+    const dryRun = i?.dryRun === true;
+    const allowApply = process.env.ALLOW_INTERNAL_WRITES === "true";
+    // Preview/plan/dryRun are safe to handle internally without FS writes
+    if (dryRun || action === "preview" || action === "plan") return true;
+    // Apply is only allowed when explicitly enabled
+    if (action === "apply" && allowApply) return true;
+    return false;
+  },
   execute(_toolName, input) {
-    // In production, implement actual diff/apply logic with safety checks
+    const i = (input as Partial<TextEditorInput>) || {};
+    const action = i.action ?? (i.dryRun ? "preview" : "plan");
+    const edits = Array.isArray(i.edits) ? i.edits : [];
+
+    // This stub does NOT write files by default.
+    // It returns a preview/apply-intent payload to the model or caller.
+    if (action === "apply" && process.env.ALLOW_INTERNAL_WRITES !== "true") {
+      return {
+        status: "declined",
+        reason: "apply not allowed by default",
+        proposedEdits: edits,
+      };
+    }
+
     return {
-      status: "ok",
-      message: "text_editor handled internally (stub)",
-      input,
+      status: action === "apply" ? "applied" : action,
+      writesPerformed: 0,
+      proposedEdits: edits,
+      note: "No filesystem writes in default handler",
     };
   },
 });

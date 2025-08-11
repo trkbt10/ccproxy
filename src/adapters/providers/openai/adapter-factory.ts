@@ -28,7 +28,7 @@ export function buildOpenAIAdapter(
   return {
     name: "openai",
     async generate(params) {
-      const body: OpenAIResponseCreateParams = { ...(params.input as OpenAIResponseCreateParams), model: params.model, stream: false };
+      const body: OpenAIResponseCreateParams = { ...(params.input as OpenAIResponseCreateParams), model: params.model };
       return client.responses.create(
         body,
         params.signal ? { signal: params.signal } : undefined

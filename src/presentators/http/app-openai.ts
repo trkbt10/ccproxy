@@ -3,15 +3,12 @@ import { loadRoutingConfigOnce } from "../../execution/routing-config";
 import { requestIdMiddleware } from "./middleware/request-id";
 import { clientDisconnectMiddleware } from "./middleware/client-disconnect";
 import { corsMiddleware } from "./middleware/cors";
-import { createClaudeRouter } from "./routes/claude/router";
-import { createGlobalErrorHandler } from "./utils/global-error-handler";
+import { createOpenAIRouter } from "./routes/openai/router";
 import type { RoutingConfig } from "../../config/types";
-import { isErrorWithStatus } from "./utils/error-helpers";
+import { createGlobalErrorHandler } from "./utils/global-error-handler";
 
-// Claude app (Anthropic-compatible)
-export function createClaudeApp(): Hono {
-  // Note: environment validation is handled in routing-config dynamic synthesis
-
+// OpenAI-compat focused Hono app
+export function createOpenAIApp(): Hono {
   const app = new Hono();
 
   // Global middlewares
@@ -20,7 +17,7 @@ export function createClaudeApp(): Hono {
   app.use("*", corsMiddleware);
 
   // Global error handler
-  app.onError(createGlobalErrorHandler("claude"));
+  app.onError(createGlobalErrorHandler("openai"));
 
   // Health
   app.get("/health", (c) => {
@@ -29,9 +26,9 @@ export function createClaudeApp(): Hono {
 
   const routingConfigPromise = loadRoutingConfigOnce();
   routingConfigPromise.then((routingConfig: RoutingConfig) => {
-    // Claude API router mounted at root (Anthropic-compatible)
-    const claudeRouter = createClaudeRouter(routingConfig);
-    app.route("/", claudeRouter); // => /v1/messages, /v1/messages/count_tokens, etc.
+    // OpenAI compatibility router mounted under /v1
+    const openaiRouter = createOpenAIRouter(routingConfig);
+    app.route("/v1", openaiRouter); // => /v1/chat/completions, /v1/models
   });
 
   return app;

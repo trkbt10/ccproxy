@@ -3,6 +3,7 @@ import type { RoutingConfig } from "../../../../config/types";
 import { createChatCompletionsHandler } from "./handlers/chat-completions";
 import { createModelsHandler } from "./handlers/models";
 import { isErrorWithStatus } from "../../utils/error-helpers";
+import { toErrorBody } from "../../../../adapters/errors/error-converter";
 
 export const createOpenAIRouter = (routingConfig: RoutingConfig) => {
   const openaiRouter = new Hono();
@@ -14,7 +15,8 @@ export const createOpenAIRouter = (routingConfig: RoutingConfig) => {
     }
     console.error(`[Request ${requestId}] OpenAI route error:`, err);
     const status = isErrorWithStatus(err) ? err.status : 500;
-    return c.json({ error: { type: "api_error", message: err instanceof Error ? err.message : "Internal server error" } }, status as Parameters<typeof c.json>[1]);
+    const message = err instanceof Error ? err.message : "Internal server error";
+    return c.json(toErrorBody("openai", message) as never, status as Parameters<typeof c.json>[1]);
   });
 
   openaiRouter.post("/chat/completions", createChatCompletionsHandler(routingConfig));

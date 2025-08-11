@@ -1,5 +1,4 @@
-import { createHonoApp } from "./presentators/http/app";
+import { createClaudeApp } from "./presentators/http/app";
 
-const app = createHonoApp();
+const app = createClaudeApp();
 export default app;
-

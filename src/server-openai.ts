@@ -1,0 +1,7 @@
+// OpenAI-compat server entry
+import { startHonoServer } from "./presentators/http/server";
+import { createOpenAIApp } from "./presentators/http/app-openai";
+
+const app = createOpenAIApp();
+await startHonoServer(app);
+

@@ -1,4 +1,4 @@
-import type { OpenAICompatibleClient } from "../../../adapters/providers/openai-compat/types";
+import type { OpenAICompatibleClient } from "../../../../../adapters/providers/openai-compat/types";
 import type {
   Response as OpenAIResponse,
   ResponseCreateParams,
@@ -7,10 +7,10 @@ import type {
 import { streamSSE } from "hono/streaming";
 import type { Context } from "hono";
 import type { MessageCreateParams as ClaudeMessageCreateParams } from "@anthropic-ai/sdk/resources/messages";
-import { streamingPipelineFactory } from "../streaming/streaming-pipeline";
-import { convertOpenAIResponseToClaude } from "../../../adapters/message-converter/openai-to-claude/response";
-import { conversationStore } from "../../../utils/conversation/conversation-store";
-import { claudeToResponses } from "../../../adapters/message-converter/claude-to-openai/request";
+import { streamingPipelineFactory } from "../../../streaming/streaming-pipeline";
+import { convertOpenAIResponseToClaude } from "../../../../../adapters/message-converter/openai-to-claude/response";
+import { conversationStore } from "../../../../../utils/conversation/conversation-store";
+import { claudeToResponses } from "../../../../../adapters/message-converter/claude-to-openai/request";
 import type { ResponsesModel as OpenAIResponseModel } from "openai/resources/shared";
 import {
   logError,
@@ -19,8 +19,8 @@ import {
   logUnexpected,
   logRequestResponse,
   logPerformance,
-} from "../../../utils/logging/migrate-logger";
-import type { RoutingConfig } from "../../../config/types";
+} from "../../../../../utils/logging/migrate-logger";
+import type { RoutingConfig } from "../../../../../config/types";
 
 export type ProcessorConfig = {
   requestId: string;
@@ -119,61 +119,51 @@ async function processStreamingResponse(
 
     try {
       await pipeline.start();
+      const iterable = await config.openai.responses.create(
+        { ...openaiReq, stream: true },
+        config.signal ? { signal: config.signal } : undefined
+      );
 
-      const streamOrResp = await config.openai.responses
-        .create({ ...openaiReq, stream: true }, config.signal ? { signal: config.signal } : undefined)
-        .catch(async (error) => {
-          if (config.signal?.aborted || (error as Error).name === "AbortError") {
-            logInfo("Request was aborted by client", undefined, context);
-            streamingPipelineFactory.release(config.requestId);
-            throw new Error("Request cancelled by client");
-          }
-          handleError(config.requestId, openaiReq, error, config.conversationId);
-          streamingPipelineFactory.release(config.requestId);
-          throw error;
-        });
-
-      function isResponseEventStream(v: unknown): v is AsyncIterable<ResponseStreamEvent> {
-        return typeof v === "object" && v !== null && Symbol.asyncIterator in (v as Record<string, unknown>);
-      }
-
-      if (!isResponseEventStream(streamOrResp)) throw new Error("Expected streaming OpenAI response event stream");
-
-      for await (const event of streamOrResp) {
-        await pipeline.processEvent(event);
+      for await (const event of iterable as AsyncIterable<ResponseStreamEvent>) {
         if (pipeline.isClientClosed()) break;
+        if (config.signal?.aborted) break;
+        await pipeline.processEvent(event);
       }
 
-      streamingPipelineFactory.release(config.requestId);
+      const { responseId } = pipeline.getResult();
+      conversationStore.updateConversationState({ conversationId: config.conversationId, requestId: config.requestId, responseId });
+      logInfo("Streaming completed", { responseId }, context);
     } catch (error) {
-      const isAbort = (error as Error)?.message === "Request cancelled by client" || config.signal?.aborted;
-      if (!isAbort) {
-        await pipeline.handleError(error);
-        handleError(config.requestId, openaiReq, error, config.conversationId);
-      }
-      streamingPipelineFactory.release(config.requestId);
+      await pipeline.handleError(error);
+      handleError(config.requestId, openaiReq, error, config.conversationId);
       throw error;
+    } finally {
+      streamingPipelineFactory.release(config.requestId);
     }
   });
 }
 
-export function createResponseProcessor(cfg: ProcessorConfig) {
-  const manager = conversationStore.getIdManager(cfg.conversationId);
-  const modelResolver = () => cfg.model as OpenAIResponseModel;
-  const openaiReq: ResponseCreateParams = claudeToResponses(
-    cfg.claudeReq,
-    modelResolver,
-    manager,
-    undefined,
-    cfg.routingConfig,
-    cfg.providerId
-  );
-  return {
-    async process(c: Context): Promise<Response> {
-      if (cfg.stream) {
-        return processStreamingResponse(cfg, openaiReq, c);
-      }
-      return processNonStreamingResponse(cfg, openaiReq, c);
-    },
-  };
+export function createResponseProcessor(config: ProcessorConfig) {
+  async function buildOpenAIRequest(req: ClaudeMessageCreateParams): Promise<ResponseCreateParams> {
+    const ctx = conversationStore.getConversationContext(config.conversationId);
+    const idManager = conversationStore.getIdManager(config.conversationId);
+    const modelResolver = () => config.model as OpenAIResponseModel;
+    const openaiReq = claudeToResponses(
+      req,
+      modelResolver,
+      idManager,
+      ctx.lastResponseId,
+      config.routingConfig,
+      config.providerId
+    );
+    return openaiReq;
+  }
+
+  async function process(c: Context): Promise<Response> {
+    const openaiReq = await buildOpenAIRequest(config.claudeReq);
+    logDebug("OpenAI Request Params", openaiReq, { requestId: config.requestId });
+    return config.stream ? processStreamingResponse(config, openaiReq, c) : processNonStreamingResponse(config, openaiReq, c);
+  }
+
+  return { process };
 }

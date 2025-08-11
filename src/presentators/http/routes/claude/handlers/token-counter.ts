@@ -1,4 +1,4 @@
-import { getTokenizerForModel } from "../../../config/models";
+import { getTokenizerForModel } from "../../../../../config/models";
 import type { MessageCreateParams as ClaudeMessageCreateParams } from "@anthropic-ai/sdk/resources/messages";
 
 export function countTokens(claudeReq: ClaudeMessageCreateParams): number {

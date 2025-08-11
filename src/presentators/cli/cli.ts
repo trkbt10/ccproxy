@@ -15,15 +15,24 @@ function usage(): void {
 ccproxy CLI
 
 Usage:
-  ${base} serve [--port 8082] [--config ./ccproxy.config.json]
+  ${base} serve [--port 8082] [--api claude|openai] [--config ./ccproxy.config.json]
   ${base} config init [--config ./ccproxy.config.json] [--force]
   ${base} config show [--config ./ccproxy.config.json] [--expanded]
   ${base} config list [--config ./ccproxy.config.json]
   ${base} config get <path> [--config ./ccproxy.config.json]
   ${base} config set <path> <value> [--config ./ccproxy.config.json]
 
+Options:
+  --port <number>     Port to listen on (default: 8082)
+  --api <mode>        API mode: "claude" (default) or "openai"
+  --openai            Shorthand for "--api openai"
+  --config <path>     Path to ccproxy config JSON (auto-detected if omitted)
+  --expanded          Expand env vars in config output (for "config show")
+  --force             Overwrite existing config (for "config init")
+
 Examples:
   ${base} serve --port 8082
+  ${base} serve --api openai
   ${base} config init
   ${base} config show --expanded
   ${base} config list

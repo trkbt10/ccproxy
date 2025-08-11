@@ -1,17 +1,27 @@
 import type { Context } from "hono";
+import type { RoutingConfig, Provider } from "../../../../../config/types";
+import { buildProviderClient } from "../../../../../execution/routing-config";
 
-export const modelsHandler = async (c: Context) => {
-  const models = [
-    { id: "gpt-4", object: "model", created: Date.now(), owned_by: "openai" },
-    { id: "gpt-4-turbo", object: "model", created: Date.now(), owned_by: "openai" },
-    { id: "gpt-4o", object: "model", created: Date.now(), owned_by: "openai" },
-    { id: "gpt-4o-mini", object: "model", created: Date.now(), owned_by: "openai" },
-    { id: "gpt-3.5-turbo", object: "model", created: Date.now(), owned_by: "openai" },
-    { id: "claude-3-5-sonnet-20241022", object: "model", created: Date.now(), owned_by: "anthropic" },
-    { id: "claude-3-opus-20240229", object: "model", created: Date.now(), owned_by: "anthropic" },
-    { id: "claude-3-sonnet-20240229", object: "model", created: Date.now(), owned_by: "anthropic" },
-    { id: "claude-3-haiku-20240307", object: "model", created: Date.now(), owned_by: "anthropic" },
-  ];
-  return c.json({ object: "list", data: models });
+function pickDefaultProvider(cfg: RoutingConfig): Provider | undefined {
+  const id = cfg.defaults?.providerId || "default";
+  const provider = cfg.providers?.[id];
+  if (provider) return provider;
+  const first = cfg.providers && Object.values(cfg.providers)[0];
+  return first;
+}
+
+export const createModelsHandler = (routingConfig: RoutingConfig) => async (c: Context) => {
+  const provider = pickDefaultProvider(routingConfig);
+  if (!provider) {
+    return c.json({ object: "list", data: [] });
+  }
+  try {
+    const client = buildProviderClient(provider);
+    const list = await client.models.list();
+    const data = (list?.data || []).map((m) => ({ id: m.id, object: "model", created: Date.now(), owned_by: provider.type }));
+    return c.json({ object: "list", data });
+  } catch (err) {
+    console.warn("Failed to list models; falling back to empty list:", err);
+    return c.json({ object: "list", data: [] });
+  }
 };
-

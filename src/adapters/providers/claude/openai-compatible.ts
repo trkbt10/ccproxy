@@ -10,6 +10,7 @@ import { chatCompletionToClaudeLocal } from "./request-converter";
 import { conversationStore } from "../../../utils/conversation/conversation-store";
 import { UnifiedIdManager } from "../../../utils/id-management/unified-id-manager";
 import type { Message as ClaudeMessage } from "@anthropic-ai/sdk/resources/messages";
+import { resolveModelForProvider } from "../shared/model-mapper";
 
 function buildChatParams(
   params: ResponseCreateParams
@@ -29,7 +30,7 @@ function buildChatParams(
   }
 
   const chatParams: ChatCompletionCreateParams = {
-    model: (params.model as string) || (process.env.ANTHROPIC_MODEL as string) || "claude-3-5-sonnet-20240620",
+    model: (params.model as string) || (process.env.ANTHROPIC_MODEL as string | undefined) || "",
     messages,
     stream: !!params.stream,
   };
@@ -73,6 +74,12 @@ export function buildOpenAICompatibleClientForClaude(
         options?: { signal?: AbortSignal }
       ): Promise<OpenAIResponse | AsyncIterable<ResponseStreamEvent>> {
         const chatParams = buildChatParams(params);
+        // Resolve model using live models list (type-safe, provider-driven)
+        chatParams.model = await resolveModelForProvider({
+          provider,
+          sourceModel: chatParams.model as string,
+          modelHint,
+        });
         const claudeReq = chatCompletionToClaudeLocal(chatParams);
 
         if (chatParams.stream) {

@@ -7,6 +7,7 @@ import type {
 import type { OpenAICompatibleClient } from "../openai-compat/types";
 import { ensureGrokStream, isGrokChatCompletion } from "../guards";
 import { grokToOpenAIResponse, grokToOpenAIStream } from "./openai-response-adapter";
+import { resolveModelForProvider } from "../shared/model-mapper";
 
 type GrokChatMessage = { role: string; content: string | null };
 type GrokFunctionTool = { type: "function"; function: { name: string; description?: string; parameters?: unknown } };
@@ -125,7 +126,11 @@ export function buildOpenAICompatibleClientForGrok(
   return {
     responses: {
       async create(params: ResponseCreateParams, options?: { signal?: AbortSignal }): Promise<any> {
-        const model = (params as { model?: string }).model || modelHint || "grok-2-latest";
+        const model = await resolveModelForProvider({
+          provider,
+          sourceModel: (params as { model?: string }).model || (modelHint as string | undefined),
+          modelHint,
+        });
         const body = responsesToGrokRequest(params);
         if ((params as { stream?: boolean }).stream === true) {
           if (!adapter.stream) throw new Error("Grok adapter does not support streaming");

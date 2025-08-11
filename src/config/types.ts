@@ -52,6 +52,16 @@ export type RoutingConfig = {
     providerId?: string;
     model?: string;
   };
+  // Optional mapping for cross-provider model selection
+  modelMapping?: {
+    byProviderType?: Record<
+      Provider["type"],
+      {
+        byGrade?: Partial<Record<import("../tools/model/model-grade-detector").ModelGrade, string>>;
+        aliases?: Record<string, string>;
+      }
+    >;
+  };
   logging?: {
     dir?: string;
     enabled?: boolean;

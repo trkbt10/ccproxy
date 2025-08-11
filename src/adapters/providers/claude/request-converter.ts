@@ -1,16 +1,10 @@
 import type { ChatCompletionCreateParams, ChatCompletionMessageParam, ChatCompletionTool } from "openai/resources/chat/completions";
 import type { MessageCreateParams as ClaudeMessageCreateParams, Tool as ClaudeTool } from "@anthropic-ai/sdk/resources/messages";
 import { contentToPlainText } from "./guards";
+import { mapModelToProvider } from "../shared/model-mapper";
 
 function mapModel(model: string): string {
-  const map: Record<string, string> = {
-    "gpt-4": "claude-3-5-sonnet-20240620",
-    "gpt-4-turbo": "claude-3-5-sonnet-20240620",
-    "gpt-4o": "claude-3-5-sonnet-20240620",
-    "gpt-4o-mini": "claude-3-haiku-20240307",
-    "gpt-3.5-turbo": "claude-3-haiku-20240307",
-  };
-  return map[model] || model || "claude-3-5-sonnet-20240620";
+  return mapModelToProvider({ targetProviderType: "claude", sourceModel: model });
 }
 
 function convertTools(tools?: ChatCompletionTool[]): ClaudeTool[] | undefined {

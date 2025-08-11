@@ -10,11 +10,10 @@ import { UnifiedIdManager as CallIdManager } from "../../../utils/id-management/
 export function convertOpenAIResponseToClaude(
   openaiResponse: OpenAIResponse,
   manager: CallIdManager
-): { message: ClaudeMessage; callIdMapping: Map<string, string> } {
+): { message: ClaudeMessage; callIdManager: CallIdManager } {
   // Collect all text content
   const textContent: string[] = [];
   const toolUseBlocks: ToolUseBlock[] = [];
-  const callIdMapping = new Map<string, string>(); // For backward compatibility
 
   // Process output items
   for (const output of openaiResponse.output || []) {
@@ -52,14 +51,11 @@ export function convertOpenAIResponseToClaude(
         // Register in the manager: OpenAI call_id -> Claude tool_use_id
         manager.registerMapping(openaiCallId, toolUseId, output.name, { source: "openai-response" });
         
-        // Also store in the legacy map for backward compatibility
-        callIdMapping.set(openaiCallId, toolUseId);
         console.log(`[OpenAI->Claude] Storing mapping: call_id ${openaiCallId} -> tool_use_id ${toolUseId}`);
       } else if (output.id) {
         // Fallback to using output.id if call_id is not present
         const openaiId = output.id;
         manager.registerMapping(openaiId, toolUseId, output.name, { source: "openai-response-id" });
-        callIdMapping.set(openaiId, toolUseId);
         console.log(`[OpenAI->Claude] Storing mapping (using id): ${openaiId} -> tool_use_id ${toolUseId}`);
       }
     }
@@ -109,5 +105,5 @@ export function convertOpenAIResponseToClaude(
     },
   };
 
-  return { message: claudeMessage, callIdMapping };
+  return { message: claudeMessage, callIdManager: manager };
 }

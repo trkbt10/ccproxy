@@ -11,17 +11,18 @@ import type {
   ChatCompletionMessageToolCall 
 } from "openai/resources/chat/completions";
 import { hasContent, hasToolCalls, isFunctionToolCall } from "./type-guards";
+import { UnifiedIdManager } from "../../utils/id-management/unified-id-manager";
 
 export const convertChatCompletionToResponse = (
   completion: ChatCompletion,
-  callIdMapping: Map<string, string>
+  callIdManager: UnifiedIdManager
 ): OpenAIResponse => {
   const message = completion.choices[0]?.message;
   if (!message) {
     throw new Error("No message in completion");
   }
 
-  const output = buildOutputItems(message, callIdMapping);
+  const output = buildOutputItems(message, callIdManager);
   const status = determineStatus(completion);
   const incompleteDetails = determineIncompleteDetails(completion);
 
@@ -70,7 +71,7 @@ export const convertChatCompletionToResponse = (
 
 const buildOutputItems = (
   message: ChatCompletionMessage,
-  callIdMapping: Map<string, string>
+  callIdManager: UnifiedIdManager
 ): ResponseOutputItem[] => {
   const output: ResponseOutputItem[] = [];
 
@@ -96,7 +97,7 @@ const buildOutputItems = (
   // Handle tool calls
   if (hasToolCalls(message)) {
     for (const toolCall of message.tool_calls) {
-      const functionCall = createFunctionCall(toolCall, callIdMapping);
+      const functionCall = createFunctionCall(toolCall, callIdManager);
       if (functionCall) {
         output.push(functionCall);
       }
@@ -108,7 +109,7 @@ const buildOutputItems = (
 
 const createFunctionCall = (
   toolCall: ChatCompletionMessageToolCall,
-  callIdMapping: Map<string, string>
+  callIdManager: UnifiedIdManager
 ): ResponseFunctionToolCall | null => {
   // Check if this is a function tool call
   if (!isFunctionToolCall(toolCall)) {
@@ -119,7 +120,10 @@ const createFunctionCall = (
   const toolUseId = generateId("toolu");
   
   // Store the mapping for future reference
-  callIdMapping.set(toolCall.id, toolUseId);
+  callIdManager.addMapping(toolCall.id, toolUseId, {
+    source: "chat-to-response-converter",
+    operation: "createFunctionCall"
+  });
   
   // Now TypeScript knows toolCall has function property
   return {

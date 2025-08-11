@@ -9,6 +9,7 @@ import { UnifiedIdManager } from "../../../utils/id-management/unified-id-manage
 import { ensureCallIdManager } from "../../../utils/id-management/call-id-helpers";
 import { convertChatCompletionMessages } from "./chat-completion-message";
 import { convertChatCompletionToolToClaude } from "./tool-definitions";
+import { mapModelToProvider } from "../../providers/shared/model-mapper";
 
 /**
  * Convert OpenAI Chat Completions API request to Claude Messages API request
@@ -32,7 +33,7 @@ export function chatCompletionToClaude(
   
   // Build Claude request
   const claudeRequest: ClaudeMessageCreateParams = {
-    model: mapChatCompletionModelToClaude(request.model),
+    model: mapModelToProvider({ targetProviderType: "claude", sourceModel: String(request.model) }),
     messages: messages,
     max_tokens: request.max_completion_tokens || request.max_tokens || 4096,
     stream: request.stream || false,
@@ -80,30 +81,4 @@ export function chatCompletionToClaude(
   
   return claudeRequest;
 }
-
-/**
- * Map OpenAI Chat Completion model names to Claude model names
- */
-function mapChatCompletionModelToClaude(openAIModel: string): string {
-  const modelMap: Record<string, string> = {
-    // GPT-4 variants
-    "gpt-4": "claude-3-5-sonnet-20241022",
-    "gpt-4-turbo": "claude-3-5-sonnet-20241022",
-    "gpt-4-turbo-preview": "claude-3-5-sonnet-20241022",
-    "gpt-4-32k": "claude-3-5-sonnet-20241022",
-    "gpt-4o": "claude-3-5-sonnet-20241022",
-    "gpt-4o-mini": "claude-3-haiku-20240307",
-    
-    // GPT-3.5 variants
-    "gpt-3.5-turbo": "claude-3-haiku-20240307",
-    "gpt-3.5-turbo-16k": "claude-3-haiku-20240307",
-    
-    // Pass through Claude models
-    "claude-3-opus-20240229": "claude-3-opus-20240229",
-    "claude-3-5-sonnet-20241022": "claude-3-5-sonnet-20241022",
-    "claude-3-sonnet-20240229": "claude-3-sonnet-20240229",
-    "claude-3-haiku-20240307": "claude-3-haiku-20240307",
-  };
-  
-  return modelMap[openAIModel] || "claude-3-5-sonnet-20241022"; // Default to latest Sonnet
-}
+// model mapping now centralized in providers/shared/model-mapper

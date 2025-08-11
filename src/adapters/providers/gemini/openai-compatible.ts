@@ -14,6 +14,7 @@ import { geminiToOpenAIStream } from "./openai-stream-adapter";
 import { geminiToOpenAIResponse } from "./openai-response-adapter";
 import { conversationStore } from "../../../utils/conversation/conversation-store";
 import { UnifiedIdManager } from "../../../utils/id-management/unified-id-manager";
+import { resolveModelForProvider } from "../shared/model-mapper";
 
 // conversion logic moved to converters/providers/gemini/request
 
@@ -32,10 +33,11 @@ export function buildOpenAICompatibleClientForGemini(
         params: ResponseCreateParams,
         options?: { signal?: AbortSignal }
       ): Promise<any> {
-        const model =
-          (params as { model?: string }).model ||
-          modelHint ||
-          "gemini-1.5-flash";
+        const model = await resolveModelForProvider({
+          provider,
+          sourceModel: (params as { model?: string }).model || (modelHint as string | undefined),
+          modelHint,
+        });
         const body = responsesToGeminiRequest(params, resolveToolName);
         if ("stream" in params && params.stream === true) {
           if (!adapter.stream)

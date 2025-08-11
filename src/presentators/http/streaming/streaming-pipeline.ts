@@ -3,6 +3,7 @@ import type { SSEStreamingApi } from "hono/streaming";
 import type { ResponseStreamEvent as OpenAIResponseStreamEvent } from "openai/resources/responses/responses";
 import { ClaudeSSEWriter } from "./claude-sse-writer";
 import { StreamState } from "./stream-state";
+import { UnifiedIdManager } from "../../../utils/id-management/unified-id-manager";
 
 /**
  * Configuration for streaming pipeline
@@ -17,7 +18,7 @@ export interface StreamingPipelineConfig {
  */
 export interface StreamingPipelineResult {
   responseId?: string;
-  callIdMapping?: Map<string, string>;
+  callIdManager?: UnifiedIdManager;
 }
 
 /**
@@ -86,7 +87,7 @@ export class StreamingPipeline {
   getResult(): StreamingPipelineResult {
     return {
       responseId: this.state.getResponseId(),
-      callIdMapping: this.state.getCallIdMapping(),
+      callIdManager: this.state.getCallIdManager(),
     };
   }
 

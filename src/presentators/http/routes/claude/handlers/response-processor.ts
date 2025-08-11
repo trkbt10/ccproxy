@@ -21,6 +21,7 @@ import {
   logPerformance,
 } from "../../../../../utils/logging/migrate-logger";
 import type { RoutingConfig } from "../../../../../config/types";
+import { UnifiedIdManager } from "../../../../../utils/id-management/unified-id-manager";
 
 export type ProcessorConfig = {
   requestId: string;
@@ -36,7 +37,7 @@ export type ProcessorConfig = {
 
 export type ProcessorResult = {
   responseId?: string;
-  callIdMapping?: Map<string, string>;
+  callIdManager?: UnifiedIdManager;
 };
 
 function handleError(

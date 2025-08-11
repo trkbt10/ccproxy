@@ -4,6 +4,7 @@ import { ContentBlockManager } from "../../../utils/streaming/content-block-mana
 import { logUnexpected, logDebug, logWarn, logInfo } from "../../../utils/logging/migrate-logger";
 import type { LogContext } from "../../../utils/logging/enhanced-logger";
 import { getMetadataHandler } from "./metadata-handler";
+import { UnifiedIdManager } from "../../../utils/id-management/unified-id-manager";
 import type {
   ResponseStreamEvent as OpenAIResponseStreamEvent,
   ResponseOutputItemAddedEvent as OpenAIResponseOutputItemAddedEvent,
@@ -25,7 +26,7 @@ export class StreamState {
   private pingTimer?: NodeJS.Timeout;
   private streamCompleted = false;
   private currentTextBlockId?: string;
-  private callIdMapping: Map<string, string> = new Map();
+  private callIdManager: UnifiedIdManager = new UnifiedIdManager();
   private requestId?: string;
   private metadataHandler = getMetadataHandler(this.requestId || "unknown");
 
@@ -104,7 +105,10 @@ export class StreamState {
           );
           const { metadata: toolMeta } = this.contentManager.addToolBlock((ev as any).item.id, (ev as any).item.name, (ev as any).item.call_id);
           if ((ev as any).item.call_id) {
-            this.callIdMapping.set((ev as any).item.call_id, (ev as any).item.id);
+            this.callIdManager.addMapping((ev as any).item.call_id, (ev as any).item.id, {
+              source: "stream-state",
+              operation: "handleFunctionCall"
+            });
             logDebug(`Stored mapping: call_id ${(ev as any).item.call_id} -> tool_use_id ${(ev as any).item.id}`, undefined, this.getLogContext());
           }
           if (!toolMeta.started) {
@@ -187,8 +191,8 @@ export class StreamState {
     return this.responseId;
   }
 
-  getCallIdMapping(): Map<string, string> {
-    return this.callIdMapping;
+  getCallIdManager(): UnifiedIdManager {
+    return this.callIdManager;
   }
 
   private isItemIdString(ev: any): ev is { item: { id: string } } {

@@ -18,6 +18,7 @@ import { convertChatCompletionToResponse } from "./chat-to-response-converter";
 import { StreamHandler } from "./stream-handler";
 import { convertResponseInputToMessages } from "./input-converter";
 import { convertToolsForChat, convertToolChoiceForChat } from "./tool-converter";
+import { UnifiedIdManager } from "../../utils/id-management/unified-id-manager";
 
 export type ResponsesAPIOptions = {
   apiKey: string;
@@ -32,7 +33,7 @@ export type ResponsesAPIOptions = {
  */
 export class ResponsesAPI {
   private openai: OpenAI;
-  private callIdMapping: Map<string, string>;
+  private callIdManager: UnifiedIdManager;
 
   constructor(options: ResponsesAPIOptions) {
     this.openai = new OpenAI({
@@ -41,7 +42,7 @@ export class ResponsesAPI {
       maxRetries: options.maxRetries ?? 3,
       timeout: options.timeout ?? 60000,
     });
-    this.callIdMapping = new Map<string, string>();
+    this.callIdManager = new UnifiedIdManager();
   }
 
   /**
@@ -149,7 +150,7 @@ export class ResponsesAPI {
       stream: false,
     });
 
-    return convertChatCompletionToResponse(completion, this.callIdMapping);
+    return convertChatCompletionToResponse(completion, this.callIdManager);
   }
 
   private async handleStreamingResponse(
@@ -166,23 +167,23 @@ export class ResponsesAPI {
   }
 
   /**
-   * Gets the current call ID mapping
+   * Gets the current call ID manager
    */
-  getCallIdMapping(): Map<string, string> {
-    return new Map(this.callIdMapping);
+  getCallIdManager(): UnifiedIdManager {
+    return this.callIdManager;
   }
 
   /**
-   * Sets the call ID mapping (useful for maintaining state across requests)
+   * Sets a new call ID manager (useful for maintaining state across requests)
    */
-  setCallIdMapping(mapping: Map<string, string>): void {
-    this.callIdMapping = new Map(mapping);
+  setCallIdManager(manager: UnifiedIdManager): void {
+    this.callIdManager = manager;
   }
 
   /**
-   * Clears the call ID mapping
+   * Clears the call ID mappings
    */
-  clearCallIdMapping(): void {
-    this.callIdMapping.clear();
+  clearCallIdMappings(): void {
+    this.callIdManager = new UnifiedIdManager();
   }
 }

@@ -11,6 +11,7 @@ import { UnifiedIdManager } from "../../../utils/id-management/unified-id-manage
 import { ensureCallIdManager } from "../../../utils/id-management/call-id-helpers";
 import { convertOpenAIMessages } from "./message";
 import { convertOpenAIToolToClaude } from "./tool-definitions";
+import { mapModelToProvider } from "../../providers/shared/model-mapper";
 
 /**
  * Convert OpenAI Responses API request to Claude Messages API request
@@ -54,7 +55,7 @@ export function openAIToClaude(
   
   // Build Claude request
   const claudeRequest = {
-    model: mapOpenAIModelToClaude(request.model || 'gpt-4'),
+    model: mapModelToProvider({ targetProviderType: 'claude', sourceModel: (request.model as string | undefined) || 'gpt-4' }),
     messages: messages,
     max_tokens: request.max_output_tokens || 4096,
   } as ClaudeMessageCreateParams;
@@ -87,19 +88,4 @@ export function openAIToClaude(
   
   return claudeRequest;
 }
-
-/**
- * Map OpenAI model names to Claude model names
- */
-function mapOpenAIModelToClaude(openAIModel: string): string {
-  const modelMap: Record<string, string> = {
-    "gpt-4": "claude-3-opus-20240229",
-    "gpt-4-turbo": "claude-3-opus-20240229",
-    "gpt-4-32k": "claude-3-opus-20240229",
-    "gpt-3.5-turbo": "claude-3-sonnet-20240229",
-    "gpt-3.5-turbo-16k": "claude-3-sonnet-20240229",
-    // Add more mappings as needed
-  };
-  
-  return modelMap[openAIModel] || "claude-3-sonnet-20240229"; // Default to Sonnet
-}
+// model mapping now centralized in providers/shared/model-mapper

@@ -3,25 +3,7 @@ import type {
   OpenAICompatResponse,
   OpenAICompatStreamEvent,
 } from "../openai-compat/compat";
-
-// Minimal types to avoid `any`
-type GrokFunction = { name: string; arguments?: string };
-type GrokToolCall = { id?: string; type: "function"; function: GrokFunction };
-type GrokMessage = {
-  role: string;
-  content?: string;
-  tool_calls?: GrokToolCall[];
-};
-type GrokChoice = {
-  message?: GrokMessage;
-  delta?: { content?: string; tool_calls?: GrokToolCall[] };
-  finish_reason?: string;
-};
-type GrokChatCompletion = {
-  id?: string;
-  choices?: GrokChoice[];
-  usage?: { prompt_tokens?: number; completion_tokens?: number };
-};
+import type { GrokChatCompletion, GrokToolCall } from "./guards";
 
 // Non-stream: map chat.completions-style response to OpenAI Responses
 export function grokToOpenAIResponse(

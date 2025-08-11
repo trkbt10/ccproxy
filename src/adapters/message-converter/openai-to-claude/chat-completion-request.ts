@@ -6,7 +6,6 @@ import type {
   ChatCompletionCreateParams,
 } from "openai/resources/chat/completions";
 import { UnifiedIdManager } from "../../../utils/id-management/unified-id-manager";
-import { ensureCallIdManager } from "../../../utils/id-management/call-id-helpers";
 import { convertChatCompletionMessages } from "./chat-completion-message";
 import { convertChatCompletionToolToClaude } from "./tool-definitions";
 import { mapModelToProvider } from "../../providers/shared/model-mapper";
@@ -18,10 +17,8 @@ export function chatCompletionToClaude(
   request: ChatCompletionCreateParams,
   callIdManager: UnifiedIdManager
 ): ClaudeMessageCreateParams {
-  const manager = ensureCallIdManager(callIdManager);
-  
   // Convert messages
-  const { messages, system } = convertChatCompletionMessages(request.messages, manager);
+  const { messages, system } = convertChatCompletionMessages(request.messages, callIdManager);
   
   // Convert tools if present
   let tools: ClaudeTool[] | undefined;

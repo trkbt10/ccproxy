@@ -14,7 +14,6 @@ import type {
   ResponseFunctionToolCallOutputItem as OpenAIResponseFunctionToolCallOutputItem,
 } from "openai/resources/responses/responses";
 import { UnifiedIdManager } from "../../../utils/id-management/unified-id-manager";
-import { ensureCallIdManager } from "../../../utils/id-management/call-id-helpers";
 import { convertOpenAIImageToClaude } from "./image";
 
 /**
@@ -24,7 +23,6 @@ export function convertOpenAIMessage(
   message: OpenAIResponseInputItem,
   callIdManager: UnifiedIdManager
 ): ClaudeMessageParam {
-  const manager = ensureCallIdManager(callIdManager);
 
   // Check if it's a message type (EasyInputMessage or ResponseInputItem.Message)
   if ('role' in message && 'content' in message) {
@@ -79,7 +77,7 @@ export function convertOpenAIMessage(
   // Handle function call
   if ('type' in message && message.type === "function_call") {
     const funcCall = message as OpenAIResponseFunctionToolCall;
-    const toolUseId = manager.getClaudeToolUseId(funcCall.call_id) || funcCall.call_id;
+    const toolUseId = callIdManager.getClaudeToolUseId(funcCall.call_id) || funcCall.call_id;
 
     const toolUseBlock: ClaudeToolUseBlock = {
       type: "tool_use",
@@ -97,7 +95,7 @@ export function convertOpenAIMessage(
   // Handle function call output
   if ('type' in message && message.type === "function_call_output") {
     const funcOutput = message as OpenAIResponseFunctionToolCallOutputItem;
-    const toolUseId = manager.getClaudeToolUseId(funcOutput.call_id);
+    const toolUseId = callIdManager.getClaudeToolUseId(funcOutput.call_id);
     if (!toolUseId) {
       console.warn(`[WARN] No tool_use_id found for call_id: ${funcOutput.call_id}`);
     }
@@ -130,13 +128,12 @@ export function convertOpenAIMessages(
   messages: OpenAIResponseInputItem[],
   callIdManager: UnifiedIdManager
 ): ClaudeMessageParam[] {
-  const manager = ensureCallIdManager(callIdManager);
   const claudeMessages: ClaudeMessageParam[] = [];
   
   let currentMessage: ClaudeMessageParam | null = null;
 
   for (const message of messages) {
-    const converted = convertOpenAIMessage(message, manager);
+    const converted = convertOpenAIMessage(message, callIdManager);
     
     // Merge consecutive messages with the same role
     if (currentMessage && currentMessage.role === converted.role) {

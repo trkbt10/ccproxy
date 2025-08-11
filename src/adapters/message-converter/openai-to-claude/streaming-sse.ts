@@ -15,22 +15,40 @@ import type {
   ResponseFunctionToolCall,
 } from "openai/resources/responses/responses";
 
-// Minimal SSE writer specialized to Claude events
 export interface ClaudeSSESink {
   write(event: string, payload: unknown): Promise<void>;
 }
 
-class ClaudeSSEWriter {
-  constructor(private sink: ClaudeSSESink) {}
-  private async send(event: string, payload: unknown): Promise<void> {
-    await this.sink.write(event, payload);
+// Type guards reused locally
+function isFunctionCallItem(item: any): item is ResponseFunctionToolCall & { id: string } {
+  return item?.type === "function_call" && typeof item?.id === "string" && typeof item?.call_id === "string" && typeof item?.name === "string";
+}
+function isResponseCompletedEvent(ev: OpenAIResponseStreamEvent): ev is ResponseCompletedEvent { return ev.type === "response.completed"; }
+function isResponseOutputItemAddedEvent(ev: OpenAIResponseStreamEvent): ev is ResponseOutputItemAddedEvent { return ev.type === "response.output_item.added"; }
+function isResponseOutputItemDoneEvent(ev: OpenAIResponseStreamEvent): ev is ResponseOutputItemDoneEvent { return ev.type === "response.output_item.done"; }
+function isWebSearchInProgressEvent(ev: OpenAIResponseStreamEvent): ev is ResponseWebSearchCallInProgressEvent { return ev.type === "response.web_search_call.in_progress"; }
+function isWebSearchSearchingEvent(ev: OpenAIResponseStreamEvent): ev is ResponseWebSearchCallSearchingEvent { return ev.type === "response.web_search_call.searching"; }
+function isWebSearchCompletedEvent(ev: OpenAIResponseStreamEvent): ev is ResponseWebSearchCallCompletedEvent { return ev.type === "response.web_search_call.completed"; }
+
+export class OpenAIToClaudeSSEStream {
+  private sink: ClaudeSSESink;
+  private contentManager = new ContentBlockManager();
+  private responseId?: string;
+  private pingTimer?: NodeJS.Timeout;
+  private completed = false;
+  private currentTextBlockId?: string;
+  private usage = { input_tokens: 0, output_tokens: 0 };
+
+  constructor(sink: ClaudeSSESink, private conversationId: string, private requestId?: string, private logEnabled: boolean = false) {
+    this.sink = sink;
   }
-  async messageStart(id: string) {
+
+  async start(messageId: string): Promise<void> {
     await this.send("message_start", {
       type: "message_start",
       message: {
         type: "message",
-        id,
+        id: messageId,
         role: "assistant",
         content: [],
         model: "claude-3-5-sonnet-20241022",
@@ -46,83 +64,43 @@ class ClaudeSSEWriter {
         },
       },
     });
+    await this.ping();
+    this.pingTimer = setInterval(() => { this.ping(); }, 15000);
   }
-  async textStart(index: number) {
-    await this.send("content_block_start", {
-      type: "content_block_start",
-      index,
-      content_block: { type: "text", text: "", citations: [] },
-    });
+
+  // Sink helpers
+  private async send(event: string, payload: unknown): Promise<void> {
+    await this.sink.write(event, payload);
   }
-  async deltaText(index: number, delta: string) {
-    await this.send("content_block_delta", {
-      type: "content_block_delta",
-      index,
-      delta: { type: "text_delta", text: delta },
-    });
+  private async textStart(index: number) {
+    await this.send("content_block_start", { type: "content_block_start", index, content_block: { type: "text", text: "", citations: [] } });
   }
-  async textStop(index: number) {
+  private async deltaText(index: number, delta: string) {
+    await this.send("content_block_delta", { type: "content_block_delta", index, delta: { type: "text_delta", text: delta } });
+  }
+  private async textStop(index: number) {
     await this.send("content_block_stop", { type: "content_block_stop", index });
   }
-  async toolStart(index: number, item: { id: string; name: string; input?: unknown }) {
-    await this.send("content_block_start", {
-      type: "content_block_start",
-      index,
-      content_block: { type: "tool_use", id: item.id, name: item.name, input: item.input ?? {} },
-    });
+  private async toolStart(index: number, item: { id: string; name: string; input?: unknown }) {
+    await this.send("content_block_start", { type: "content_block_start", index, content_block: { type: "tool_use", id: item.id, name: item.name, input: item.input ?? {} } });
   }
-  async toolArgsDelta(index: number, partialJson: string) {
-    await this.send("content_block_delta", {
-      type: "content_block_delta",
-      index,
-      delta: { type: "input_json_delta", partial_json: partialJson },
-    });
+  private async toolArgsDelta(index: number, partialJson: string) {
+    await this.send("content_block_delta", { type: "content_block_delta", index, delta: { type: "input_json_delta", partial_json: partialJson } });
   }
-  async toolStop(index: number) {
+  private async toolStop(index: number) {
     await this.send("content_block_stop", { type: "content_block_stop", index });
   }
-  async messageStop() {
+  private async messageStop() {
     await this.send("message_stop", { type: "message_stop" });
   }
-  async ping() {
+  private async ping() {
     await this.sink.write("ping", {});
   }
-  async done() {
+  private async done() {
     await this.sink.write("done", {});
   }
-  async error(type: string, message: string) {
+  public async error(type: string, message: string) {
     await this.send("error", { type, message });
-  }
-}
-
-// Type guards reused locally
-function isFunctionCallItem(item: any): item is ResponseFunctionToolCall & { id: string } {
-  return item?.type === "function_call" && typeof item?.id === "string" && typeof item?.call_id === "string" && typeof item?.name === "string";
-}
-function isResponseCompletedEvent(ev: OpenAIResponseStreamEvent): ev is ResponseCompletedEvent { return ev.type === "response.completed"; }
-function isResponseOutputItemAddedEvent(ev: OpenAIResponseStreamEvent): ev is ResponseOutputItemAddedEvent { return ev.type === "response.output_item.added"; }
-function isResponseOutputItemDoneEvent(ev: OpenAIResponseStreamEvent): ev is ResponseOutputItemDoneEvent { return ev.type === "response.output_item.done"; }
-function isWebSearchInProgressEvent(ev: OpenAIResponseStreamEvent): ev is ResponseWebSearchCallInProgressEvent { return ev.type === "response.web_search_call.in_progress"; }
-function isWebSearchSearchingEvent(ev: OpenAIResponseStreamEvent): ev is ResponseWebSearchCallSearchingEvent { return ev.type === "response.web_search_call.searching"; }
-function isWebSearchCompletedEvent(ev: OpenAIResponseStreamEvent): ev is ResponseWebSearchCallCompletedEvent { return ev.type === "response.web_search_call.completed"; }
-
-export class OpenAIToClaudeSSEStream {
-  private sse: ClaudeSSEWriter;
-  private contentManager = new ContentBlockManager();
-  private responseId?: string;
-  private pingTimer?: NodeJS.Timeout;
-  private completed = false;
-  private currentTextBlockId?: string;
-  private usage = { input_tokens: 0, output_tokens: 0 };
-
-  constructor(sink: ClaudeSSESink, private conversationId: string, private requestId?: string, private logEnabled: boolean = false) {
-    this.sse = new ClaudeSSEWriter(sink);
-  }
-
-  async start(messageId: string): Promise<void> {
-    await this.sse.messageStart(messageId);
-    await this.sse.ping();
-    this.pingTimer = setInterval(() => { this.sse.ping(); }, 15000);
   }
 
   async processEvent(ev: OpenAIResponseStreamEvent): Promise<void> {
@@ -141,7 +119,7 @@ export class OpenAIToClaudeSSEStream {
       case "response.output_text.delta": {
         const currentBlockResult = this.currentTextBlockId ? this.contentManager.getBlock(this.currentTextBlockId) : this.contentManager.getCurrentTextBlock();
         if (currentBlockResult) {
-          await this.sse.deltaText(currentBlockResult.metadata.index, ev.delta);
+          await this.deltaText(currentBlockResult.metadata.index, ev.delta);
           this.contentManager.updateTextContent(currentBlockResult.metadata.id, ev.delta);
         }
         break;
@@ -149,7 +127,7 @@ export class OpenAIToClaudeSSEStream {
       case "response.output_text.done": {
         const doneBlockResult = this.currentTextBlockId ? this.contentManager.getBlock(this.currentTextBlockId) : this.contentManager.getCurrentTextBlock();
         if (doneBlockResult) {
-          await this.sse.textStop(doneBlockResult.metadata.index);
+          await this.textStop(doneBlockResult.metadata.index);
           this.contentManager.markCompleted(doneBlockResult.metadata.id);
         }
         this.currentTextBlockId = undefined;
@@ -165,7 +143,7 @@ export class OpenAIToClaudeSSEStream {
             logDebug(`Stored mapping: call_id ${item.call_id} -> tool_use_id ${item.id}`, undefined, { requestId: this.requestId });
           }
           if (!toolMeta.started) {
-            await this.sse.toolStart(toolMeta.index, { id: item.id, name: item.name });
+            await this.toolStart(toolMeta.index, { id: item.id, name: item.name });
             this.contentManager.markStarted(toolMeta.id);
           }
         }
@@ -175,7 +153,7 @@ export class OpenAIToClaudeSSEStream {
         const toolBlockResult = this.contentManager.getToolBlock(ev.item_id);
         if (toolBlockResult && !toolBlockResult.metadata.completed) {
           toolBlockResult.metadata.argsBuffer = (toolBlockResult.metadata.argsBuffer || "") + ev.delta;
-          await this.sse.toolArgsDelta(toolBlockResult.metadata.index, ev.delta);
+          await this.toolArgsDelta(toolBlockResult.metadata.index, ev.delta);
         }
         break;
       }
@@ -184,7 +162,7 @@ export class OpenAIToClaudeSSEStream {
           const item = ev.item;
           const toolBlockResult = this.contentManager.getToolBlock(item.id);
           if (toolBlockResult && !toolBlockResult.metadata.completed) {
-            await this.sse.toolStop(toolBlockResult.metadata.index);
+            await this.toolStop(toolBlockResult.metadata.index);
             this.contentManager.markCompleted(toolBlockResult.metadata.id);
           }
         }
@@ -212,8 +190,8 @@ export class OpenAIToClaudeSSEStream {
           if (resp?.usage?.output_tokens) this.usage.output_tokens = resp.usage.output_tokens;
           if (resp?.usage?.input_tokens) this.usage.input_tokens = resp.usage.input_tokens;
         }
-        await this.sse.messageStop();
-        await this.sse.done();
+        await this.messageStop();
+        await this.done();
         break;
       }
       case "response.web_search_call.in_progress": {
@@ -250,5 +228,3 @@ export class OpenAIToClaudeSSEStream {
     if (this.pingTimer) clearInterval(this.pingTimer);
   }
 }
-
-export { ClaudeSSEWriter };

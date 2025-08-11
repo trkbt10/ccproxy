@@ -1,12 +1,17 @@
-import { describe, test, expect } from "bun:test";
-import { UnifiedIdManager, IdFormat, UnifiedIdRegistry } from "./unified-id-manager";
+import {
+  UnifiedIdManager,
+  IdFormat,
+  UnifiedIdRegistry,
+} from "./unified-id-manager";
 
 describe("UnifiedIdManager - ID lifecycle and mapping", () => {
   test("getOrCreateOpenAICallIdForToolUse creates mapping without marking used", () => {
     const m = new UnifiedIdManager("spec-conv-1");
     const toolUseId = IdFormat.generateClaudeId();
 
-    const callId = m.getOrCreateOpenAICallIdForToolUse(toolUseId, "editor", { source: "spec" });
+    const callId = m.getOrCreateOpenAICallIdForToolUse(toolUseId, "editor", {
+      source: "spec",
+    });
     expect(callId.startsWith("call_") || callId.startsWith("fc_")).toBe(true);
 
     // Should be stored and pending (not used yet)
@@ -38,7 +43,9 @@ describe("UnifiedIdManager - ID lifecycle and mapping", () => {
     const toolUseId = IdFormat.generateClaudeId();
     m.registerMapping(callId, toolUseId, "calc", { source: "spec" });
 
-    const again = m.getOrCreateOpenAICallIdForToolUse(toolUseId, "calc", { source: "spec" });
+    const again = m.getOrCreateOpenAICallIdForToolUse(toolUseId, "calc", {
+      source: "spec",
+    });
     expect(again).toBe(callId);
     // Should still be pending (not used yet)
     const stats = m.getStats();
@@ -99,7 +106,7 @@ describe("UnifiedIdManager - ID lifecycle and mapping", () => {
   test("registry caches per conversation and clearManager removes state", () => {
     // Create a local registry instance for this test
     const registry = new UnifiedIdRegistry();
-    
+
     const a1 = registry.getManager("conv-X");
     const a2 = registry.getManager("conv-X");
     expect(a1).toBe(a2);
@@ -116,4 +123,3 @@ describe("UnifiedIdManager - ID lifecycle and mapping", () => {
     expect(a3.getOpenAICallId(toolUse)).toBeUndefined();
   });
 });
-

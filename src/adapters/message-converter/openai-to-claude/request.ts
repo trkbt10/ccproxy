@@ -8,7 +8,6 @@ import type {
   EasyInputMessage as OpenAIEasyInputMessage,
 } from "openai/resources/responses/responses";
 import { UnifiedIdManager } from "../../../utils/id-management/unified-id-manager";
-import { ensureCallIdManager } from "../../../utils/id-management/call-id-helpers";
 import { convertOpenAIMessages } from "./message";
 import { convertOpenAIToolToClaude } from "./tool-definitions";
 import { mapModelToProvider } from "../../providers/shared/model-mapper";
@@ -20,8 +19,6 @@ export function openAIToClaude(
   request: OpenAIResponseCreateParams,
   callIdManager: UnifiedIdManager
 ): ClaudeMessageCreateParams {
-  const manager = ensureCallIdManager(callIdManager);
-  
   // Convert input items to messages
   const inputItems = request.input || [];
   const normalizedItems: OpenAIResponseInputItem[] =
@@ -34,7 +31,7 @@ export function openAIToClaude(
           } as OpenAIEasyInputMessage,
         ]
       : (inputItems as OpenAIResponseInputItem[]);
-  const messages = convertOpenAIMessages(normalizedItems, manager);
+  const messages = convertOpenAIMessages(normalizedItems, callIdManager);
   
   // Extract system message if present in first message
   let system: string | undefined;

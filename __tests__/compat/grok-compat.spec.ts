@@ -13,38 +13,15 @@ import {
   ensureGrokStream,
 } from "../../src/adapters/providers/guards";
 import { getAdapterFor } from "../../src/adapters/providers/registry";
-import type { OpenAICompatStreamEvent } from "../../src/adapters/providers/openai-compat/compat";
+import { resolveModelForProvider } from "../../src/adapters/providers/shared/model-mapper";
 
 describe("Grok OpenAI-compat (real API)", () => {
   const provider: Provider = { type: "grok" };
 
-  async function pickCheapGrokModel(
-    adapter: ReturnType<typeof getAdapterFor>
+  async function selectGrokModel(
+    adapter: ReturnType<typeof getAdapterFor>,
+    provider: Provider
   ): Promise<string> {
-    // Prefer explicit env to avoid guessing, but still exercise models.list for coverage
-    const envModel = process.env.GROK_TEST_MODEL;
-    if (envModel) {
-      try {
-        const listed = await adapter.listModels();
-        const ids = listed.data.map((m) => m.id);
-        compatCoverage.log(
-          "grok",
-          `models.list: ${ids.slice(0, 5).join(", ")}${
-            ids.length > 5 ? ", ..." : ""
-          }`
-        );
-        if (ids.length > 0) {
-          compatCoverage.mark("grok", "models.list.basic");
-        }
-      } catch (e) {
-        compatCoverage.error(
-          "grok",
-          "models.list.basic",
-          `Failed to list models: ${e instanceof Error ? e.message : String(e)}`
-        );
-      }
-      return envModel;
-    }
     try {
       const listed = await adapter.listModels();
       const ids = listed.data.map((m) => m.id);
@@ -54,15 +31,7 @@ describe("Grok OpenAI-compat (real API)", () => {
           ids.length > 5 ? ", ..." : ""
         }`
       );
-      if (ids.length > 0) {
-        compatCoverage.mark("grok", "models.list.basic");
-        const prioritized = ids.sort((a, b) => {
-          const sc = (s: string) =>
-            /mini|small/i.test(s) ? 0 : /latest/i.test(s) ? 1 : 2;
-          return sc(a) - sc(b);
-        });
-        return prioritized[0];
-      }
+      if (ids.length > 0) compatCoverage.mark("grok", "models.list.basic");
     } catch (e) {
       compatCoverage.error(
         "grok",
@@ -70,12 +39,12 @@ describe("Grok OpenAI-compat (real API)", () => {
         `Failed to list models: ${e instanceof Error ? e.message : String(e)}`
       );
     }
-    throw new Error("No Grok models available. Set GROK_TEST_MODEL.");
+    return await resolveModelForProvider({ provider });
   }
 
   it("chat non-stream basic", async () => {
     const adapter = getAdapterFor(provider);
-    const model = await pickCheapGrokModel(adapter);
+    const model = await selectGrokModel(adapter, provider);
     const input = {
       model,
       messages: [{ role: "user", content: "Hello from compat test" }],
@@ -98,7 +67,7 @@ describe("Grok OpenAI-compat (real API)", () => {
 
   it("chat stream chunk + done", async () => {
     const adapter = getAdapterFor(provider);
-    const model = await pickCheapGrokModel(adapter);
+    const model = await selectGrokModel(adapter, provider);
     const input = {
       model,
       messages: [{ role: "user", content: "Stream please" }],
@@ -127,7 +96,7 @@ describe("Grok OpenAI-compat (real API)", () => {
 
   it("chat non-stream function_call (real)", async () => {
     const adapter = getAdapterFor(provider);
-    const model = await pickCheapGrokModel(adapter);
+    const model = await selectGrokModel(adapter, provider);
     const tools = [
       {
         type: "function",
@@ -180,7 +149,7 @@ describe("Grok OpenAI-compat (real API)", () => {
 
   it("chat stream tool_call delta (real)", async () => {
     const adapter = getAdapterFor(provider);
-    const model = await pickCheapGrokModel(adapter);
+    const model = await selectGrokModel(adapter, provider);
     const tools = [
       {
         type: "function",
@@ -219,8 +188,7 @@ describe("Grok OpenAI-compat (real API)", () => {
     for await (const ev of grokToOpenAIStream(
       ensureGrokStream(s as AsyncIterable<unknown>)
     )) {
-      const e: OpenAICompatStreamEvent = ev;
-      types.push(e.type);
+      types.push(ev.type);
     }
     compatCoverage.log(
       "grok",

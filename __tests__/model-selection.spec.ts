@@ -1,4 +1,3 @@
-import { describe, it, expect } from "bun:test";
 import { detectModelGrade } from "../src/tools/model/model-grade-detector";
 import {
   mapModelToProvider,
@@ -88,7 +87,9 @@ describe("Model selection via model-grade-detector", () => {
   });
 
   it("uses defaults.model grade when source model omitted", () => {
-    const cfg = makeConfig({ defaults: { providerId: "default", model: "gpt-4o" } });
+    const cfg = makeConfig({
+      defaults: { providerId: "default", model: "gpt-4o" },
+    });
     // defaults.model is high → pick high for target
     expect(detectModelGrade("gpt-4o")).toBe("high");
     const outClaude = mapModelToProvider({
@@ -113,7 +114,9 @@ describe("Model selection via model-grade-detector", () => {
       routingConfig: cfg,
       listAvailableModels: async () => available,
     });
-    expect(available.map((m) => m.replace(/^models\//, "")).includes(picked)).toBe(true);
+    expect(
+      available.map((m) => m.replace(/^models\//, "")).includes(picked)
+    ).toBe(true);
     expect(detectModelGrade(picked)).toBe("low");
   });
 

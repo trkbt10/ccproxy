@@ -1,4 +1,3 @@
-import { describe, it, expect, afterAll } from "bun:test";
 import {
   compatCoverage,
   writeMarkdownReport,
@@ -9,7 +8,10 @@ import { geminiToOpenAIStream } from "../../src/adapters/providers/gemini/openai
 import { getAdapterFor } from "../../src/adapters/providers/registry";
 import type { Provider } from "../../src/config/types";
 import type { GenerateContentRequest } from "../../src/adapters/providers/gemini/fetch-client";
-import { isGeminiResponse, ensureGeminiStream } from "../../src/adapters/providers/guards";
+import {
+  isGeminiResponse,
+  ensureGeminiStream,
+} from "../../src/adapters/providers/guards";
 
 describe("Gemini OpenAI-compat (real API)", () => {
   const provider: Provider = { type: "gemini" };

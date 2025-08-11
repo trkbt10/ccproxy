@@ -345,6 +345,22 @@ export class UnifiedIdManager {
     );
     return undefined;
   }
+
+  /**
+   * Get tool name by OpenAI call ID, if known
+   */
+  getToolNameByOpenAICallId(openaiCallId: string): string | undefined {
+    // Direct lookup
+    const entry = this.mappings.get(openaiCallId);
+    if (entry && entry.toolName) return entry.toolName;
+    // Try ignoring prefix
+    for (const [oId, e] of this.mappings.entries()) {
+      if (IdFormat.isSameIdIgnoringPrefix(oId, openaiCallId)) {
+        return e.toolName;
+      }
+    }
+    return undefined;
+  }
   
   /**
    * Mark a mapping as used

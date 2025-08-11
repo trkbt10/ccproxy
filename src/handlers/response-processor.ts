@@ -1,8 +1,5 @@
-import OpenAI from "openai";
-import type {
-  ResponseCreateParams,
-  Response as OpenAIResponse,
-} from "openai/resources/responses/responses";
+import type { OpenAICompatibleClient } from "../providers/openai-compat/types";
+import type { Response as OpenAIResponse, ResponseCreateParams, ResponseStreamEvent } from "openai/resources/responses/responses";
 import { streamSSE } from "hono/streaming";
 import type { Context } from "hono";
 import type { MessageCreateParams as ClaudeMessageCreateParams } from "@anthropic-ai/sdk/resources/messages";
@@ -23,7 +20,7 @@ import type { RoutingConfig } from "../config/types";
 export type ProcessorConfig = {
   requestId: string;
   conversationId: string;
-  openai: OpenAI;
+  openai: OpenAICompatibleClient;
   claudeReq: ClaudeMessageCreateParams;
   // Resolved OpenAI model for this request
   model: string;
@@ -95,13 +92,25 @@ async function processNonStreamingResponse(
     logDebug("Starting non-streaming response", { openaiReq }, context);
 
     // Pass the abort signal to OpenAI API
-    const response = await config.openai.responses.create(
+    const respOrStream = await config.openai.responses.create(
       {
         ...openaiReq,
         stream: false,
       },
       config.signal ? { signal: config.signal } : undefined
     );
+    function isOpenAIResponse(v: unknown): v is OpenAIResponse {
+      return (
+        typeof v === "object" &&
+        v !== null &&
+        "object" in (v as Record<string, unknown>) &&
+        (v as { object?: unknown }).object === "response"
+      );
+    }
+    if (!isOpenAIResponse(respOrStream)) {
+      throw new Error("Expected non-streaming OpenAI response shape");
+    }
+    const response = respOrStream;
 
     // Get the manager for this conversation
     const manager = conversationStore.getIdManager(config.conversationId);
@@ -153,14 +162,13 @@ async function processStreamingResponse(
 
     try {
       // Pass the abort signal to OpenAI API for streaming
-      const openaiStream = await config.openai.responses
-        .create(
-          {
-            ...openaiReq,
-            stream: true,
-          },
-          config.signal ? { signal: config.signal } : undefined
-        )
+      const streamOrResp = await config.openai.responses.create(
+        {
+          ...openaiReq,
+          stream: true,
+        },
+        config.signal ? { signal: config.signal } : undefined
+      )
         .catch(async (error) => {
           // Check if error is due to abort
           if (config.signal?.aborted || error.name === "AbortError") {
@@ -176,6 +184,16 @@ async function processStreamingResponse(
           );
           throw error;
         });
+
+      function isResponseEventStream(v: unknown): v is AsyncIterable<ResponseStreamEvent> {
+        return typeof v === "object" && v !== null && Symbol.asyncIterator in (v as Record<string, unknown>);
+      }
+
+      if (!isResponseEventStream(streamOrResp)) {
+        throw new Error("Expected streaming OpenAI response (AsyncIterable)");
+      }
+
+      const openaiStream = streamOrResp;
 
       await pipeline.start();
 
@@ -233,6 +251,13 @@ export const createResponseProcessor = (config: ProcessorConfig) => {
 
   // Get or create centralized manager for this conversation
   const manager = conversationStore.getIdManager(config.conversationId);
+
+  // If the underlying client supports tool name resolver (Gemini bridge), provide it
+  if (typeof (config.openai as any).setToolNameResolver === "function") {
+    (config.openai as any).setToolNameResolver((callId: string) =>
+      manager.getToolNameByOpenAICallId(callId)
+    );
+  }
 
   // Convert Claude request to OpenAI format
   const openaiReq = claudeToResponses(

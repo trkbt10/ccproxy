@@ -7,6 +7,7 @@ import { selectProviderForRequest } from "./execution/tool-model-planner";
 import { loadRoutingConfigOnce, buildProviderClient } from "./execution/routing-config";
 import { requestIdMiddleware } from "./middleware/request-id";
 import { clientDisconnectMiddleware } from "./middleware/client-disconnect";
+import { createOpenAIRouter } from "./routes/openai/router";
 
 // Bun automatically loads .env file, but we still check for required variables
 checkEnvironmentVariables();
@@ -150,6 +151,12 @@ app.post("/v1/messages/count_tokens", async (c) => {
   const claudeReq = (await c.req.json()) as ClaudeMessageCreateParams;
   const tokens = countTokens(claudeReq);
   return c.json({ input_tokens: tokens });
+});
+
+// Mount OpenAI compatibility router with routing config
+routingConfigPromise.then(routingConfig => {
+  const openaiRouter = createOpenAIRouter(routingConfig);
+  app.route("/openai/api/v1", openaiRouter);
 });
 
 // テスト接続エンドポイント

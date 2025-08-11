@@ -24,7 +24,7 @@ export type ToolRule = {
 };
 
 export type Provider = {
-  type: "openai" | "claude" | "gemini" | "grok";
+  type: "openai" | "claude" | "gemini" | "grok" | "groq" | (string & {});
   baseURL?: string;
   apiKey?: string;
   api?: {

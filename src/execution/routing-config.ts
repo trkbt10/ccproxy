@@ -1,6 +1,13 @@
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 import OpenAI from "openai";
+import type {
+  Response as OpenAIResponse,
+  ResponseCreateParams,
+  ResponseStreamEvent,
+} from "openai/resources/responses/responses";
+import type { OpenAICompatibleClient } from "../providers/openai-compat/types";
+import { buildOpenAICompatibleClientForGemini } from "../providers/gemini/openai-compatible";
 import type { RoutingConfig, Provider } from "../config/types";
 import { expandConfig } from "../config/expansion";
 import { configureLogger } from "../utils/logging/enhanced-logger";
@@ -128,7 +135,7 @@ export function buildProviderClient(
   provider: Provider | undefined,
   getHeader: (name: string) => string | null,
   modelHint?: string
-): OpenAI {
+): OpenAICompatibleClient {
   // If no provider is defined, it means providers config doesn't exist
   // Fall back to environment variables
   if (!provider) {
@@ -139,16 +146,29 @@ export function buildProviderClient(
       );
     }
     
-    return new OpenAI({
+    const client = new OpenAI({
       apiKey,
       defaultHeaders: {
         "OpenAI-Beta": "responses-2025-06-21",
       },
     });
+    return {
+      responses: {
+        async create(params: any, options?: { signal?: AbortSignal }) {
+          return client.responses.create(params, options);
+        },
+      },
+      models: {
+        async list() {
+          const res = await client.models.list();
+          return { data: res.data.map((m) => ({ id: m.id })) };
+        },
+      },
+    };
   }
 
-  if (provider.type !== "openai") {
-    throw new Error(`Provider type '${provider.type}' is not supported yet`);
+  if (provider.type === "gemini") {
+    return buildOpenAICompatibleClientForGemini(provider, getHeader, modelHint);
   }
 
   // Choose API key in the following order (all from configuration/ENV):
@@ -176,5 +196,21 @@ export function buildProviderClient(
     options.baseURL = provider.baseURL;
   }
 
-  return new OpenAI(options);
+  const client = new OpenAI(options);
+  return {
+    responses: {
+      async create(
+        params: ResponseCreateParams,
+        options?: { signal?: AbortSignal }
+      ): Promise<OpenAIResponse | AsyncIterable<ResponseStreamEvent>> {
+        return client.responses.create(params, options);
+      },
+    },
+    models: {
+      async list() {
+        const res = await client.models.list();
+        return { data: res.data.map((m) => ({ id: m.id })) };
+      },
+    },
+  };
 }

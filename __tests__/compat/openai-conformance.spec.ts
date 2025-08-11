@@ -10,14 +10,18 @@ import type {
   ToolChoiceFunction,
   ResponseStreamEvent,
 } from "openai/resources/responses/responses";
-import { compatCoverage, writeMarkdownReport, writeCombinedMarkdownReport } from "./compat-coverage";
+import {
+  compatCoverage,
+  writeMarkdownReport,
+  writeCombinedMarkdownReport,
+} from "./compat-coverage";
 import type {
   ChatCompletionCreateParams,
   ChatCompletionTool,
   ChatCompletionToolChoiceOption,
   ChatCompletionChunk,
 } from "openai/resources/chat/completions";
-import { isFunctionToolDelta } from "../../src/providers/guards";
+import { isFunctionToolDelta } from "../../src/adapters/providers/guards";
 
 // Type guard moved to shared module
 
@@ -78,11 +82,18 @@ describe("OpenAI Conformance: chat/completions", () => {
         function: {
           name: "test_tool",
           description: "A test tool",
-          parameters: { type: "object", properties: { input: { type: "string" } }, additionalProperties: false },
+          parameters: {
+            type: "object",
+            properties: { input: { type: "string" } },
+            additionalProperties: false,
+          },
         },
       },
     ];
-    const tool_choice: ChatCompletionToolChoiceOption = { type: "function", function: { name: "test_tool" } };
+    const tool_choice: ChatCompletionToolChoiceOption = {
+      type: "function",
+      function: { name: "test_tool" },
+    };
     const params: ChatCompletionCreateParams = {
       model: MODEL,
       messages: [{ role: "user", content: "use tool" }],
@@ -104,11 +115,18 @@ describe("OpenAI Conformance: chat/completions", () => {
         function: {
           name: "test_tool",
           description: "A test tool",
-          parameters: { type: "object", properties: { input: { type: "string" } }, additionalProperties: false },
+          parameters: {
+            type: "object",
+            properties: { input: { type: "string" } },
+            additionalProperties: false,
+          },
         },
       },
     ];
-    const tool_choice: ChatCompletionToolChoiceOption = { type: "function", function: { name: "test_tool" } };
+    const tool_choice: ChatCompletionToolChoiceOption = {
+      type: "function",
+      function: { name: "test_tool" },
+    };
     const stream = await client.chat.completions.create({
       model: MODEL,
       messages: [{ role: "user", content: "use tool" }],
@@ -156,12 +174,33 @@ describe("OpenAI Conformance: responses", () => {
   maybe("non-stream returns function_call item when forced", async () => {
     const client = makeClient();
     const tools: Tool[] = [
-      { type: "function", name: "test_tool", description: "A test tool", parameters: { type: "object", properties: { input: { type: "string" } }, required: ["input"], additionalProperties: false }, strict: true },
+      {
+        type: "function",
+        name: "test_tool",
+        description: "A test tool",
+        parameters: {
+          type: "object",
+          properties: { input: { type: "string" } },
+          required: ["input"],
+          additionalProperties: false,
+        },
+        strict: true,
+      },
     ];
-    const tool_choice: ToolChoiceFunction = { type: "function", name: "test_tool" };
-    const params: ResponseCreateParamsNonStreaming = { model: MODEL, input: "use tool", tools, tool_choice };
+    const tool_choice: ToolChoiceFunction = {
+      type: "function",
+      name: "test_tool",
+    };
+    const params: ResponseCreateParamsNonStreaming = {
+      model: MODEL,
+      input: "use tool",
+      tools,
+      tool_choice,
+    };
     const res = await client.responses.create(params);
-    const hasFn = Array.isArray(res.output) && res.output.some((o: ResponseOutputItem) => o.type === "function_call");
+    const hasFn =
+      Array.isArray(res.output) &&
+      res.output.some((o: ResponseOutputItem) => o.type === "function_call");
     expect(hasFn).toBe(true);
     compatCoverage.mark("openai", "responses.non_stream.function_call");
   });
@@ -174,7 +213,10 @@ describe("OpenAI Conformance: responses", () => {
       stream: true,
     };
     const stream = await client.responses.create(params);
-    let created = false, delta = false, done = false, completed = false;
+    let created = false,
+      delta = false,
+      done = false,
+      completed = false;
     for await (const ev of stream as AsyncIterable<ResponseStreamEvent>) {
       if (ev.type === "response.created") created = true;
       if (ev.type === "response.output_text.delta") delta = true;
@@ -198,11 +240,19 @@ describe("OpenAI Conformance: responses", () => {
         type: "function",
         name: "test_tool",
         description: "A test tool",
-        parameters: { type: "object", properties: { input: { type: "string" } }, required: ["input"], additionalProperties: false },
+        parameters: {
+          type: "object",
+          properties: { input: { type: "string" } },
+          required: ["input"],
+          additionalProperties: false,
+        },
         strict: true,
       },
     ];
-    const tool_choice: ToolChoiceFunction = { type: "function", name: "test_tool" };
+    const tool_choice: ToolChoiceFunction = {
+      type: "function",
+      name: "test_tool",
+    };
     const params: ResponseCreateParamsStreaming = {
       model: MODEL,
       input: "use tool",
@@ -211,10 +261,13 @@ describe("OpenAI Conformance: responses", () => {
       stream: true,
     };
     const stream = await client.responses.create(params);
-    let added = false, argsDelta = false, itemDone = false;
+    let added = false,
+      argsDelta = false,
+      itemDone = false;
     for await (const ev of stream) {
       if (ev.type === "response.output_item.added") added = true;
-      if (ev.type === "response.function_call_arguments.delta") argsDelta = true;
+      if (ev.type === "response.function_call_arguments.delta")
+        argsDelta = true;
       if (ev.type === "response.output_item.done") itemDone = true;
     }
     expect(added).toBe(true);
@@ -246,20 +299,32 @@ afterAll(async () => {
   const providers = compatCoverage.providers();
   for (const prov of providers) {
     const basic = compatCoverage.report(prov);
-    const report = { ...basic, generatedAt: new Date().toISOString(), provider: prov };
+    const report = {
+      ...basic,
+      generatedAt: new Date().toISOString(),
+      provider: prov,
+    };
     try {
       await writeMarkdownReport(report);
       // eslint-disable-next-line no-console
-      console.log(`Saved compatibility report: reports/openai-compat/${prov}.md`);
+      console.log(
+        `Saved compatibility report: reports/openai-compat/${prov}.md`
+      );
     } catch (e) {
       console.warn("Failed to write compatibility report:", e);
     }
   }
   try {
-    const combined = providers.map((p) => ({ ...compatCoverage.report(p), generatedAt: new Date().toISOString(), provider: p }));
+    const combined = providers.map((p) => ({
+      ...compatCoverage.report(p),
+      generatedAt: new Date().toISOString(),
+      provider: p,
+    }));
     await writeCombinedMarkdownReport(combined);
     // eslint-disable-next-line no-console
-    console.log(`Saved combined compatibility report: reports/openai-compat/summary.md`);
+    console.log(
+      `Saved combined compatibility report: reports/openai-compat/summary.md`
+    );
   } catch (e) {
     console.warn("Failed to write combined report:", e);
   }

@@ -1,15 +1,33 @@
 // Minimal Grok (x.ai) to OpenAI Responses compatibility adapter
-import type { OpenAICompatResponse, OpenAICompatStreamEvent } from "../openai-compat/compat";
+import type {
+  OpenAICompatResponse,
+  OpenAICompatStreamEvent,
+} from "../openai-compat/compat";
 
 // Minimal types to avoid `any`
 type GrokFunction = { name: string; arguments?: string };
 type GrokToolCall = { id?: string; type: "function"; function: GrokFunction };
-type GrokMessage = { role: string; content?: string; tool_calls?: GrokToolCall[] };
-type GrokChoice = { message?: GrokMessage; delta?: { content?: string; tool_calls?: GrokToolCall[] }; finish_reason?: string };
-type GrokChatCompletion = { id?: string; choices?: GrokChoice[]; usage?: { prompt_tokens?: number; completion_tokens?: number } };
+type GrokMessage = {
+  role: string;
+  content?: string;
+  tool_calls?: GrokToolCall[];
+};
+type GrokChoice = {
+  message?: GrokMessage;
+  delta?: { content?: string; tool_calls?: GrokToolCall[] };
+  finish_reason?: string;
+};
+type GrokChatCompletion = {
+  id?: string;
+  choices?: GrokChoice[];
+  usage?: { prompt_tokens?: number; completion_tokens?: number };
+};
 
 // Non-stream: map chat.completions-style response to OpenAI Responses
-export function grokToOpenAIResponse(resp: GrokChatCompletion, model = "grok"): OpenAICompatResponse {
+export function grokToOpenAIResponse(
+  resp: GrokChatCompletion,
+  model = "grok"
+): OpenAICompatResponse {
   const text = resp?.choices?.[0]?.message?.content || "";
   const toolCalls = Array.isArray(resp?.choices?.[0]?.message?.tool_calls)
     ? (resp.choices![0]!.message!.tool_calls as GrokToolCall[])
@@ -24,12 +42,20 @@ export function grokToOpenAIResponse(resp: GrokChatCompletion, model = "grok"): 
     });
   }
   for (const tc of toolCalls) {
-    if (tc && tc.type === "function" && tc.function && typeof tc.function.name === "string") {
+    if (
+      tc &&
+      tc.type === "function" &&
+      tc.function &&
+      typeof tc.function.name === "string"
+    ) {
       output.push({
         type: "function_call",
         id: tc.id || undefined,
         name: tc.function.name,
-        arguments: typeof tc.function.arguments === "string" ? tc.function.arguments : undefined,
+        arguments:
+          typeof tc.function.arguments === "string"
+            ? tc.function.arguments
+            : undefined,
         call_id: tc.id || undefined,
       });
     }
@@ -50,7 +76,9 @@ export function grokToOpenAIResponse(resp: GrokChatCompletion, model = "grok"): 
 }
 
 // Stream: map chat.completion.chunk stream to Responses events
-export async function* grokToOpenAIStream(src: AsyncIterable<GrokChatCompletion>): AsyncGenerator<OpenAICompatStreamEvent, void, unknown> {
+export async function* grokToOpenAIStream(
+  src: AsyncIterable<GrokChatCompletion>
+): AsyncGenerator<OpenAICompatStreamEvent, void, unknown> {
   const id = `resp_${Date.now()}`;
   yield { type: "response.created", response: { id, status: "in_progress" } };
   let sawText = false;
@@ -72,16 +100,31 @@ export async function* grokToOpenAIStream(src: AsyncIterable<GrokChatCompletion>
         if (emittedFunctionName) {
           yield {
             type: "response.output_item.added",
-            item: { type: "function_call", id: emittedFunctionId, call_id: emittedFunctionId, name: emittedFunctionName },
+            item: {
+              type: "function_call",
+              id: emittedFunctionId,
+              call_id: emittedFunctionId,
+              name: emittedFunctionName,
+            },
           };
         }
       }
       const args = call.function?.arguments;
       if (args && emittedFunctionName) {
-        yield { type: "response.function_call_arguments.delta", item_id: emittedFunctionId, delta: args };
+        yield {
+          type: "response.function_call_arguments.delta",
+          item_id: emittedFunctionId,
+          delta: args,
+        };
         yield {
           type: "response.output_item.done",
-          item: { type: "function_call", id: emittedFunctionId, call_id: emittedFunctionId, name: emittedFunctionName, arguments: args },
+          item: {
+            type: "function_call",
+            id: emittedFunctionId,
+            call_id: emittedFunctionId,
+            name: emittedFunctionName,
+            arguments: args,
+          },
         };
       }
     }

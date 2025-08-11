@@ -6,7 +6,7 @@ import type {
   ChatCompletionTool,
   ChatCompletionToolChoiceOption,
 } from "openai/resources/chat/completions";
-import type { ChatCompletionMessage } from "openai/resources/chat/completions";
+import type { ChatCompletionMessage, ChatCompletionMessageToolCall } from "openai/resources/chat/completions";
 
 function buildAssistantText(messages: ChatCompletionMessageParam[]): string {
   const lastUser = [...messages].reverse().find((m) => m.role === "user");
@@ -33,10 +33,13 @@ export function geminiToChatCompletion(params: ChatCompletionCreateParams): Chat
   const text = buildAssistantText(params.messages);
   const created = Math.floor(Date.now() / 1000);
 
-  const toolForced = isFunctionToolChoice(params.tool_choice as any);
-  const toolName = toolForced && isObject((params.tool_choice as any).function)
-    ? String((params.tool_choice as any).function?.name || "")
-    : "";
+  const toolChoice = params.tool_choice;
+  let toolForced = false;
+  let toolName = "";
+  if (isFunctionToolChoice(toolChoice)) {
+    toolForced = true;
+    toolName = toolChoice.function?.name || "";
+  }
 
   const message: ChatCompletionMessage = toolForced
     ? {
@@ -48,7 +51,7 @@ export function geminiToChatCompletion(params: ChatCompletionCreateParams): Chat
             id: buildId("call"),
             type: "function",
             function: { name: toolName, arguments: JSON.stringify({ input: "test" }) },
-          },
+          } as ChatCompletionMessageToolCall,
         ],
       }
     : {
@@ -76,10 +79,13 @@ export function geminiToChatCompletion(params: ChatCompletionCreateParams): Chat
 export async function* geminiToChatCompletionStream(params: ChatCompletionCreateParams): AsyncGenerator<ChatCompletionChunk, void, unknown> {
   const id = buildId("chatcmpl");
   const created = Math.floor(Date.now() / 1000);
-  const toolForced = isFunctionToolChoice(params.tool_choice as any);
-  const toolName = toolForced && isObject((params.tool_choice as any).function)
-    ? String((params.tool_choice as any).function?.name || "")
-    : "";
+  const toolChoice2 = params.tool_choice;
+  let toolForced = false;
+  let toolName = "";
+  if (isFunctionToolChoice(toolChoice2)) {
+    toolForced = true;
+    toolName = toolChoice2.function?.name || "";
+  }
 
   if (toolForced) {
     // Emit tool_call deltas

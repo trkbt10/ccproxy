@@ -5,7 +5,7 @@ import type {
   ChatCompletionMessageParam,
   ChatCompletionToolChoiceOption,
 } from "openai/resources/chat/completions";
-import type { ChatCompletionMessage } from "openai/resources/chat/completions";
+import type { ChatCompletionMessage, ChatCompletionMessageToolCall } from "openai/resources/chat/completions";
 
 function textFromMessages(messages: ChatCompletionMessageParam[]): string {
   const u = [...messages].reverse().find((m) => m.role === "user");
@@ -30,14 +30,13 @@ function isFunctionToolChoice(
 export function grokToChatCompletion(params: ChatCompletionCreateParams): ChatCompletion {
   const rid = id("chatcmpl");
   const created = Math.floor(Date.now() / 1000);
-  const forced = isFunctionToolChoice(params.tool_choice as any);
-  const name = forced && isObject((params.tool_choice as any).function)
-    ? String((params.tool_choice as any).function?.name || "")
-    : "";
+  const choice = params.tool_choice;
+  const forced = isFunctionToolChoice(choice);
+  const name = forced ? choice.function?.name || "" : "";
   const content = `Grok: ${textFromMessages(params.messages)}`;
 
   const message: ChatCompletionMessage = forced
-    ? { role: "assistant", content: null, refusal: null, tool_calls: [{ id: id("call"), type: "function", function: { name, arguments: JSON.stringify({ input: "test" }) } }] as any }
+    ? { role: "assistant", content: null, refusal: null, tool_calls: [{ id: id("call"), type: "function", function: { name, arguments: JSON.stringify({ input: "test" }) } } as ChatCompletionMessageToolCall] }
     : { role: "assistant", content, refusal: null };
 
   return {
@@ -53,8 +52,9 @@ export function grokToChatCompletion(params: ChatCompletionCreateParams): ChatCo
 export async function* grokToChatCompletionStream(params: ChatCompletionCreateParams): AsyncGenerator<ChatCompletionChunk, void, unknown> {
   const rid = id("chatcmpl");
   const created = Math.floor(Date.now() / 1000);
-  const forced = isFunctionToolChoice(params.tool_choice as any);
-  const name = forced ? (params.tool_choice as any).function?.name || "" : "";
+  const choice2 = params.tool_choice;
+  const forced = isFunctionToolChoice(choice2);
+  const name = forced ? choice2.function?.name || "" : "";
 
   if (forced) {
     const callId = id("call");

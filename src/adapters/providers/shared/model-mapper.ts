@@ -27,6 +27,36 @@ function pickByGrade(
   return byGrade?.[grade];
 }
 
+function tryMapByGrade(
+  modelName: string | undefined,
+  providerType: ProviderType,
+  cfg: RoutingConfig | null
+): string | undefined {
+  if (!modelName) return undefined;
+  const grade = detectModelGrade(modelName);
+  return pickByGrade(grade, providerType, cfg);
+}
+
+function resolveWithDefaults(
+  sourceModel: string | undefined,
+  defaultModel: string | undefined,
+  providerType: ProviderType,
+  cfg: RoutingConfig | null
+): string {
+  // Try grade mapping for provided source model
+  {
+    const mapped = tryMapByGrade(sourceModel, providerType, cfg);
+    if (mapped) return mapped;
+  }
+  // If no source provided, try mapping the configured default model
+  if (!sourceModel && defaultModel) {
+    const mapped = tryMapByGrade(defaultModel, providerType, cfg);
+    if (mapped) return mapped;
+  }
+  // Fallback to original or default
+  return sourceModel || defaultModel || "";
+}
+
 /**
  * Maps a source model name to a target provider's roughly equivalent model.
  * If a lister is provided, prefers picking from actual provider `listModels()` results
@@ -40,6 +70,7 @@ export function mapModelToProvider(params: {
   const providerType = params.targetProviderType;
   const cfg = params.routingConfig ?? getRoutingConfigCache();
   const sourceModel = normalizeModelName(params.sourceModel);
+  const defaultModel = cfg?.defaults?.model;
 
   // 1) Provider-specific alias mapping
   const aliases = getProviderAliases(cfg, providerType);
@@ -47,23 +78,8 @@ export function mapModelToProvider(params: {
     return aliases[sourceModel];
   }
 
-  // 2) Grade-based mapping
-  if (sourceModel) {
-    const grade = detectModelGrade(sourceModel);
-    const mapped = pickByGrade(grade, providerType, cfg);
-    if (mapped) return mapped;
-  }
-
-  // 3) Fallbacks
-  const defaultModel = cfg?.defaults?.model;
-  if (!sourceModel && defaultModel) {
-    const grade = detectModelGrade(defaultModel);
-    const mapped = pickByGrade(grade, providerType, cfg);
-    if (mapped) return mapped;
-  }
-
-  // Keep source model or config default as last resort, no hardcoded fallbacks
-  return sourceModel || defaultModel || "";
+  // 2) Grade-based mapping and fallbacks consolidated
+  return resolveWithDefaults(sourceModel, defaultModel, providerType, cfg);
 }
 
 /**
@@ -80,6 +96,7 @@ export async function resolveModelForProvider(params: {
   const providerType = params.provider.type as ProviderType;
   const cfg = params.routingConfig ?? getRoutingConfigCache();
   const sourceModel = normalizeModelName(params.sourceModel);
+  const defaultModel = cfg?.defaults?.model;
 
   // Aliases first
   const aliases = getProviderAliases(cfg, providerType);
@@ -107,19 +124,8 @@ export async function resolveModelForProvider(params: {
     // ignore list errors and fall back
   }
 
-  // Fallbacks similar to sync version (no hardcoded tables)
-  if (sourceModel) {
-    const grade = detectModelGrade(sourceModel);
-    const mapped = pickByGrade(grade, providerType, cfg);
-    if (mapped) return mapped;
-  }
-  const defaultModel = cfg?.defaults?.model;
-  if (!sourceModel && defaultModel) {
-    const grade = detectModelGrade(defaultModel);
-    const mapped = pickByGrade(grade, providerType, cfg);
-    if (mapped) return mapped;
-  }
-  return sourceModel || defaultModel || "";
+  // Fallbacks consolidated
+  return resolveWithDefaults(sourceModel, defaultModel, providerType, cfg);
 }
 
 function pickBestModelId(ids: string[]): string | undefined {

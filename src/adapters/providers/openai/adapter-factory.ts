@@ -1,5 +1,6 @@
 import OpenAI from "openai";
 import type {
+  Response as OpenAIResponse,
   ResponseCreateParams as OpenAIResponseCreateParams,
   ResponseStreamEvent,
 } from "openai/resources/responses/responses";

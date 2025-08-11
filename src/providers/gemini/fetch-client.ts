@@ -135,19 +135,37 @@ export class GeminiFetchClient {
         const chunk = buffer.slice(0, idx).trim();
         buffer = buffer.slice(idx + 2);
         const payload = parseStreamChunk(chunk);
-        if (payload) yield payload;
+        if (payload) {
+          if (Array.isArray(payload)) {
+            for (const p of payload) yield p as GenerateContentResponse;
+          } else {
+            yield payload as GenerateContentResponse;
+          }
+        }
       }
       // Also handle single newlines
       const lines = buffer.split("\n");
       buffer = lines.pop() ?? "";
       for (const line of lines) {
         const payload = parseStreamChunk(line);
-        if (payload) yield payload;
+        if (payload) {
+          if (Array.isArray(payload)) {
+            for (const p of payload) yield p as GenerateContentResponse;
+          } else {
+            yield payload as GenerateContentResponse;
+          }
+        }
       }
     }
     if (buffer.trim().length > 0) {
       const payload = parseStreamChunk(buffer.trim());
-      if (payload) yield payload;
+      if (payload) {
+        if (Array.isArray(payload)) {
+          for (const p of payload) yield p as GenerateContentResponse;
+        } else {
+          yield payload as GenerateContentResponse;
+        }
+      }
     }
   }
 

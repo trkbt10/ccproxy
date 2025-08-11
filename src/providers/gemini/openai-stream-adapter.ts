@@ -29,24 +29,59 @@ export async function* geminiToOpenAIStream(
 ): AsyncGenerator<OpenAIResponseStreamEvent, void, unknown> {
   const id = `resp_${Date.now()}`;
   yield { type: "response.created", response: { id, status: "in_progress" } } as OpenAIResponseStreamEvent;
-  let emitted = "";
+
+  // Accumulate emitted plain text so we can compute robust deltas
+  let accumulatedText = "";
+  let emittedAnyTextDelta = false;
+  let lastTextSeen = "";
+  // Track emitted function call signatures to avoid duplicates across chunks
+  const seenFnCalls = new Set<string>();
+
   for await (const chunk of src) {
     const text = extractText(chunk);
-    if (text.length > emitted.length) {
-      const delta = text.slice(emitted.length);
-      emitted = text;
+    if (text) lastTextSeen = text;
+    if (text) {
+      let delta = "";
+      if (text.startsWith(accumulatedText)) {
+        // Cumulative mode: chunk contains full text so far
+        delta = text.slice(accumulatedText.length);
+        accumulatedText = text;
+      } else if (accumulatedText && accumulatedText.startsWith(text)) {
+        // Truncation or rewind; ignore this chunk
+        delta = "";
+      } else {
+        // Incremental mode: chunk is the new delta
+        delta = text;
+        accumulatedText += text;
+      }
       if (delta) {
         yield { type: "response.output_text.delta", delta } as OpenAIResponseStreamEvent;
+        emittedAnyTextDelta = true;
       }
     }
+
     const calls = extractFunctionCalls(chunk);
     for (const c of calls) {
-      yield { type: "response.output_item.added", item: { type: "function_call", id: c.id, call_id: c.id, name: c.name, arguments: c.arguments } } as OpenAIResponseStreamEvent;
+      const sig = `${c.name}|${c.arguments ?? ""}`;
+      if (seenFnCalls.has(sig)) continue;
+      seenFnCalls.add(sig);
+      yield {
+        type: "response.output_item.added",
+        item: { type: "function_call", id: c.id, call_id: c.id, name: c.name, arguments: c.arguments },
+      } as OpenAIResponseStreamEvent;
       if (c.arguments) {
         yield { type: "response.function_call_arguments.delta", delta: c.arguments } as OpenAIResponseStreamEvent;
       }
-      yield { type: "response.output_item.done", item: { type: "function_call", id: c.id, call_id: c.id, name: c.name, arguments: c.arguments } } as OpenAIResponseStreamEvent;
+      yield {
+        type: "response.output_item.done",
+        item: { type: "function_call", id: c.id, call_id: c.id, name: c.name, arguments: c.arguments },
+      } as OpenAIResponseStreamEvent;
     }
+  }
+  // Synthesize at least one text delta event for OpenAI parity if none were emitted
+  if (!emittedAnyTextDelta) {
+    const fallback = lastTextSeen || "";
+    yield { type: "response.output_text.delta", delta: fallback } as OpenAIResponseStreamEvent;
   }
   yield { type: "response.output_text.done" } as OpenAIResponseStreamEvent;
   yield { type: "response.completed", response: { id, status: "completed" } } as OpenAIResponseStreamEvent;

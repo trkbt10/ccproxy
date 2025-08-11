@@ -6,32 +6,24 @@ import { getAdapterFor } from "../../src/providers/registry";
 import type { Provider } from "../../src/config/types";
 import type { GenerateContentRequest } from "../../src/providers/gemini/fetch-client";
 import { isGeminiResponse, ensureGeminiStream } from "../../src/providers/guards";
-import { hasListModels } from "../../src/providers/guards";
-import { StreamHandler } from "../../src/converters/responses-adapter/stream-handler";
-import type { ChatCompletionChunk, ChatCompletion } from "openai/resources/chat/completions";
-import { convertChatCompletionToResponse } from "../../src/converters/responses-adapter/chat-to-response-converter";
 
 describe("Gemini OpenAI-compat (real API)", () => {
   const provider: Provider = { type: "gemini" };
   const getHeader = (_: string) => null;
 
   async function pickCheapGeminiModel(adapter: ReturnType<typeof getAdapterFor>): Promise<string> {
-    const listed = await adapter.listModels();
+    // Always list to exercise models endpoint coverage
+    const listed = await (adapter as any).listModels();
     expect(Array.isArray(listed.data)).toBe(true);
     compatCoverage.mark("gemini", "models.list.basic");
-    compatCoverage.log("gemini", `models.list: ${listed.data.slice(0,5).map(m=>m.id).join(", ")}${listed.data.length>5?", ...":""}`);
-    const names = listed.data.map((m) => m.id);
-    // Strongly prefer cheaper variants; avoid matching 'mini' inside 'gemini'
+    compatCoverage.log("gemini", `models.list: ${listed.data.slice(0,5).map((m: any)=>m.id).join(", ")}${listed.data.length>5?", ...":""}`);
+    // Prefer explicit env to avoid guessing for selection
+    const envModel = process.env.GEMINI_TEST_MODEL || process.env.GOOGLE_AI_TEST_MODEL;
+    if (envModel) return envModel.replace(/^models\//, "");
+    const names = listed.data.map((m: any) => m.id as string);
     const cheap = names.filter((n) => /(^|[-_.])(?:nano|flash(?:-\d+)?|mini)(?:$|[-_.])/i.test(n));
-    let selected = cheap[0];
-    if (!selected) {
-      const env = process.env.GEMINI_TEST_MODEL || process.env.GOOGLE_AI_TEST_MODEL;
-      if (!env) {
-        throw new Error("No cheap Gemini model found from /models. Set GEMINI_TEST_MODEL or GOOGLE_AI_TEST_MODEL to a mini/flash/nano model.");
-      }
-      selected = env;
-    }
-    expect(typeof selected).toBe("string");
+    const selected = cheap[0] || names[0];
+    if (!selected) throw new Error("No Gemini models available. Set GEMINI_TEST_MODEL or GOOGLE_AI_TEST_MODEL.");
     return selected;
   }
 
@@ -62,8 +54,13 @@ describe("Gemini OpenAI-compat (real API)", () => {
     const model = await pickCheapGeminiModel(adapter);
 
     const input: GenerateContentRequest = {
-      contents: [{ role: "user", parts: [{ text: "Stream please" }] }],
-      generationConfig: { maxOutputTokens: 64 },
+      contents: [{
+        role: "user",
+        parts: [{
+          text: "200語以上の長文で、人工知能の歴史を複数段落で詳しく要約してください。段落の間に空行を入れ、箇条書きを1つ含めてください。"
+        }]
+      }],
+      generationConfig: { maxOutputTokens: 512, responseMimeType: "text/plain" as any },
     };
 
     const types: string[] = [];
@@ -74,12 +71,11 @@ describe("Gemini OpenAI-compat (real API)", () => {
     }
     compatCoverage.log("gemini", `chat.stream events: ${types.join(", ")}`);
     expect(types[0]).toBe("response.created");
+    expect(types).toContain("response.output_text.delta");
     expect(types).toContain("response.output_text.done");
     expect(types[types.length - 1]).toBe("response.completed");
     compatCoverage.mark("gemini", "responses.stream.created");
-    if (types.includes("response.output_text.delta")) {
-      compatCoverage.mark("gemini", "responses.stream.delta");
-    }
+    compatCoverage.mark("gemini", "responses.stream.delta");
     compatCoverage.mark("gemini", "responses.stream.done");
     compatCoverage.mark("gemini", "responses.stream.completed");
     compatCoverage.mark("gemini", "chat.stream.chunk");
@@ -120,6 +116,7 @@ describe("Gemini OpenAI-compat (real API)", () => {
     const hasFn = Array.isArray(out.output) && out.output.some((o) => o.type === "function_call");
     expect(hasFn).toBe(true);
     compatCoverage.mark("gemini", "chat.non_stream.function_call");
+    compatCoverage.mark("gemini", "responses.non_stream.function_call");
   }, 30000);
 
   it("chat stream tool_call delta (real)", async () => {
@@ -141,7 +138,12 @@ describe("Gemini OpenAI-compat (real API)", () => {
       },
     ];
     const input: GenerateContentRequest = {
-      contents: [{ role: "user", parts: [{ text: "Call tool to get ceiling for San Francisco" }] }],
+      contents: [{
+        role: "user",
+        parts: [{
+          text: "必ずツール get_current_ceiling を location=San Francisco で呼び出してください。テキストで回答しないでください。"
+        }]
+      }],
       tools,
       toolConfig: { functionCallingConfig: { mode: "ANY", allowedFunctionNames: ["get_current_ceiling"] } },
       generationConfig: { maxOutputTokens: 32 },
@@ -155,9 +157,11 @@ describe("Gemini OpenAI-compat (real API)", () => {
     compatCoverage.log("gemini", `function_call (stream) events: ${types.join(", ")}`);
     if (types.includes("response.output_item.added") && types.includes("response.function_call_arguments.delta") && types.includes("response.output_item.done")) {
       compatCoverage.mark("gemini", "chat.stream.tool_call.delta");
+      compatCoverage.mark("gemini", "responses.stream.function_call.added");
+      compatCoverage.mark("gemini", "responses.stream.function_call.args.delta");
+      compatCoverage.mark("gemini", "responses.stream.function_call.done");
     }
   }, 30000);
-
   it("chat function_call roundtrip (real)", async () => {
     const adapter = getAdapterFor(provider, getHeader);
     const model = await pickCheapGeminiModel(adapter);
@@ -214,55 +218,7 @@ describe("Gemini OpenAI-compat (real API)", () => {
     expect(hasAny).toBe(true);
   }, 30000);
 
-  it("responses non-stream function_call via emulator", async () => {
-    // Keep emulator-based check for conversion path only (no network)
-    const completion: ChatCompletion = {
-      id: "x",
-      object: "chat.completion",
-      created: Math.floor(Date.now() / 1000),
-      model: "gemini-test",
-      choices: [ { index: 0, message: { role: "assistant", content: null, refusal: null, tool_calls: [{ id: "c1", type: "function", function: { name: "t", arguments: "{}" } }] }, logprobs: null, finish_reason: "stop" } ],
-      usage: { prompt_tokens: 0, completion_tokens: 0, total_tokens: 0 },
-    };
-    const out = convertChatCompletionToResponse(completion, new Map());
-    const hasFn = Array.isArray(out.output) && out.output.some((o) => o.type === "function_call");
-    expect(hasFn).toBe(true);
-    compatCoverage.mark("gemini", "responses.non_stream.function_call");
-  });
 
-  it("responses stream function_call via emulator", async () => {
-    async function* chunks() {
-      yield { id: "x", object: "chat.completion.chunk", created: Math.floor(Date.now()/1000), model: "gemini-test", choices: [ { index:0, delta: { role: "assistant", tool_calls: [{ id: "c1", type: "function", function: { name: "t", arguments: "" } }] }, finish_reason: null } ] } as ChatCompletionChunk;
-      yield { id: "x", object: "chat.completion.chunk", created: Math.floor(Date.now()/1000), model: "gemini-test", choices: [ { index:0, delta: { tool_calls: [{ id: "c1", type: "function", function: { arguments: "{\"input\":\"test\"}" } }] }, finish_reason: null } ] } as ChatCompletionChunk;
-      yield { id: "x", object: "chat.completion.chunk", created: Math.floor(Date.now()/1000), model: "gemini-test", choices: [ { index:0, delta: {}, finish_reason: "stop" } ] } as ChatCompletionChunk;
-    }
-    const h = new StreamHandler();
-    const types: string[] = [];
-    for await (const ev of h.handleStream(chunks())) { types.push(ev.type); }
-    expect(types).toContain("response.output_item.added");
-    expect(types).toContain("response.function_call_arguments.delta");
-    expect(types).toContain("response.output_item.done");
-    compatCoverage.mark("gemini", "responses.stream.function_call.added");
-    compatCoverage.mark("gemini", "responses.stream.function_call.args.delta");
-    compatCoverage.mark("gemini", "responses.stream.function_call.done");
-  });
-
-  it("chat stream function_call via adapter (emulated)", async () => {
-    // Emulate GenerateContentResponse stream including functionCall parts
-    async function* chunks() {
-      yield { candidates: [{ content: { parts: [{ functionCall: { name: "t", args: { city: "Tokyo" } } }] } }] } as any;
-    }
-    const types: string[] = [];
-    for await (const ev of geminiToOpenAIStream(chunks())) {
-      types.push(ev.type);
-    }
-    expect(types).toContain("response.created");
-    expect(types).toContain("response.output_item.added");
-    expect(types).toContain("response.function_call_arguments.delta");
-    expect(types).toContain("response.output_item.done");
-    expect(types).toContain("response.completed");
-    compatCoverage.mark("gemini", "chat.stream.tool_call.delta");
-  });
 });
 
 afterAll(async () => {

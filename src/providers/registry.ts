@@ -42,6 +42,11 @@ export function getAdapterFor(provider: Provider, getHeader: (name: string) => s
         async generate(params) {
           return client.responses.create({ ...(params.input as any), model: params.model }, params.signal ? { signal: params.signal } : undefined);
         },
+        async listModels() {
+          const res = await client.models.list();
+          const data = res.data.map((m) => ({ id: m.id, object: "model" as const }));
+          return { object: "list" as const, data };
+        },
       };
       return adapter as ProviderAdapter;
     }
@@ -61,6 +66,14 @@ export function getAdapterFor(provider: Provider, getHeader: (name: string) => s
         },
         async countTokens(params) {
           return client.countTokens(params.model, params.input as any, params.signal);
+        },
+        async listModels() {
+          const res = await client.listModels();
+          const data = (res.models || []).map((m) => {
+            const id = m.name?.startsWith("models/") ? m.name.slice("models/".length) : m.name;
+            return { id: id || "", object: "model" as const };
+          }).filter((m) => m.id);
+          return { object: "list" as const, data };
         },
       };
       return adapter as ProviderAdapter;
@@ -120,6 +133,14 @@ export function getAdapterFor(provider: Provider, getHeader: (name: string) => s
             const payload = parseSSELine(buffer.trim());
             if (payload) yield payload;
           }
+        },
+        async listModels() {
+          const url = new URL(baseURL.replace(/\/$/, "") + "/models");
+          const res = await fetch(url.toString(), { headers: { Authorization: `Bearer ${apiKey}` } });
+          if (!res.ok) throw new Error(`Grok models error ${res.status}`);
+          const json = await res.json() as { data?: Array<{ id?: string }> };
+          const data = (json.data || []).map((m) => ({ id: m.id || "", object: "model" as const })).filter((m) => m.id);
+          return { object: "list" as const, data };
         },
       };
       return adapter as ProviderAdapter;

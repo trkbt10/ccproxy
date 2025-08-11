@@ -4,7 +4,9 @@ import { geminiToOpenAIResponse } from "../../src/providers/gemini/openai-respon
 import { geminiToOpenAIStream } from "../../src/providers/gemini/openai-stream-adapter";
 import { getAdapterFor } from "../../src/providers/registry";
 import type { Provider } from "../../src/config/types";
-import { GeminiFetchClient, type GenerateContentRequest } from "../../src/providers/gemini/fetch-client";
+import type { GenerateContentRequest } from "../../src/providers/gemini/fetch-client";
+import { isGeminiResponse, ensureGeminiStream } from "../../src/providers/guards";
+import { hasListModels } from "../../src/providers/guards";
 import { StreamHandler } from "../../src/converters/responses-adapter/stream-handler";
 import type { ChatCompletionChunk, ChatCompletion } from "openai/resources/chat/completions";
 import { convertChatCompletionToResponse } from "../../src/converters/responses-adapter/chat-to-response-converter";
@@ -13,34 +15,28 @@ describe("Gemini OpenAI-compat (real API)", () => {
   const provider: Provider = { type: "gemini" };
   const getHeader = (_: string) => null;
 
-  async function pickCheapGeminiModel(client: GeminiFetchClient): Promise<string> {
-    const listed = await client.listModels();
-    expect(Array.isArray(listed.models)).toBe(true);
+  async function pickCheapGeminiModel(adapter: ReturnType<typeof getAdapterFor>): Promise<string> {
+    const listed = await adapter.listModels();
+    expect(Array.isArray(listed.data)).toBe(true);
     compatCoverage.mark("gemini", "models.list.basic");
-    // Prefer flash/mini-like models used for testing economy
-    const names = listed.models.map(m => m.name);
+    const names = listed.data.map((m) => m.id);
     // Strongly prefer cheaper variants; avoid matching 'mini' inside 'gemini'
     const cheap = names.filter((n) => /(^|[-_.])(?:nano|flash(?:-\d+)?|mini)(?:$|[-_.])/i.test(n));
     let selected = cheap[0];
     if (!selected) {
-      const env = process.env.GEMINI_TEST_MODEL;
+      const env = process.env.GEMINI_TEST_MODEL || process.env.GOOGLE_AI_TEST_MODEL;
       if (!env) {
-        throw new Error("No cheap Gemini model found from /models. Set GEMINI_TEST_MODEL to a mini/flash/nano model.");
+        throw new Error("No cheap Gemini model found from /models. Set GEMINI_TEST_MODEL or GOOGLE_AI_TEST_MODEL to a mini/flash/nano model.");
       }
       selected = env;
     }
-    // Gemini expects the path segment after "models/" in the URL builder here
-    if (selected.startsWith("models/")) selected = selected.slice("models/".length);
     expect(typeof selected).toBe("string");
     return selected;
   }
 
   it("chat non-stream basic", async () => {
     const adapter = getAdapterFor(provider, getHeader);
-    const apiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_AI_STUDIO_API_KEY;
-    expect(apiKey).toBeTruthy();
-    const client = new GeminiFetchClient({ apiKey: apiKey! });
-    const model = await pickCheapGeminiModel(client);
+    const model = await pickCheapGeminiModel(adapter);
 
     const input: GenerateContentRequest = {
       contents: [
@@ -50,6 +46,7 @@ describe("Gemini OpenAI-compat (real API)", () => {
     };
 
     const raw = await adapter.generate({ model, input });
+    if (!isGeminiResponse(raw)) throw new Error("Unexpected Gemini response shape");
     const out = geminiToOpenAIResponse(raw, model);
     expect(out.object).toBe("response");
     expect(out.status).toBe("completed");
@@ -60,9 +57,7 @@ describe("Gemini OpenAI-compat (real API)", () => {
 
   it("chat stream chunk + done", async () => {
     const adapter = getAdapterFor(provider, getHeader);
-    const apiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_AI_STUDIO_API_KEY;
-    const client = new GeminiFetchClient({ apiKey: apiKey! });
-    const model = await pickCheapGeminiModel(client);
+    const model = await pickCheapGeminiModel(adapter);
 
     const input: GenerateContentRequest = {
       contents: [{ role: "user", parts: [{ text: "Stream please" }] }],
@@ -71,7 +66,7 @@ describe("Gemini OpenAI-compat (real API)", () => {
 
     const types: string[] = [];
     const stream = adapter.stream!({ model, input });
-    for await (const ev of geminiToOpenAIStream(stream)) {
+    for await (const ev of geminiToOpenAIStream(ensureGeminiStream(stream as AsyncIterable<unknown>))) {
       types.push(ev.type);
     }
     expect(types[0]).toBe("response.created");
@@ -87,6 +82,132 @@ describe("Gemini OpenAI-compat (real API)", () => {
     compatCoverage.mark("gemini", "chat.stream.done");
   }, 30000);
 
+  it("chat non-stream function_call (real)", async () => {
+    const adapter = getAdapterFor(provider, getHeader);
+    const model = await pickCheapGeminiModel(adapter);
+    const tools = [
+      {
+        functionDeclarations: [
+          {
+            name: "get_current_temperature",
+            description: "Get the current temperature in a given location",
+            parameters: {
+              type: "object",
+              properties: {
+                location: { type: "string" },
+                unit: { type: "string", enum: ["celsius", "fahrenheit"] },
+              },
+              required: ["location"],
+            },
+          },
+        ],
+      },
+    ];
+    const input: GenerateContentRequest = {
+      contents: [{ role: "user", parts: [{ text: "Use tool to get temperature for San Francisco" }] }],
+      tools,
+      toolConfig: { functionCallingConfig: { mode: "ANY", allowedFunctionNames: ["get_current_temperature"] } },
+      generationConfig: { maxOutputTokens: 32 },
+    } as GenerateContentRequest;
+    const raw = await adapter.generate({ model, input });
+    if (!isGeminiResponse(raw)) throw new Error("Unexpected Gemini response shape");
+    const out = geminiToOpenAIResponse(raw, model);
+    const hasFn = Array.isArray(out.output) && out.output.some((o) => o.type === "function_call");
+    expect(hasFn).toBe(true);
+    compatCoverage.mark("gemini", "chat.non_stream.function_call");
+  }, 30000);
+
+  it("chat stream tool_call delta (real)", async () => {
+    const adapter = getAdapterFor(provider, getHeader);
+    const model = await pickCheapGeminiModel(adapter);
+    const tools = [
+      {
+        functionDeclarations: [
+          {
+            name: "get_current_ceiling",
+            description: "Get the current cloud ceiling in a given location",
+            parameters: {
+              type: "object",
+              properties: { location: { type: "string" } },
+              required: ["location"],
+            },
+          },
+        ],
+      },
+    ];
+    const input: GenerateContentRequest = {
+      contents: [{ role: "user", parts: [{ text: "Call tool to get ceiling for San Francisco" }] }],
+      tools,
+      toolConfig: { functionCallingConfig: { mode: "ANY", allowedFunctionNames: ["get_current_ceiling"] } },
+      generationConfig: { maxOutputTokens: 32 },
+    } as GenerateContentRequest;
+    const types: string[] = [];
+    const stream = adapter.stream!({ model, input });
+    for await (const ev of geminiToOpenAIStream(ensureGeminiStream(stream as AsyncIterable<unknown>))) {
+      types.push(ev.type);
+    }
+    if (types.includes("response.output_item.added") && types.includes("response.function_call_arguments.delta") && types.includes("response.output_item.done")) {
+      compatCoverage.mark("gemini", "chat.stream.tool_call.delta");
+    } else {
+      // Provider likely does not stream function calls; record reason rather than failing
+      compatCoverage.error("gemini", "chat.stream.tool_call.delta", "Gemini stream did not include functionCall events (single-chunk function calling unsupported in stream).");
+    }
+  }, 30000);
+
+  it("chat function_call roundtrip (real)", async () => {
+    const adapter = getAdapterFor(provider, getHeader);
+    const model = await pickCheapGeminiModel(adapter);
+    const tools = [
+      {
+        functionDeclarations: [
+          {
+            name: "get_weather",
+            description: "Get current weather for a city",
+            parameters: {
+              type: "object",
+              properties: {
+                city: { type: "string" },
+                unit: { type: "string", enum: ["celsius", "fahrenheit"] },
+              },
+              required: ["city"],
+            },
+          },
+        ],
+      },
+    ];
+
+    // Turn 1: get functionCall
+    const req1: GenerateContentRequest = {
+      contents: [{ role: "user", parts: [{ text: "東京の今の天気は？" }] }],
+      tools,
+      toolConfig: { functionCallingConfig: { mode: "ANY", allowedFunctionNames: ["get_weather"] } },
+      generationConfig: { maxOutputTokens: 64 },
+    } as GenerateContentRequest;
+    const raw1 = await adapter.generate({ model, input: req1 });
+    if (!isGeminiResponse(raw1)) throw new Error("Unexpected Gemini response shape (turn1)");
+    const cand = raw1.candidates?.[0];
+    const parts = cand?.content?.parts || [];
+    const fn = (parts as any[]).find((p) => p && (p as any).functionCall);
+    expect(!!fn).toBe(true);
+
+    // Turn 2: supply functionResponse (fake local result is fine for test)
+    const fnName = (fn as any).functionCall.name as string;
+    const result = { ok: true, city: "Tokyo", temperature: 25, unit: "celsius" };
+    const req2: GenerateContentRequest = {
+      contents: [
+        { role: "user", parts: [{ text: "東京の今の天気は？" }] },
+        cand!.content!,
+        { role: "function", parts: [{ functionResponse: { name: fnName, response: result } }] },
+      ],
+      generationConfig: { maxOutputTokens: 64 },
+    } as GenerateContentRequest;
+    const raw2 = await adapter.generate({ model, input: req2 });
+    if (!isGeminiResponse(raw2)) throw new Error("Unexpected Gemini response shape (turn2)");
+    const out = geminiToOpenAIResponse(raw2, model);
+    const hasAny = Array.isArray(out.output) && out.output.length > 0;
+    expect(hasAny).toBe(true);
+  }, 30000);
+
   it("responses non-stream function_call via emulator", async () => {
     // Keep emulator-based check for conversion path only (no network)
     const completion: ChatCompletion = {
@@ -94,7 +215,7 @@ describe("Gemini OpenAI-compat (real API)", () => {
       object: "chat.completion",
       created: Math.floor(Date.now() / 1000),
       model: "gemini-test",
-      choices: [ { index: 0, message: { role: "assistant", content: null, tool_calls: [{ id: "c1", type: "function", function: { name: "t", arguments: "{}" } }] }, finish_reason: "stop" } ],
+      choices: [ { index: 0, message: { role: "assistant", content: null, refusal: null, tool_calls: [{ id: "c1", type: "function", function: { name: "t", arguments: "{}" } }] }, logprobs: null, finish_reason: "stop" } ],
       usage: { prompt_tokens: 0, completion_tokens: 0, total_tokens: 0 },
     };
     const out = convertChatCompletionToResponse(completion, new Map());

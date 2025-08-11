@@ -16,4 +16,7 @@ export interface ProviderAdapter<TInput = unknown, TOutput = unknown> {
   countTokens?(params: { model: string; input: unknown; signal?: AbortSignal }): Promise<unknown>;
 
   embed?(params: { model: string; input: unknown; signal?: AbortSignal }): Promise<unknown>;
+
+  // OpenAI-compatible models endpoint (required)
+  listModels(): Promise<{ object: "list"; data: Array<{ id: string; object: "model" }> }>;
 }

@@ -5,6 +5,7 @@ import { compatCoverage, writeMarkdownReport, writeCombinedMarkdownReport } from
 import { StreamHandler } from "../../src/converters/responses-adapter/stream-handler";
 import { convertChatCompletionToResponse } from "../../src/converters/responses-adapter/chat-to-response-converter";
 import type { Provider } from "../../src/config/types";
+import { isGrokChatCompletion, ensureGrokStream } from "../../src/providers/guards";
 import { getAdapterFor } from "../../src/providers/registry";
 import type { OpenAICompatStreamEvent } from "../../src/providers/openai-compat/compat";
 
@@ -12,23 +13,17 @@ describe("Grok OpenAI-compat (real API)", () => {
   const provider: Provider = { type: "grok" };
   const getHeader = (_: string) => null;
 
-  async function pickCheapGrokModel(): Promise<string> {
-    const baseURL = "https://api.x.ai/v1";
-    const key = process.env.GROK_API_KEY;
-    expect(key).toBeTruthy();
+  async function pickCheapGrokModel(adapter: ReturnType<typeof getAdapterFor>): Promise<string> {
     try {
-      const res = await fetch(`${baseURL}/models`, { headers: { Authorization: `Bearer ${key}` } });
-      if (res.ok) {
-        const json = await res.json();
-        const ids: string[] = (json?.data || []).map((m: any) => m?.id).filter(Boolean);
-        if (ids.length > 0) {
-          compatCoverage.mark("grok", "models.list.basic");
-          const prioritized = ids.sort((a, b) => {
-            const sc = (s: string) => (/mini|small/i.test(s) ? 0 : /latest/i.test(s) ? 1 : 2);
-            return sc(a) - sc(b);
-          });
-          return prioritized[0];
-        }
+      const listed = await adapter.listModels();
+      const ids = listed.data.map((m) => m.id);
+      if (ids.length > 0) {
+        compatCoverage.mark("grok", "models.list.basic");
+        const prioritized = ids.sort((a, b) => {
+          const sc = (s: string) => (/mini|small/i.test(s) ? 0 : /latest/i.test(s) ? 1 : 2);
+          return sc(a) - sc(b);
+        });
+        return prioritized[0];
       }
     } catch (e) {
       compatCoverage.error("grok", "models.list.basic", `Failed to list models: ${e instanceof Error ? e.message : String(e)}`);
@@ -45,13 +40,14 @@ describe("Grok OpenAI-compat (real API)", () => {
 
   it("chat non-stream basic", async () => {
     const adapter = getAdapterFor(provider, getHeader);
-    const model = await pickCheapGrokModel();
+    const model = await pickCheapGrokModel(adapter);
     const input = {
       model,
       messages: [{ role: "user", content: "Hello from compat test" }],
       stream: false,
     };
     const raw = await adapter.generate({ model, input });
+    if (!isGrokChatCompletion(raw)) throw new Error("Unexpected Grok response shape");
     const out = grokToOpenAIResponse(raw, model);
     expect(out.object).toBe("response");
     expect(out.status).toBe("completed");
@@ -64,7 +60,7 @@ describe("Grok OpenAI-compat (real API)", () => {
 
   it("chat stream chunk + done", async () => {
     const adapter = getAdapterFor(provider, getHeader);
-    const model = await pickCheapGrokModel();
+    const model = await pickCheapGrokModel(adapter);
     const input = {
       model,
       messages: [{ role: "user", content: "Stream please" }],
@@ -72,7 +68,7 @@ describe("Grok OpenAI-compat (real API)", () => {
     };
     const types: string[] = [];
     const s = adapter.stream!({ model, input });
-    for await (const ev of grokToOpenAIStream(s)) {
+    for await (const ev of grokToOpenAIStream(ensureGrokStream(s as AsyncIterable<unknown>))) {
       const e: OpenAICompatStreamEvent = ev;
       types.push(e.type);
     }
@@ -89,13 +85,87 @@ describe("Grok OpenAI-compat (real API)", () => {
     compatCoverage.error("grok", "chat.stream.tool_call.delta", "Grok chat.completions tool-call deltas not confirmed for streaming.");
   }, 30000);
 
+  it("chat non-stream function_call (real)", async () => {
+    const adapter = getAdapterFor(provider, getHeader);
+    const model = await pickCheapGrokModel(adapter);
+    const tools = [
+      {
+        type: "function",
+        function: {
+          name: "get_current_temperature",
+          description: "Get the current temperature in a given location",
+          parameters: {
+            type: "object",
+            properties: {
+              location: { type: "string", description: "City and state" },
+              unit: { type: "string", enum: ["celsius", "fahrenheit"], default: "fahrenheit" },
+            },
+            required: ["location"],
+            additionalProperties: false,
+          },
+        },
+      },
+    ];
+    const input = {
+      model,
+      messages: [{ role: "user", content: "What's the temperature in San Francisco?" }],
+      tools,
+      tool_choice: { type: "function", function: { name: "get_current_temperature" } },
+      stream: false,
+    };
+    const raw = await adapter.generate({ model, input });
+    if (!isGrokChatCompletion(raw)) throw new Error("Unexpected Grok response shape");
+    const out = grokToOpenAIResponse(raw, model);
+    const hasFn = Array.isArray(out.output) && out.output.some((o) => o.type === "function_call");
+    expect(hasFn).toBe(true);
+    compatCoverage.mark("grok", "chat.non_stream.function_call");
+  }, 30000);
+
+  it("chat stream tool_call delta (real)", async () => {
+    const adapter = getAdapterFor(provider, getHeader);
+    const model = await pickCheapGrokModel(adapter);
+    const tools = [
+      {
+        type: "function",
+        function: {
+          name: "get_current_ceiling",
+          description: "Get the current cloud ceiling in a given location",
+          parameters: {
+            type: "object",
+            properties: { location: { type: "string", description: "City and state" } },
+            required: ["location"],
+            additionalProperties: false,
+          },
+        },
+      },
+    ];
+    const input = {
+      model,
+      messages: [{ role: "user", content: "Call tool to get ceiling for San Francisco" }],
+      tools,
+      tool_choice: { type: "function", function: { name: "get_current_ceiling" } },
+      stream: true,
+    };
+    const types: string[] = [];
+    const s = adapter.stream!({ model, input });
+    for await (const ev of grokToOpenAIStream(ensureGrokStream(s as AsyncIterable<unknown>))) {
+      const e: OpenAICompatStreamEvent = ev;
+      types.push(e.type);
+    }
+    // Should include function call added/delta/done sequence (single chunk semantics)
+    expect(types).toContain("response.output_item.added");
+    expect(types).toContain("response.function_call_arguments.delta");
+    expect(types).toContain("response.output_item.done");
+    compatCoverage.mark("grok", "chat.stream.tool_call.delta");
+  }, 30000);
+
   it("responses non-stream function_call via emulator", async () => {
     const completion: ChatCompletion = {
       id: "y",
       object: "chat.completion" as const,
       created: Math.floor(Date.now()/1000),
       model: "grok-test",
-      choices: [{ index: 0, message: { role: "assistant" as const, content: null, tool_calls: [{ id: "c1", type: "function" as const, function: { name: "t", arguments: "{}" } }] }, finish_reason: "stop" as const }]
+      choices: [{ index: 0, message: { role: "assistant" as const, content: null, refusal: null, tool_calls: [{ id: "c1", type: "function" as const, function: { name: "t", arguments: "{}" } }] }, logprobs: null, finish_reason: "stop" as const }]
     };
     const out = convertChatCompletionToResponse(completion, new Map());
     expect(out.output?.some((o) => o.type === "function_call")).toBe(true);

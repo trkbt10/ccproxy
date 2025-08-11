@@ -11,17 +11,18 @@ export type GeminiClientOptions = {
 
 export type GeminiPart =
   | { text: string }
-  // Extend here for images / function calls in future
-  ;
+  | { functionCall: { name: string; args?: unknown } }
+  | { functionResponse: { name: string; response?: unknown } };
 
 export type GeminiContent = {
-  role?: "user" | "model";
+  role?: "user" | "model" | "function";
   parts: GeminiPart[];
 };
 
 export type GenerateContentRequest = {
   contents: GeminiContent[];
   tools?: unknown[];
+  toolConfig?: unknown;
   safetySettings?: unknown[];
   generationConfig?: {
     temperature?: number;

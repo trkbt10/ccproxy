@@ -17,18 +17,9 @@ import type {
   ChatCompletionToolChoiceOption,
   ChatCompletionChunk,
 } from "openai/resources/chat/completions";
+import { isFunctionToolDelta } from "../../src/providers/guards";
 
-type ToolCallDelta = {
-  type: "function";
-  function?: { name?: string; arguments?: string };
-};
-
-function isFunctionToolDelta(v: unknown): v is ToolCallDelta {
-  return (
-    typeof v === "object" && v !== null &&
-    (v as { type?: string }).type === "function"
-  );
-}
+// Type guard moved to shared module
 
 function hasApiKey(): boolean {
   return Boolean(process.env.OPENAI_API_KEY);

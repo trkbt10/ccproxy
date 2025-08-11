@@ -1,5 +1,5 @@
 import type { MessageCreateParams as ClaudeMessageCreateParams, Tool as ClaudeTool } from "@anthropic-ai/sdk/resources/messages";
-import type { ResponseCreateParams, Tool as OpenAITool } from "openai/resources/responses/responses";
+import type { ResponseCreateParams, Tool as OpenAITool, FunctionTool } from "openai/resources/responses/responses";
 import type { ResponsesModel as OpenAIResponseModel } from "openai/resources/shared";
 import type { UnifiedIdManager } from "../../../utils/id-management/unified-id-manager";
 import { convertClaudeMessage } from "./message-converters";
@@ -20,7 +20,7 @@ export function claudeToResponsesLocal(
     inputItems.push(...(parts as any));
   }
 
-  const tools = mapClaudeToolsToResponses(Array.isArray(req.tools) ? req.tools.filter((t): t is Extract<ClaudeTool, { input_schema: unknown }> => !!(t as any).input_schema) : undefined);
+  const tools = mapClaudeToolsToResponses(Array.isArray(req.tools) ? req.tools.filter((t): t is Extract<ClaudeTool, { input_schema: unknown }> => typeof (t as any).input_schema === 'object' && (t as any).input_schema !== null) : undefined);
 
   const body: ResponseCreateParams = {
     model: model as unknown as string,
@@ -39,12 +39,19 @@ function mapClaudeToolsToResponses(tools?: ClaudeTool[]): OpenAITool[] | undefin
   if (!Array.isArray(tools) || tools.length === 0) return undefined;
   const out: OpenAITool[] = [];
   for (const t of tools) {
-    out.push({
+    const params = ((): Record<string, unknown> | null => {
+      const sch = (t as { input_schema?: unknown }).input_schema;
+      if (typeof sch === 'object' && sch !== null) return sch as Record<string, unknown>;
+      return {};
+    })();
+    const fn: FunctionTool = {
       type: 'function',
       name: t.name,
-      description: t.description,
-      parameters: t.input_schema as unknown as Record<string, unknown>,
-    } as unknown as OpenAITool);
+      description: t.description ?? null,
+      parameters: params,
+      strict: true,
+    };
+    out.push(fn as OpenAITool);
   }
   return out;
 }

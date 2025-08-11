@@ -1,5 +1,6 @@
 import { OpenAICompatResponse } from "../openai-compat/compat";
 import { GeminiPart, GenerateContentResponse } from "./fetch-client";
+import { UnifiedIdManager, IdFormat } from "../../../utils/id-management/unified-id-manager";
 
 function extractText(resp: GenerateContentResponse): string {
   const cand = resp.candidates && resp.candidates[0];
@@ -12,9 +13,10 @@ function extractText(resp: GenerateContentResponse): string {
 }
 
 function extractFunctionCalls(
-  resp: GenerateContentResponse
-): Array<{ id?: string; name: string; arguments?: string }> {
-  const out: Array<{ id?: string; name: string; arguments?: string }> = [];
+  resp: GenerateContentResponse,
+  idManager?: UnifiedIdManager
+): Array<{ id: string; name: string; arguments?: string }> {
+  const out: Array<{ id: string; name: string; arguments?: string }> = [];
   const cand = resp.candidates && resp.candidates[0];
   const parts = cand?.content?.parts || [];
   for (const p of parts as GeminiPart[]) {
@@ -27,7 +29,11 @@ function extractFunctionCalls(
         p.functionCall.args !== undefined
           ? JSON.stringify(p.functionCall.args)
           : undefined;
-      out.push({ name: p.functionCall.name, arguments: args });
+      const callId = IdFormat.generateOpenAIId();
+      if (idManager) {
+        idManager.recordToolCall({ id: callId, name: p.functionCall.name, arguments: args ? JSON.parse(args) : undefined });
+      }
+      out.push({ id: callId, name: p.functionCall.name, arguments: args });
     }
   }
   return out;
@@ -35,10 +41,11 @@ function extractFunctionCalls(
 
 export function geminiToOpenAIResponse(
   resp: GenerateContentResponse,
-  model = "gemini"
+  model = "gemini",
+  idManager?: UnifiedIdManager
 ): OpenAICompatResponse {
   const text = extractText(resp);
-  const calls = extractFunctionCalls(resp);
+  const calls = extractFunctionCalls(resp, idManager);
   const out: OpenAICompatResponse = {
     id: `resp_${Date.now()}`,
     object: "response",

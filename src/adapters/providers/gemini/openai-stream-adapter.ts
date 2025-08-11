@@ -1,5 +1,6 @@
 import type { ResponseStreamEvent as OpenAIResponseStreamEvent } from "openai/resources/responses/responses";
 import { GenerateContentResponse, GeminiPart } from "./fetch-client";
+import { UnifiedIdManager, IdFormat } from "../../../utils/id-management/unified-id-manager";
 
 function extractText(resp: GenerateContentResponse): string {
   const cand = resp.candidates && resp.candidates[0];
@@ -34,7 +35,8 @@ function extractFunctionCalls(
 }
 
 export async function* geminiToOpenAIStream(
-  src: AsyncIterable<GenerateContentResponse>
+  src: AsyncIterable<GenerateContentResponse>,
+  idManager?: UnifiedIdManager
 ): AsyncGenerator<OpenAIResponseStreamEvent, void, unknown> {
   const id = `resp_${Date.now()}`;
   yield {
@@ -46,6 +48,7 @@ export async function* geminiToOpenAIStream(
   let emittedAnyTextDelta = false;
   let lastTextSeen = "";
   const seenFnCalls = new Set<string>();
+  const sigToId = new Map<string, string>();
 
   for await (const chunk of src) {
     const text = extractText(chunk);
@@ -75,12 +78,17 @@ export async function* geminiToOpenAIStream(
       const sig = `${c.name}|${c.arguments ?? ""}`;
       if (seenFnCalls.has(sig)) continue;
       seenFnCalls.add(sig);
+      const callId = sigToId.get(sig) || IdFormat.generateOpenAIId();
+      sigToId.set(sig, callId);
+      if (idManager) {
+        idManager.recordToolCall({ id: callId, name: c.name, arguments: c.arguments ? JSON.parse(c.arguments) : undefined });
+      }
       yield {
         type: "response.output_item.added",
         item: {
           type: "function_call",
-          id: c.id,
-          call_id: c.id,
+          id: callId,
+          call_id: callId,
           name: c.name,
           arguments: c.arguments,
         },
@@ -89,14 +97,15 @@ export async function* geminiToOpenAIStream(
         yield {
           type: "response.function_call_arguments.delta",
           delta: c.arguments,
+          item_id: callId,
         } as OpenAIResponseStreamEvent;
       }
       yield {
         type: "response.output_item.done",
         item: {
           type: "function_call",
-          id: c.id,
-          call_id: c.id,
+          id: callId,
+          call_id: callId,
           name: c.name,
           arguments: c.arguments,
         },

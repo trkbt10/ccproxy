@@ -17,15 +17,23 @@ function id(prefix: string): string {
   return `${prefix}_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
 }
 
-function isFunctionToolChoice(tc: ChatCompletionToolChoiceOption | undefined): tc is Extract<ChatCompletionToolChoiceOption, { type: 'function' }> {
-  return typeof tc === 'object' && tc !== null && (tc as any).type === 'function';
+function isObject(v: unknown): v is Record<string, unknown> {
+  return typeof v === "object" && v !== null;
+}
+
+function isFunctionToolChoice(
+  tc: ChatCompletionToolChoiceOption | undefined
+): tc is Extract<ChatCompletionToolChoiceOption, { type: "function" }> {
+  return isObject(tc) && ("type" in tc) && (tc as { type?: unknown }).type === "function";
 }
 
 export function grokToChatCompletion(params: ChatCompletionCreateParams): ChatCompletion {
   const rid = id("chatcmpl");
   const created = Math.floor(Date.now() / 1000);
   const forced = isFunctionToolChoice(params.tool_choice as any);
-  const name = forced ? (params.tool_choice as any).function?.name || "" : "";
+  const name = forced && isObject((params.tool_choice as any).function)
+    ? String((params.tool_choice as any).function?.name || "")
+    : "";
   const content = `Grok: ${textFromMessages(params.messages)}`;
 
   const message: ChatCompletionMessage = forced
@@ -50,18 +58,33 @@ export async function* grokToChatCompletionStream(params: ChatCompletionCreatePa
 
   if (forced) {
     const callId = id("call");
-    yield { id: rid, object: "chat.completion.chunk", created, model: params.model, choices: [{ index: 0, delta: { role: "assistant", content: null, tool_calls: [{ id: callId, type: "function", function: { name, arguments: "" } }] as any }, finish_reason: null }] } as ChatCompletionChunk;
-    yield { id: rid, object: "chat.completion.chunk", created, model: params.model, choices: [{ index: 0, delta: { tool_calls: [{ id: callId, type: "function", function: { arguments: JSON.stringify({ input: "test" }) } }] as any }, finish_reason: null }] } as ChatCompletionChunk;
-    yield { id: rid, object: "chat.completion.chunk", created, model: params.model, choices: [{ index: 0, delta: {}, finish_reason: "stop" }] } as ChatCompletionChunk;
+    const first: ChatCompletionChunk = {
+      id: rid,
+      object: "chat.completion.chunk",
+      created,
+      model: params.model,
+      choices: [{ index: 0, delta: { role: "assistant", content: null, tool_calls: [{ index: 0, id: callId, type: "function", function: { name, arguments: "" } }] }, finish_reason: null }],
+    };
+    yield first;
+    const second: ChatCompletionChunk = {
+      id: rid,
+      object: "chat.completion.chunk",
+      created,
+      model: params.model,
+      choices: [{ index: 0, delta: { tool_calls: [{ index: 0, id: callId, type: "function", function: { arguments: JSON.stringify({ input: "test" }) } }] }, finish_reason: null }],
+    };
+    yield second;
+    const done: ChatCompletionChunk = { id: rid, object: "chat.completion.chunk", created, model: params.model, choices: [{ index: 0, delta: {}, finish_reason: "stop" }] };
+    yield done;
     return;
   }
 
   const content = `Grok: ${textFromMessages(params.messages)}`;
   const a = Math.ceil(content.length / 2);
   const parts = [content.slice(0, a), content.slice(a)];
-  yield { id: rid, object: "chat.completion.chunk", created, model: params.model, choices: [{ index: 0, delta: { role: "assistant", content: parts[0] }, finish_reason: null }] } as ChatCompletionChunk;
+  yield { id: rid, object: "chat.completion.chunk", created, model: params.model, choices: [{ index: 0, delta: { role: "assistant", content: parts[0] }, finish_reason: null }] };
   if (parts[1]) {
-    yield { id: rid, object: "chat.completion.chunk", created, model: params.model, choices: [{ index: 0, delta: { content: parts[1] }, finish_reason: null }] } as ChatCompletionChunk;
+    yield { id: rid, object: "chat.completion.chunk", created, model: params.model, choices: [{ index: 0, delta: { content: parts[1] }, finish_reason: null }] };
   }
-  yield { id: rid, object: "chat.completion.chunk", created, model: params.model, choices: [{ index: 0, delta: {}, finish_reason: "stop" }] } as ChatCompletionChunk;
+  yield { id: rid, object: "chat.completion.chunk", created, model: params.model, choices: [{ index: 0, delta: {}, finish_reason: "stop" }] };
 }

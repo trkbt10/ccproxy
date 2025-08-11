@@ -8,10 +8,7 @@ import {
   writeCombinedMarkdownReport,
 } from "./compat-coverage";
 import type { Provider } from "../../src/config/types";
-import {
-  isGrokChatCompletion,
-  ensureGrokStream,
-} from "../../src/adapters/providers/guards";
+import { isGrokChatCompletion, ensureGrokStream } from "../../src/adapters/providers/grok/guards";
 import { getAdapterFor } from "../../src/adapters/providers/registry";
 import type { OpenAICompatStreamEvent } from "../../src/adapters/providers/openai-compat/compat";
 

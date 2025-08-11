@@ -12,7 +12,6 @@ import { isGeminiResponse, ensureGeminiStream } from "../../src/adapters/provide
 
 describe("Gemini OpenAI-compat (real API)", () => {
   const provider: Provider = { type: "gemini" };
-  const getHeader = (_: string) => null;
 
   async function pickCheapGeminiModel(
     adapter: ReturnType<typeof getAdapterFor>
@@ -45,7 +44,7 @@ describe("Gemini OpenAI-compat (real API)", () => {
   }
 
   it("chat non-stream basic", async () => {
-    const adapter = getAdapterFor(provider, getHeader);
+    const adapter = getAdapterFor(provider);
     const model = await pickCheapGeminiModel(adapter);
 
     const input: GenerateContentRequest = {
@@ -69,7 +68,7 @@ describe("Gemini OpenAI-compat (real API)", () => {
   });
 
   it("chat stream chunk + done", async () => {
-    const adapter = getAdapterFor(provider, getHeader);
+    const adapter = getAdapterFor(provider);
     const model = await pickCheapGeminiModel(adapter);
 
     const input: GenerateContentRequest = {
@@ -114,7 +113,7 @@ describe("Gemini OpenAI-compat (real API)", () => {
   }, 30000);
 
   it("chat non-stream function_call (real)", async () => {
-    const adapter = getAdapterFor(provider, getHeader);
+    const adapter = getAdapterFor(provider);
     const model = await pickCheapGeminiModel(adapter);
     const tools = [
       {

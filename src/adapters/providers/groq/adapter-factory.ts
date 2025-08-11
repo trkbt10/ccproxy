@@ -4,13 +4,10 @@ import type { ProviderAdapter } from "../adapter";
 
 function selectApiKey(
   provider: Provider,
-  getHeader: (name: string) => string | null,
   modelHint?: string
 ): string | null {
   const keyFromProvider = provider.apiKey;
-  const keyHeader = provider.api?.keyHeader;
-  const keyId = keyHeader ? getHeader(keyHeader) : null;
-  const keyFromMap = keyId ? provider.api?.keys?.[keyId] : null;
+  const keyFromMap = null;
   let keyFromModel: string | null = null;
   if (modelHint && provider.api?.keyByModelPrefix) {
     const entries = Object.entries(provider.api.keyByModelPrefix).sort(
@@ -23,19 +20,17 @@ function selectApiKey(
       }
     }
   }
-  const envKey = process.env["GROQ_API_KEY"] || null;
-  return keyFromProvider || keyFromMap || keyFromModel || envKey || null;
+  return keyFromProvider || keyFromMap || keyFromModel || null;
 }
 
 export function buildGroqAdapter(
   provider: Provider,
-  getHeader: (name: string) => string | null,
   modelHint?: string
 ): ProviderAdapter<
   Parameters<OpenAI["responses"]["create"]>[0],
   Awaited<ReturnType<OpenAI["responses"]["create"]>>
 > {
-  const apiKey = selectApiKey(provider, getHeader, modelHint);
+  const apiKey = selectApiKey(provider, modelHint);
   if (!apiKey) throw new Error("Missing Groq API key");
   const baseURL = provider.baseURL || "https://api.groq.com/v1";
   const client = new OpenAI({
@@ -60,4 +55,3 @@ export function buildGroqAdapter(
     },
   };
 }
-

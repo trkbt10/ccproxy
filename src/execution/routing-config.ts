@@ -32,8 +32,7 @@ export async function loadRoutingConfigOnce(): Promise<RoutingConfig> {
       // Expand environment variables in the config
       const expanded = expandConfig(json);
 
-      // Ensure a "default" provider exists by synthesizing from env when missing
-      const ensured = ensureDefaultProvider(expanded);
+      const ensured = expanded;
 
       // Apply logging configuration (dir/enabled) from config
       if (ensured.logging) {
@@ -47,7 +46,7 @@ export async function loadRoutingConfigOnce(): Promise<RoutingConfig> {
       return ensured;
     } catch {
       // Fallback when no config file exists - empty providers
-      const fallback: RoutingConfig = ensureDefaultProvider({ tools: [] });
+      const fallback: RoutingConfig = { tools: [] };
       // No config: use defaults for logger
       cachedConfig = fallback;
       return fallback;
@@ -63,46 +62,11 @@ export function getRoutingConfigCache(): RoutingConfig | null {
   return cachedConfig;
 }
 
-function synthesizeDefaultProviderFromEnv(): Provider {
-  const apiKey = process.env.OPENAI_API_KEY;
-  const provider: Provider = {
-    type: "openai",
-    // Include apiKey if available; buildProviderClient will also fallback to env
-    ...(apiKey ? { apiKey } : {}),
-    defaultHeaders: {
-      "OpenAI-Beta": "responses-2025-06-21",
-    },
-  };
-  return provider;
-}
-
-function ensureDefaultProvider(cfg: RoutingConfig): RoutingConfig {
-  const result: RoutingConfig = { ...cfg };
-  const providers = { ...(cfg.providers || {}) } as Record<string, Provider>;
-  if (!providers["default"]) {
-    providers["default"] = synthesizeDefaultProviderFromEnv();
-  }
-  result.providers = providers;
-  return result;
-}
+// No implicit default provider synthesis. Providers must be specified in config.
 
 // resolveConfigPath now provided from src/config/paths
 
-function resolveApiKeyFromHeader(
-  provider: Provider,
-  getHeader: (name: string) => string | null
-): string | null {
-  const keyIdHeader = provider.api?.keyHeader;
-  if (!keyIdHeader) {
-    return null;
-  }
-  const id = getHeader(keyIdHeader);
-  if (!id) {
-    return null;
-  }
-  const apiKey = provider.api?.keys?.[id];
-  return apiKey ?? null;
-}
+// Header-based API key resolution removed; providers must specify keys directly.
 
 function resolveApiKeyByModelPrefix(
   provider: Provider,
@@ -129,42 +93,14 @@ function resolveApiKeyByModelPrefix(
 
 export function buildProviderClient(
   provider: Provider | undefined,
-  getHeader: (name: string) => string | null,
   modelHint?: string
 ): OpenAICompatibleClient {
-  // If no provider is defined, it means providers config doesn't exist
-  // Fall back to environment variables
   if (!provider) {
-    const apiKey = process.env.OPENAI_API_KEY;
-    if (!apiKey) {
-      throw new Error(
-        "No OpenAI API key available. Provide OPENAI_API_KEY environment variable or configure providers."
-      );
-    }
-
-    const client = new OpenAI({
-      apiKey,
-      defaultHeaders: {
-        "OpenAI-Beta": "responses-2025-06-21",
-      },
-    });
-    return {
-      responses: {
-        async create(params: any, options?: { signal?: AbortSignal }) {
-          return client.responses.create(params, options);
-        },
-      },
-      models: {
-        async list() {
-          const res = await client.models.list();
-          return { data: res.data.map((m) => ({ id: m.id })) };
-        },
-      },
-    };
+    throw new Error("No provider configured. Define providers in RoutingConfig.");
   }
 
   if (provider.type === "gemini") {
-    return buildOpenAICompatibleClientForGemini(provider, getHeader, modelHint);
+    return buildOpenAICompatibleClientForGemini(provider, modelHint);
   }
 
   // Choose API key in the following order (all from configuration/ENV):
@@ -173,18 +109,13 @@ export function buildProviderClient(
   // 3) apiKeyByModelPrefix match
   // 4) process.env.OPENAI_API_KEY (as ultimate fallback)
   const keyFromProvider = provider.apiKey;
-  const keyFromApiHeader = resolveApiKeyFromHeader(provider, getHeader);
+  const keyFromApiHeader = null; // Header-based selection removed
   const keyFromModel = resolveApiKeyByModelPrefix(provider, modelHint);
 
-  const apiKey =
-    keyFromProvider ||
-    keyFromApiHeader ||
-    keyFromModel ||
-    process.env.OPENAI_API_KEY ||
-    null;
+  const apiKey = keyFromProvider || keyFromApiHeader || keyFromModel || null;
   if (!apiKey) {
     throw new Error(
-      "No OpenAI API key available. Configure provider apiKey or provide OPENAI_API_KEY environment variable."
+      "No API key available. Configure provider.apiKey or keyByModelPrefix in providers."
     );
   }
 

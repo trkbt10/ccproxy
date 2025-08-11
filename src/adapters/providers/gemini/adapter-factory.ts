@@ -8,13 +8,10 @@ import {
 
 export function selectApiKey(
   provider: Provider,
-  getHeader: (name: string) => string | null,
   modelHint?: string
 ): string | null {
   const keyFromProvider = provider.apiKey;
-  const keyHeader = provider.api?.keyHeader;
-  const keyId = keyHeader ? getHeader(keyHeader) : null;
-  const keyFromMap = keyId ? provider.api?.keys?.[keyId] : null;
+  const keyFromMap = null;
   let keyFromModel: string | null = null;
   if (modelHint && provider.api?.keyByModelPrefix) {
     const entries = Object.entries(provider.api.keyByModelPrefix).sort(
@@ -27,23 +24,14 @@ export function selectApiKey(
       }
     }
   }
-  const envNames = ["GEMINI_API_KEY", "GOOGLE_AI_STUDIO_API_KEY"];
-  let envKey: string | null = null;
-  for (const name of envNames) {
-    if (process.env[name]) {
-      envKey = process.env[name]!;
-      break;
-    }
-  }
-  return keyFromProvider || keyFromMap || keyFromModel || envKey || null;
+  return keyFromProvider || keyFromMap || keyFromModel || null;
 }
 
 export function buildGeminiAdapter(
   provider: Provider,
-  getHeader: (name: string) => string | null,
   modelHint?: string
 ): ProviderAdapter<GenerateContentRequest, GenerateContentResponse> {
-  const apiKey = selectApiKey(provider, getHeader, modelHint);
+  const apiKey = selectApiKey(provider, modelHint);
   if (!apiKey) throw new Error("Missing Gemini API key");
   const client = new GeminiFetchClient({
     apiKey,

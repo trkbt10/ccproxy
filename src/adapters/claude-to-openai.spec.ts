@@ -1,4 +1,3 @@
-import { describe, test, expect, beforeEach, mock } from "bun:test";
 import type {
   TextBlock,
   ImageBlockParam,
@@ -21,11 +20,6 @@ import { convertClaudeMessage } from "./message-converter/claude-to-openai/messa
 import { UnifiedIdManager as CallIdManager } from "../utils/id-management/unified-id-manager";
 
 describe("claude-to-openai converter", () => {
-  beforeEach(() => {
-    // Clear console mocks before each test
-    mock.restore();
-  });
-
   describe("convertClaudeImageToOpenAI", () => {
     test("converts base64 image source correctly", () => {
       const claudeImage: ImageBlockParam = {

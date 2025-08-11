@@ -44,8 +44,7 @@ export const createChatCompletionsHandler =
     // Select provider based on the passed routing config
     const providerSelection = selectProviderForRequest(
       routingConfig,
-      claudeReq,
-      (name) => c.req.header(name) ?? null
+      claudeReq
     );
 
     const provider = routingConfig.providers?.[providerSelection.providerId];
@@ -107,7 +106,7 @@ async function handleClaudeProvider(c: Context, params: ClaudeProviderParams) {
 
   // Direct Claude API call
   const anthropic = new Anthropic({
-    apiKey: provider?.apiKey || process.env.ANTHROPIC_API_KEY,
+    apiKey: provider?.apiKey,
     baseURL: provider?.baseURL,
   });
 
@@ -190,11 +189,7 @@ async function handleNonClaudeProvider(
   } = params;
 
   // For non-Claude providers (Gemini, Grok), use the existing response processor
-  const openai = buildProviderClient(
-    provider,
-    (name) => c.req.header(name) ?? null,
-    providerSelection.model
-  );
+  const openai = buildProviderClient(provider, providerSelection.model);
 
   const processor = createResponseProcessor({
     requestId,

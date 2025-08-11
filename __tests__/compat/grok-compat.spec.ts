@@ -14,7 +14,6 @@ import type { OpenAICompatStreamEvent } from "../../src/adapters/providers/opena
 
 describe("Grok OpenAI-compat (real API)", () => {
   const provider: Provider = { type: "grok" };
-  const getHeader = (_: string) => null;
 
   async function pickCheapGrokModel(
     adapter: ReturnType<typeof getAdapterFor>
@@ -51,7 +50,7 @@ describe("Grok OpenAI-compat (real API)", () => {
   }
 
   it("chat non-stream basic", async () => {
-    const adapter = getAdapterFor(provider, getHeader);
+    const adapter = getAdapterFor(provider);
     const model = await pickCheapGrokModel(adapter);
     const input = {
       model,
@@ -74,7 +73,7 @@ describe("Grok OpenAI-compat (real API)", () => {
   });
 
   it("chat stream chunk + done", async () => {
-    const adapter = getAdapterFor(provider, getHeader);
+    const adapter = getAdapterFor(provider);
     const model = await pickCheapGrokModel(adapter);
     const input = {
       model,
@@ -104,7 +103,7 @@ describe("Grok OpenAI-compat (real API)", () => {
   }, 30000);
 
   it("chat non-stream function_call (real)", async () => {
-    const adapter = getAdapterFor(provider, getHeader);
+    const adapter = getAdapterFor(provider);
     const model = await pickCheapGrokModel(adapter);
     const tools = [
       {

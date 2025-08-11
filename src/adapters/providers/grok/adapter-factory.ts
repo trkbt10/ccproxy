@@ -3,13 +3,10 @@ import type { ProviderAdapter, GenerateParams } from "../adapter";
 
 export function selectApiKey(
   provider: Provider,
-  getHeader: (name: string) => string | null,
   modelHint?: string
 ): string | null {
   const keyFromProvider = provider.apiKey;
-  const keyHeader = provider.api?.keyHeader;
-  const keyId = keyHeader ? getHeader(keyHeader) : null;
-  const keyFromMap = keyId ? provider.api?.keys?.[keyId] : null;
+  const keyFromMap = null;
   let keyFromModel: string | null = null;
   if (modelHint && provider.api?.keyByModelPrefix) {
     const entries = Object.entries(provider.api.keyByModelPrefix).sort(
@@ -22,8 +19,7 @@ export function selectApiKey(
       }
     }
   }
-  const envKey = process.env["GROK_API_KEY"] || null;
-  return keyFromProvider || keyFromMap || keyFromModel || envKey || null;
+  return keyFromProvider || keyFromMap || keyFromModel || null;
 }
 
 function parseSSELine(line: string): any | null {
@@ -43,11 +39,10 @@ function parseSSELine(line: string): any | null {
 
 export function buildGrokAdapter(
   provider: Provider,
-  getHeader: (name: string) => string | null,
   modelHint?: string
 ): ProviderAdapter<any, any> {
   const baseURL = provider.baseURL || "https://api.x.ai/v1";
-  const apiKey = selectApiKey(provider, getHeader, modelHint);
+  const apiKey = selectApiKey(provider, modelHint);
   if (!apiKey) throw new Error("Missing Grok API key");
   const adapter: ProviderAdapter<any, any> = {
     name: "grok",
@@ -122,4 +117,3 @@ export function buildGrokAdapter(
   };
   return adapter;
 }
-

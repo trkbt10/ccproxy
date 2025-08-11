@@ -100,8 +100,7 @@ app.post("/v1/messages", async (c) => {
 
   const providerSelection = selectProviderForRequest(
     routingConfig,
-    claudeReq,
-    (name) => c.req.header(name) ?? null
+    claudeReq
   );
 
   const provider = routingConfig.providers?.[providerSelection.providerId];
@@ -111,11 +110,7 @@ app.post("/v1/messages", async (c) => {
   }
 
   // Build provider client for this request (supports API key switching)
-  const openai = buildProviderClient(
-    provider,
-    (name) => c.req.header(name) ?? null,
-    providerSelection.model
-  );
+  const openai = buildProviderClient(provider, providerSelection.model);
 
   const processor = createResponseProcessor({
     requestId,
@@ -164,10 +159,10 @@ app.get("/test-connection", async (c) => {
   const routingConfig = await routingConfigPromise;
   // Use default provider for test connection
   const defaultProvider = routingConfig.providers?.["default"];
-  const openai = buildProviderClient(
-    defaultProvider,
-    (name) => c.req.header(name) ?? null
-  );
+  if (!defaultProvider) {
+    return c.json({ status: "error", message: "No default provider configured" }, 400);
+  }
+  const openai = buildProviderClient(defaultProvider);
   // OpenAI APIの簡単なテスト
   const response = await openai.responses.create({
     model: "gpt-4o-mini",

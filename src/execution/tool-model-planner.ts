@@ -4,8 +4,7 @@ import type { RoutingConfig, Step } from "../config/types";
 // Select the provider and model for the current request
 export function selectProviderForRequest(
   cfg: RoutingConfig,
-  req: ClaudeMessageCreateParams,
-  getHeader: (name: string) => string | null
+  req: ClaudeMessageCreateParams
 ): { providerId: string; model: string } {
   // Model is determined by tool step or env/defaults; no header override
   const overrideModel = undefined;
@@ -17,7 +16,7 @@ export function selectProviderForRequest(
     for (const s of steps) {
       if (s.kind === "responses_model") {
         const providerId = s.providerId || "default";
-        const model = s.model || process.env.OPENAI_MODEL || "gpt-4.1-mini";
+        const model = s.model || "gpt-4o-mini";
         
         // Verify provider exists if not using default
         if (providerId !== "default" && cfg.providers && !cfg.providers[providerId]) {
@@ -32,7 +31,7 @@ export function selectProviderForRequest(
   // Use default provider
   return {
     providerId: "default",
-    model: process.env.OPENAI_MODEL || "gpt-4.1-mini"
+    model: "gpt-4o-mini",
   };
 }
 

@@ -17,10 +17,9 @@ import { geminiToOpenAIResponse } from "./openai-response-adapter";
 
 export function buildOpenAICompatibleClientForGemini(
   provider: Provider,
-  getHeader: (name: string) => string | null,
   modelHint?: string
 ): OpenAICompatibleClient {
-  const adapter = getAdapterFor(provider, getHeader, modelHint);
+  const adapter = getAdapterFor(provider, modelHint);
   let resolveToolName: ((callId: string) => string | undefined) | undefined;
   return {
     responses: {

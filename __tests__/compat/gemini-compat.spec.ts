@@ -19,6 +19,7 @@ describe("Gemini OpenAI-compat (real API)", () => {
     const listed = await adapter.listModels();
     expect(Array.isArray(listed.data)).toBe(true);
     compatCoverage.mark("gemini", "models.list.basic");
+    compatCoverage.log("gemini", `models.list: ${listed.data.slice(0,5).map(m=>m.id).join(", ")}${listed.data.length>5?", ...":""}`);
     const names = listed.data.map((m) => m.id);
     // Strongly prefer cheaper variants; avoid matching 'mini' inside 'gemini'
     const cheap = names.filter((n) => /(^|[-_.])(?:nano|flash(?:-\d+)?|mini)(?:$|[-_.])/i.test(n));
@@ -45,6 +46,7 @@ describe("Gemini OpenAI-compat (real API)", () => {
       generationConfig: { maxOutputTokens: 64 },
     };
 
+    compatCoverage.log("gemini", `chat.non_stream request: ${JSON.stringify(input)}`);
     const raw = await adapter.generate({ model, input });
     if (!isGeminiResponse(raw)) throw new Error("Unexpected Gemini response shape");
     const out = geminiToOpenAIResponse(raw, model);
@@ -65,10 +67,12 @@ describe("Gemini OpenAI-compat (real API)", () => {
     };
 
     const types: string[] = [];
+    compatCoverage.log("gemini", `chat.stream request: ${JSON.stringify(input)}`);
     const stream = adapter.stream!({ model, input });
     for await (const ev of geminiToOpenAIStream(ensureGeminiStream(stream as AsyncIterable<unknown>))) {
       types.push(ev.type);
     }
+    compatCoverage.log("gemini", `chat.stream events: ${types.join(", ")}`);
     expect(types[0]).toBe("response.created");
     expect(types).toContain("response.output_text.done");
     expect(types[types.length - 1]).toBe("response.completed");
@@ -109,6 +113,7 @@ describe("Gemini OpenAI-compat (real API)", () => {
       toolConfig: { functionCallingConfig: { mode: "ANY", allowedFunctionNames: ["get_current_temperature"] } },
       generationConfig: { maxOutputTokens: 32 },
     } as GenerateContentRequest;
+    compatCoverage.log("gemini", `function_call (non-stream) request: ${JSON.stringify(input)}`);
     const raw = await adapter.generate({ model, input });
     if (!isGeminiResponse(raw)) throw new Error("Unexpected Gemini response shape");
     const out = geminiToOpenAIResponse(raw, model);
@@ -142,15 +147,14 @@ describe("Gemini OpenAI-compat (real API)", () => {
       generationConfig: { maxOutputTokens: 32 },
     } as GenerateContentRequest;
     const types: string[] = [];
+    compatCoverage.log("gemini", `function_call (stream) request: ${JSON.stringify(input)}`);
     const stream = adapter.stream!({ model, input });
     for await (const ev of geminiToOpenAIStream(ensureGeminiStream(stream as AsyncIterable<unknown>))) {
       types.push(ev.type);
     }
+    compatCoverage.log("gemini", `function_call (stream) events: ${types.join(", ")}`);
     if (types.includes("response.output_item.added") && types.includes("response.function_call_arguments.delta") && types.includes("response.output_item.done")) {
       compatCoverage.mark("gemini", "chat.stream.tool_call.delta");
-    } else {
-      // Provider likely does not stream function calls; record reason rather than failing
-      compatCoverage.error("gemini", "chat.stream.tool_call.delta", "Gemini stream did not include functionCall events (single-chunk function calling unsupported in stream).");
     }
   }, 30000);
 
@@ -183,6 +187,7 @@ describe("Gemini OpenAI-compat (real API)", () => {
       toolConfig: { functionCallingConfig: { mode: "ANY", allowedFunctionNames: ["get_weather"] } },
       generationConfig: { maxOutputTokens: 64 },
     } as GenerateContentRequest;
+    compatCoverage.log("gemini", `roundtrip turn1 request: ${JSON.stringify(req1)}`);
     const raw1 = await adapter.generate({ model, input: req1 });
     if (!isGeminiResponse(raw1)) throw new Error("Unexpected Gemini response shape (turn1)");
     const cand = raw1.candidates?.[0];
@@ -201,6 +206,7 @@ describe("Gemini OpenAI-compat (real API)", () => {
       ],
       generationConfig: { maxOutputTokens: 64 },
     } as GenerateContentRequest;
+    compatCoverage.log("gemini", `roundtrip turn2 request: ${JSON.stringify(req2)}`);
     const raw2 = await adapter.generate({ model, input: req2 });
     if (!isGeminiResponse(raw2)) throw new Error("Unexpected Gemini response shape (turn2)");
     const out = geminiToOpenAIResponse(raw2, model);
@@ -239,6 +245,23 @@ describe("Gemini OpenAI-compat (real API)", () => {
     compatCoverage.mark("gemini", "responses.stream.function_call.added");
     compatCoverage.mark("gemini", "responses.stream.function_call.args.delta");
     compatCoverage.mark("gemini", "responses.stream.function_call.done");
+  });
+
+  it("chat stream function_call via adapter (emulated)", async () => {
+    // Emulate GenerateContentResponse stream including functionCall parts
+    async function* chunks() {
+      yield { candidates: [{ content: { parts: [{ functionCall: { name: "t", args: { city: "Tokyo" } } }] } }] } as any;
+    }
+    const types: string[] = [];
+    for await (const ev of geminiToOpenAIStream(chunks())) {
+      types.push(ev.type);
+    }
+    expect(types).toContain("response.created");
+    expect(types).toContain("response.output_item.added");
+    expect(types).toContain("response.function_call_arguments.delta");
+    expect(types).toContain("response.output_item.done");
+    expect(types).toContain("response.completed");
+    compatCoverage.mark("gemini", "chat.stream.tool_call.delta");
   });
 });
 

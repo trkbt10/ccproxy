@@ -23,6 +23,7 @@ export type Feature =
 export class CompatCoverage {
   private seenByProvider = new Map<string, Set<Feature>>();
   private errorsByProvider = new Map<string, { feature: Feature; reason: string }[]>();
+  private logsByProvider = new Map<string, string[]>();
 
   providers(): string[] {
     return Array.from(this.seenByProvider.keys());
@@ -32,6 +33,11 @@ export class CompatCoverage {
     if (!this.seenByProvider.has(provider))
       this.seenByProvider.set(provider, new Set());
     this.seenByProvider.get(provider)!.add(f);
+  }
+
+  log(provider: string, message: string): void {
+    if (!this.logsByProvider.has(provider)) this.logsByProvider.set(provider, []);
+    this.logsByProvider.get(provider)!.push(message);
   }
 
   error(provider: string, feature: Feature, reason: string): void {
@@ -49,6 +55,7 @@ export class CompatCoverage {
     percent: number;
     missing: Feature[];
     errors: { feature: Feature; reason: string }[];
+    logs: string[];
   } {
     const all: Feature[] = [
       "chat.non_stream.basic",
@@ -73,7 +80,8 @@ export class CompatCoverage {
     const total = all.length;
     const percent = Math.round((covered.length / total) * 1000) / 10;
     const errors = this.errorsByProvider.get(provider) ?? [];
-    return { total, covered: covered.length, percent, missing, errors };
+    const logs = this.logsByProvider.get(provider) ?? [];
+    return { total, covered: covered.length, percent, missing, errors, logs };
   }
 }
 
@@ -120,6 +128,12 @@ export function toMarkdown(report: CompatReport): string {
     for (const e of report.errors) {
       lines.push(`- ${e.feature}: ${e.reason}`);
     }
+    lines.push("");
+  }
+  if (report.logs.length > 0) {
+    lines.push(`## Logs`);
+    lines.push("");
+    for (const l of report.logs) lines.push(`- ${l}`);
     lines.push("");
   }
   lines.push(

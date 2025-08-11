@@ -17,6 +17,7 @@ describe("Grok OpenAI-compat (real API)", () => {
     try {
       const listed = await adapter.listModels();
       const ids = listed.data.map((m) => m.id);
+      compatCoverage.log("grok", `models.list: ${ids.slice(0,5).join(", ")}${ids.length>5?", ...":""}`);
       if (ids.length > 0) {
         compatCoverage.mark("grok", "models.list.basic");
         const prioritized = ids.sort((a, b) => {
@@ -46,6 +47,7 @@ describe("Grok OpenAI-compat (real API)", () => {
       messages: [{ role: "user", content: "Hello from compat test" }],
       stream: false,
     };
+    compatCoverage.log("grok", `chat.non_stream request: ${JSON.stringify(input)}`);
     const raw = await adapter.generate({ model, input });
     if (!isGrokChatCompletion(raw)) throw new Error("Unexpected Grok response shape");
     const out = grokToOpenAIResponse(raw, model);
@@ -54,8 +56,6 @@ describe("Grok OpenAI-compat (real API)", () => {
     expect(out.output?.[0]).toBeTruthy();
     compatCoverage.mark("grok", "responses.non_stream.basic");
     compatCoverage.mark("grok", "chat.non_stream.basic");
-    // Provider tool-calls for chat.completions are not confirmed; record reasons instead of guessing.
-    compatCoverage.error("grok", "chat.non_stream.function_call", "Grok chat.completions tool-calls not documented/confirmed; avoiding forced tools.");
   });
 
   it("chat stream chunk + done", async () => {
@@ -67,11 +67,13 @@ describe("Grok OpenAI-compat (real API)", () => {
       stream: true,
     };
     const types: string[] = [];
+    compatCoverage.log("grok", `chat.stream request: ${JSON.stringify(input)}`);
     const s = adapter.stream!({ model, input });
     for await (const ev of grokToOpenAIStream(ensureGrokStream(s as AsyncIterable<unknown>))) {
       const e: OpenAICompatStreamEvent = ev;
       types.push(e.type);
     }
+    compatCoverage.log("grok", `chat.stream events: ${types.join(", ")}`);
     expect(types[0]).toBe("response.created");
     expect(types).toContain("response.output_text.delta");
     expect(types).toContain("response.output_text.done");
@@ -82,7 +84,6 @@ describe("Grok OpenAI-compat (real API)", () => {
     compatCoverage.mark("grok", "responses.stream.completed");
     compatCoverage.mark("grok", "chat.stream.chunk");
     compatCoverage.mark("grok", "chat.stream.done");
-    compatCoverage.error("grok", "chat.stream.tool_call.delta", "Grok chat.completions tool-call deltas not confirmed for streaming.");
   }, 30000);
 
   it("chat non-stream function_call (real)", async () => {
@@ -113,6 +114,7 @@ describe("Grok OpenAI-compat (real API)", () => {
       tool_choice: { type: "function", function: { name: "get_current_temperature" } },
       stream: false,
     };
+    compatCoverage.log("grok", `function_call (non-stream) request: ${JSON.stringify(input)}`);
     const raw = await adapter.generate({ model, input });
     if (!isGrokChatCompletion(raw)) throw new Error("Unexpected Grok response shape");
     const out = grokToOpenAIResponse(raw, model);
@@ -147,11 +149,13 @@ describe("Grok OpenAI-compat (real API)", () => {
       stream: true,
     };
     const types: string[] = [];
+    compatCoverage.log("grok", `function_call (stream) request: ${JSON.stringify(input)}`);
     const s = adapter.stream!({ model, input });
     for await (const ev of grokToOpenAIStream(ensureGrokStream(s as AsyncIterable<unknown>))) {
       const e: OpenAICompatStreamEvent = ev;
       types.push(e.type);
     }
+    compatCoverage.log("grok", `function_call (stream) events: ${types.join(", ")}`);
     // Should include function call added/delta/done sequence (single chunk semantics)
     expect(types).toContain("response.output_item.added");
     expect(types).toContain("response.function_call_arguments.delta");

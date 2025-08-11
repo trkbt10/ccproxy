@@ -18,6 +18,18 @@ import type {
   ChatCompletionChunk,
 } from "openai/resources/chat/completions";
 
+type ToolCallDelta = {
+  type: "function";
+  function?: { name?: string; arguments?: string };
+};
+
+function isFunctionToolDelta(v: unknown): v is ToolCallDelta {
+  return (
+    typeof v === "object" && v !== null &&
+    (v as { type?: string }).type === "function"
+  );
+}
+
 function hasApiKey(): boolean {
   return Boolean(process.env.OPENAI_API_KEY);
 }
@@ -120,11 +132,13 @@ describe("OpenAI Conformance: chat/completions", () => {
       const tc = chunk.choices?.[0]?.delta?.tool_calls;
       if (Array.isArray(tc) && tc.length > 0) {
         sawToolDelta = true;
-        const t = tc[0];
-        const n = (t as any).function?.name;
-        const a = (t as any).function?.arguments;
-        if (typeof n === "string" && n.length > 0) sawName = true;
-        if (typeof a === "string" && a.length > 0) sawArgs = true;
+        const t = tc[0] as unknown;
+        if (isFunctionToolDelta(t)) {
+          const n = t.function?.name;
+          const a = t.function?.arguments;
+          if (typeof n === "string" && n.length > 0) sawName = true;
+          if (typeof a === "string" && a.length > 0) sawArgs = true;
+        }
       }
     }
     expect(sawToolDelta).toBe(true);
@@ -156,7 +170,7 @@ describe("OpenAI Conformance: responses", () => {
     const tool_choice: ToolChoiceFunction = { type: "function", name: "test_tool" };
     const params: ResponseCreateParamsNonStreaming = { model: MODEL, input: "use tool", tools, tool_choice };
     const res = await client.responses.create(params);
-    const hasFn = Array.isArray(res.output) && res.output.some((o: ResponseOutputItem) => (o as any).type === "function_call");
+    const hasFn = Array.isArray(res.output) && res.output.some((o: ResponseOutputItem) => o.type === "function_call");
     expect(hasFn).toBe(true);
     compatCoverage.mark("openai", "responses.non_stream.function_call");
   });

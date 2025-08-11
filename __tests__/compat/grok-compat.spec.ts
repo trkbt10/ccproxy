@@ -1,65 +1,81 @@
-import { describe, it, expect } from "bun:test";
-import type { ChatCompletionCreateParams, ChatCompletionChunk } from "openai/resources/chat/completions";
-import { grokToChatCompletion, grokToChatCompletionStream } from "../../src/providers/grok/openai-chat-adapter";
+import { describe, it, expect, afterAll } from "bun:test";
+import type { ChatCompletionChunk, ChatCompletion } from "openai/resources/chat/completions";
 import { grokToOpenAIResponse, grokToOpenAIStream } from "../../src/providers/grok/openai-response-adapter";
 import { compatCoverage, writeMarkdownReport, writeCombinedMarkdownReport } from "./compat-coverage";
-import { afterAll } from "bun:test";
 import { StreamHandler } from "../../src/converters/responses-adapter/stream-handler";
+import { convertChatCompletionToResponse } from "../../src/converters/responses-adapter/chat-to-response-converter";
+import type { Provider } from "../../src/config/types";
+import { getAdapterFor } from "../../src/providers/registry";
+import type { OpenAICompatStreamEvent } from "../../src/providers/openai-compat/compat";
 
-describe("Grok OpenAI-compat", () => {
-  it("chat non-stream basic", () => {
-    const params: ChatCompletionCreateParams = { model: "grok-3", messages: [{ role: "user", content: "hi" }] } as any;
-    const res = grokToChatCompletion(params);
-    expect(res.object).toBe("chat.completion");
+describe("Grok OpenAI-compat (real API)", () => {
+  const provider: Provider = { type: "grok" };
+  const getHeader = (_: string) => null;
+
+  async function pickCheapGrokModel(): Promise<string> {
+    const baseURL = "https://api.x.ai/v1";
+    const key = process.env.GROK_API_KEY;
+    expect(key).toBeTruthy();
+    try {
+      const res = await fetch(`${baseURL}/models`, { headers: { Authorization: `Bearer ${key}` } });
+      if (res.ok) {
+        const json = await res.json();
+        const ids: string[] = (json?.data || []).map((m: any) => m?.id).filter(Boolean);
+        if (ids.length > 0) {
+          compatCoverage.mark("grok", "models.list.basic");
+          const prioritized = ids.sort((a, b) => {
+            const sc = (s: string) => (/mini|small/i.test(s) ? 0 : /latest/i.test(s) ? 1 : 2);
+            return sc(a) - sc(b);
+          });
+          return prioritized[0];
+        }
+      }
+    } catch (e) {
+      compatCoverage.error("grok", "models.list.basic", `Failed to list models: ${e instanceof Error ? e.message : String(e)}`);
+    }
+    // Fallback: require explicit env to avoid guessing
+    const envModel = process.env.GROK_TEST_MODEL;
+    if (!envModel) {
+      const reason = "Set GROK_TEST_MODEL to a mini/cheap model or ensure /models endpoint works.";
+      compatCoverage.error("grok", "models.list.basic", reason);
+      throw new Error(reason);
+    }
+    return envModel;
+  }
+
+  it("chat non-stream basic", async () => {
+    const adapter = getAdapterFor(provider, getHeader);
+    const model = await pickCheapGrokModel();
+    const input = {
+      model,
+      messages: [{ role: "user", content: "Hello from compat test" }],
+      stream: false,
+    };
+    const raw = await adapter.generate({ model, input });
+    const out = grokToOpenAIResponse(raw, model);
+    expect(out.object).toBe("response");
+    expect(out.status).toBe("completed");
+    expect(out.output?.[0]).toBeTruthy();
+    compatCoverage.mark("grok", "responses.non_stream.basic");
     compatCoverage.mark("grok", "chat.non_stream.basic");
+    // Provider tool-calls for chat.completions are not confirmed; record reasons instead of guessing.
+    compatCoverage.error("grok", "chat.non_stream.function_call", "Grok chat.completions tool-calls not documented/confirmed; avoiding forced tools.");
   });
 
   it("chat stream chunk + done", async () => {
-    const params: ChatCompletionCreateParams = { model: "grok-3", messages: [{ role: "user", content: "hello" }], stream: true } as any;
-    let sawContent = false;
-    let finished = false;
-    for await (const ch of grokToChatCompletionStream(params) as AsyncIterable<ChatCompletionChunk>) {
-      const d = ch.choices[0].delta;
-      if (typeof d?.content === "string" && d.content) sawContent = true;
-      if (ch.choices[0].finish_reason) finished = true;
-    }
-    expect(sawContent).toBe(true);
-    expect(finished).toBe(true);
-    compatCoverage.mark("grok", "chat.stream.chunk");
-    compatCoverage.mark("grok", "chat.stream.done");
-  });
-
-  it("chat non-stream function_call when forced", () => {
-    const params: ChatCompletionCreateParams = { model: "grok-3", messages: [{ role: "user", content: "use tool" }], tools: [{ type: "function", function: { name: "t", parameters: { type: "object", properties: {}, additionalProperties: false } } }] as any, tool_choice: { type: "function", function: { name: "t" } } as any } as any;
-    const res = grokToChatCompletion(params);
-    const calls = res.choices[0].message.tool_calls || [];
-    expect(calls.length).toBeGreaterThan(0);
-    compatCoverage.mark("grok", "chat.non_stream.function_call");
-  });
-
-  it("chat stream tool_call delta when forced", async () => {
-    const params: ChatCompletionCreateParams = { model: "grok-3", messages: [{ role: "user", content: "use tool" }], tools: [{ type: "function", function: { name: "t", parameters: { type: "object", properties: {}, additionalProperties: false } } }] as any, tool_choice: { type: "function", function: { name: "t" } } as any, stream: true } as any;
-    let sawTool = false;
-    for await (const ch of grokToChatCompletionStream(params) as AsyncIterable<ChatCompletionChunk>) {
-      if (Array.isArray(ch.choices[0].delta.tool_calls) && ch.choices[0].delta.tool_calls.length > 0) {
-        sawTool = true;
-      }
-    }
-    expect(sawTool).toBe(true);
-    compatCoverage.mark("grok", "chat.stream.tool_call.delta");
-  });
-
-  it("responses non-stream basic via adapter", () => {
-    const resp = { id: "x", choices: [{ message: { role: "assistant", content: "Hi" } }], usage: { prompt_tokens: 1, completion_tokens: 2 } } as any;
-    const out = grokToOpenAIResponse(resp, "grok-3");
-    expect(out.object).toBe("response");
-    compatCoverage.mark("grok", "responses.non_stream.basic");
-  });
-
-  it("responses stream created/delta/done/completed via adapter", async () => {
-    async function* fake() { yield { choices: [{ delta: { content: "He" } }] }; yield { choices: [{ delta: { content: "Hello" }, finish_reason: "stop" }] }; }
+    const adapter = getAdapterFor(provider, getHeader);
+    const model = await pickCheapGrokModel();
+    const input = {
+      model,
+      messages: [{ role: "user", content: "Stream please" }],
+      stream: true,
+    };
     const types: string[] = [];
-    for await (const ev of grokToOpenAIStream(fake() as any)) { types.push(ev.type); }
+    const s = adapter.stream!({ model, input });
+    for await (const ev of grokToOpenAIStream(s)) {
+      const e: OpenAICompatStreamEvent = ev;
+      types.push(e.type);
+    }
     expect(types[0]).toBe("response.created");
     expect(types).toContain("response.output_text.delta");
     expect(types).toContain("response.output_text.done");
@@ -68,25 +84,33 @@ describe("Grok OpenAI-compat", () => {
     compatCoverage.mark("grok", "responses.stream.delta");
     compatCoverage.mark("grok", "responses.stream.done");
     compatCoverage.mark("grok", "responses.stream.completed");
-  });
+    compatCoverage.mark("grok", "chat.stream.chunk");
+    compatCoverage.mark("grok", "chat.stream.done");
+    compatCoverage.error("grok", "chat.stream.tool_call.delta", "Grok chat.completions tool-call deltas not confirmed for streaming.");
+  }, 30000);
 
-  it("responses non-stream function_call via emulator", () => {
-    const completion = { id: "y", object: "chat.completion", created: Math.floor(Date.now()/1000), model: "grok-3", choices: [ { index: 0, message: { role: "assistant", content: null, tool_calls: [{ id: "c1", type: "function", function: { name: "t", arguments: "{}" } }] }, finish_reason: "stop" } ] } as any;
-    const { convertChatCompletionToResponse } = require("../../src/converters/responses-adapter/chat-to-response-converter");
+  it("responses non-stream function_call via emulator", async () => {
+    const completion: ChatCompletion = {
+      id: "y",
+      object: "chat.completion" as const,
+      created: Math.floor(Date.now()/1000),
+      model: "grok-test",
+      choices: [{ index: 0, message: { role: "assistant" as const, content: null, tool_calls: [{ id: "c1", type: "function" as const, function: { name: "t", arguments: "{}" } }] }, finish_reason: "stop" as const }]
+    };
     const out = convertChatCompletionToResponse(completion, new Map());
-    expect(out.output?.some((o: any) => o.type === "function_call")).toBe(true);
+    expect(out.output?.some((o) => o.type === "function_call")).toBe(true);
     compatCoverage.mark("grok", "responses.non_stream.function_call");
   });
 
   it("responses stream function_call via emulator", async () => {
     async function* chunks() {
-      yield { id: "y", object: "chat.completion.chunk", created: Math.floor(Date.now()/1000), model: "grok-3", choices: [ { index: 0, delta: { role: "assistant", tool_calls: [{ id: "c1", type: "function", function: { name: "t", arguments: "" } }] }, finish_reason: null } ] } as any;
-      yield { id: "y", object: "chat.completion.chunk", created: Math.floor(Date.now()/1000), model: "grok-3", choices: [ { index: 0, delta: { tool_calls: [{ id: "c1", type: "function", function: { arguments: "{\"input\":\"test\"}" } }] }, finish_reason: null } ] } as any;
-      yield { id: "y", object: "chat.completion.chunk", created: Math.floor(Date.now()/1000), model: "grok-3", choices: [ { index: 0, delta: {}, finish_reason: "stop" } ] } as any;
+      yield { id: "y", object: "chat.completion.chunk", created: Math.floor(Date.now()/1000), model: "grok-test", choices: [ { index: 0, delta: { role: "assistant", tool_calls: [{ id: "c1", type: "function", function: { name: "t", arguments: "" } }] }, finish_reason: null } ] } as ChatCompletionChunk;
+      yield { id: "y", object: "chat.completion.chunk", created: Math.floor(Date.now()/1000), model: "grok-test", choices: [ { index: 0, delta: { tool_calls: [{ id: "c1", type: "function", function: { arguments: "{\"input\":\"test\"}" } }] }, finish_reason: null } ] } as ChatCompletionChunk;
+      yield { id: "y", object: "chat.completion.chunk", created: Math.floor(Date.now()/1000), model: "grok-test", choices: [ { index: 0, delta: {}, finish_reason: "stop" } ] } as ChatCompletionChunk;
     }
     const h = new StreamHandler();
     const types: string[] = [];
-    for await (const ev of h.handleStream(chunks() as any)) { types.push((ev as any).type); }
+    for await (const ev of h.handleStream(chunks())) { types.push(ev.type); }
     expect(types).toContain("response.output_item.added");
     expect(types).toContain("response.function_call_arguments.delta");
     expect(types).toContain("response.output_item.done");

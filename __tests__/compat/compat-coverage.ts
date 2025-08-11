@@ -22,6 +22,7 @@ export type Feature =
 
 export class CompatCoverage {
   private seenByProvider = new Map<string, Set<Feature>>();
+  private errorsByProvider = new Map<string, { feature: Feature; reason: string }[]>();
 
   providers(): string[] {
     return Array.from(this.seenByProvider.keys());
@@ -33,6 +34,11 @@ export class CompatCoverage {
     this.seenByProvider.get(provider)!.add(f);
   }
 
+  error(provider: string, feature: Feature, reason: string): void {
+    if (!this.errorsByProvider.has(provider)) this.errorsByProvider.set(provider, []);
+    this.errorsByProvider.get(provider)!.push({ feature, reason });
+  }
+
   has(provider: string, f: Feature): boolean {
     return this.seenByProvider.get(provider)?.has(f) ?? false;
   }
@@ -42,6 +48,7 @@ export class CompatCoverage {
     covered: number;
     percent: number;
     missing: Feature[];
+    errors: { feature: Feature; reason: string }[];
   } {
     const all: Feature[] = [
       "chat.non_stream.basic",
@@ -65,7 +72,8 @@ export class CompatCoverage {
     const missing = all.filter((f) => !seen.has(f));
     const total = all.length;
     const percent = Math.round((covered.length / total) * 1000) / 10;
-    return { total, covered: covered.length, percent, missing };
+    const errors = this.errorsByProvider.get(provider) ?? [];
+    return { total, covered: covered.length, percent, missing, errors };
   }
 }
 
@@ -106,18 +114,27 @@ export function toMarkdown(report: CompatReport): string {
     for (const f of report.missing) lines.push(`- ${f}`);
   }
   lines.push("");
+  if (report.errors.length > 0) {
+    lines.push(`## Errors / Reasons`);
+    lines.push("");
+    for (const e of report.errors) {
+      lines.push(`- ${e.feature}: ${e.reason}`);
+    }
+    lines.push("");
+  }
   lines.push(
     `> Note: This measures compatibility coverage against the OpenAI API (feature-level), not code coverage.`
   );
   return lines.join("\n");
 }
 
+import { mkdir, writeFile } from "node:fs/promises";
+import { dirname } from "node:path";
+
 export async function writeMarkdownReport(
   report: CompatReport,
   baseDir = "reports/openai-compat"
 ): Promise<void> {
-  const { mkdir, writeFile } = await import("node:fs/promises");
-  const { dirname } = await import("node:path");
   const filePath = `${baseDir}/${report.provider}.md`;
   await mkdir(dirname(filePath), { recursive: true });
   await writeFile(filePath, toMarkdown(report), "utf8");
@@ -127,8 +144,6 @@ export async function writeCombinedMarkdownReport(
   reports: CompatReport[],
   baseDir = "reports/openai-compat"
 ): Promise<void> {
-  const { mkdir, writeFile } = await import("node:fs/promises");
-  const { dirname } = await import("node:path");
   const filePath = `${baseDir}/summary.md`;
   await mkdir(dirname(filePath), { recursive: true });
   const lines: string[] = [];

@@ -1,3 +1,4 @@
+import { describe, it, expect, afterAll } from "bun:test";
 import {
   compatCoverage,
   writeMarkdownReport,
@@ -32,7 +33,7 @@ describe("Gemini OpenAI-compat (real API)", () => {
       process.env.GEMINI_TEST_MODEL || process.env.GOOGLE_AI_TEST_MODEL;
     if (envModel) return envModel.replace(/^models\//, "");
     const names = listed.data.map((m: any) => m.id as string);
-    const cheap = names.filter((n) =>
+    const cheap = names.filter((n: string) =>
       /(^|[-_.])(?:nano|flash(?:-\d+)?|mini)(?:$|[-_.])/i.test(n)
     );
     const selected = cheap[0] || names[0];

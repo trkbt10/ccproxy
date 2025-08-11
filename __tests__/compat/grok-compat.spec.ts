@@ -8,7 +8,10 @@ import {
   writeCombinedMarkdownReport,
 } from "./compat-coverage";
 import type { Provider } from "../../src/config/types";
-import { isGrokChatCompletion, ensureGrokStream } from "../../src/adapters/providers/guards";
+import {
+  isGrokChatCompletion,
+  ensureGrokStream,
+} from "../../src/adapters/providers/guards";
 import { getAdapterFor } from "../../src/adapters/providers/registry";
 import type { OpenAICompatStreamEvent } from "../../src/adapters/providers/openai-compat/compat";
 
@@ -18,9 +21,30 @@ describe("Grok OpenAI-compat (real API)", () => {
   async function pickCheapGrokModel(
     adapter: ReturnType<typeof getAdapterFor>
   ): Promise<string> {
-    // Prefer explicit env to avoid guessing
+    // Prefer explicit env to avoid guessing, but still exercise models.list for coverage
     const envModel = process.env.GROK_TEST_MODEL;
-    if (envModel) return envModel;
+    if (envModel) {
+      try {
+        const listed = await adapter.listModels();
+        const ids = listed.data.map((m) => m.id);
+        compatCoverage.log(
+          "grok",
+          `models.list: ${ids.slice(0, 5).join(", ")}${
+            ids.length > 5 ? ", ..." : ""
+          }`
+        );
+        if (ids.length > 0) {
+          compatCoverage.mark("grok", "models.list.basic");
+        }
+      } catch (e) {
+        compatCoverage.error(
+          "grok",
+          "models.list.basic",
+          `Failed to list models: ${e instanceof Error ? e.message : String(e)}`
+        );
+      }
+      return envModel;
+    }
     try {
       const listed = await adapter.listModels();
       const ids = listed.data.map((m) => m.id);
@@ -86,8 +110,7 @@ describe("Grok OpenAI-compat (real API)", () => {
     for await (const ev of grokToOpenAIStream(
       ensureGrokStream(s as AsyncIterable<unknown>)
     )) {
-      const e: OpenAICompatStreamEvent = ev;
-      types.push(e.type);
+      types.push(ev.type);
     }
     compatCoverage.log("grok", `chat.stream events: ${types.join(", ")}`);
     expect(types[0]).toBe("response.created");

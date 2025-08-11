@@ -138,7 +138,12 @@ async function processStreamingResponse(
       conversationStore.updateConversationState({ conversationId: config.conversationId, requestId: config.requestId, responseId });
       logInfo("Streaming completed", { responseId }, context);
     } catch (error) {
-      try { await sse.error("api_error", String(error)); } catch {}
+      try {
+        const status = (error as any)?.status as number | undefined;
+        const code = (error as any)?.code as string | undefined;
+        const type = code || (status === 401 ? 'unauthorized' : status === 429 ? 'rate_limited' : status && status >= 500 ? 'upstream_error' : status && status >= 400 ? 'bad_request' : 'api_error');
+        await sse.error(type, String(error));
+      } catch {}
       handleError(config.requestId, openaiReq, error, config.conversationId);
       throw error;
     } finally {

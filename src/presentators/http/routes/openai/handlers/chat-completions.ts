@@ -34,10 +34,22 @@ export const createChatCompletionsHandler =
 
     if (plan.type === "stream") {
       return streamSSE(c, async (sse) => {
-        for await (const chunk of plan.stream) {
-          await sse.writeSSE({ data: JSON.stringify(chunk) });
+        try {
+          for await (const chunk of plan.stream) {
+            await sse.writeSSE({ data: JSON.stringify(chunk) });
+          }
+        } catch (err) {
+          const status = (err as any)?.status ?? undefined;
+          const message = err instanceof Error ? err.message : String(err);
+          const code = (err as any)?.code as string | undefined;
+          const type = code || (status === 401 ? 'unauthorized' : status === 429 ? 'rate_limited' : status && status >= 500 ? 'upstream_error' : 'api_error');
+          try {
+            await sse.writeSSE({ event: 'error', data: JSON.stringify({ error: { type, message } }) });
+          } catch {}
+          throw err;
+        } finally {
+          try { await sse.writeSSE({ data: "[DONE]" }); } catch {}
         }
-        await sse.writeSSE({ data: "[DONE]" });
       });
     }
 

@@ -16,7 +16,17 @@ export const createOpenAIRouter = (routingConfig: RoutingConfig) => {
     console.error(`[Request ${requestId}] OpenAI route error:`, err);
     const status = isErrorWithStatus(err) ? err.status : 500;
     const message = err instanceof Error ? err.message : "Internal server error";
-    return c.json(toErrorBody("openai", message) as never, status as Parameters<typeof c.json>[1]);
+    const code = (err as { code?: unknown })?.code;
+    const type = typeof code === 'string' && code.trim()
+      ? String(code)
+      : (status === 401 ? 'unauthorized'
+        : status === 403 ? 'forbidden'
+        : status === 404 ? 'not_found'
+        : status === 429 ? 'rate_limited'
+        : status >= 500 ? 'upstream_error'
+        : status >= 400 ? 'bad_request'
+        : 'api_error');
+    return c.json(toErrorBody("openai", message, type) as never, status as Parameters<typeof c.json>[1]);
   });
 
   openaiRouter.post("/chat/completions", createChatCompletionsHandler(routingConfig));

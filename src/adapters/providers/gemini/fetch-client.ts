@@ -103,8 +103,9 @@ export class GeminiFetchClient {
       signal: abortSignal,
     });
     if (!res.ok) {
-      const text = await res.text();
-      throw new Error(`Gemini API error ${res.status}: ${text}`);
+      const text = await res.text().catch(() => "");
+      const { httpErrorFromResponse } = await import("../../errors/http-error");
+      throw httpErrorFromResponse(res as unknown as Response, text);
     }
     return (await res.json()) as GenerateContentResponse;
   }
@@ -120,7 +121,8 @@ export class GeminiFetchClient {
     });
     if (!res.ok || !res.body) {
       const text = await res.text().catch(() => "");
-      throw new Error(`Gemini stream error ${res.status}: ${text}`);
+      const { httpErrorFromResponse } = await import("../../errors/http-error");
+      throw httpErrorFromResponse(res as unknown as Response, text);
     }
     const reader = (res.body as ReadableStream<Uint8Array>).getReader();
     const decoder = new TextDecoder();
@@ -173,7 +175,11 @@ export class GeminiFetchClient {
     const url = new URL(`${this.baseURL}/v1beta/models`);
     url.searchParams.set("key", this.apiKey);
     const res = await this.f(url.toString(), { method: "GET" });
-    if (!res.ok) throw new Error(`Gemini list models ${res.status}`);
+    if (!res.ok) {
+      const text = await res.text().catch(() => "");
+      const { httpErrorFromResponse } = await import("../../errors/http-error");
+      throw httpErrorFromResponse(res as unknown as Response, text);
+    }
     return (await res.json()) as ListModelsResponse;
   }
 
@@ -181,7 +187,11 @@ export class GeminiFetchClient {
     const url = new URL(`${this.baseURL}/v1beta/${encodeURIComponent(name)}`);
     url.searchParams.set("key", this.apiKey);
     const res = await this.f(url.toString(), { method: "GET" });
-    if (!res.ok) throw new Error(`Gemini get model ${res.status}`);
+    if (!res.ok) {
+      const text = await res.text().catch(() => "");
+      const { httpErrorFromResponse } = await import("../../errors/http-error");
+      throw httpErrorFromResponse(res as unknown as Response, text);
+    }
     return (await res.json()) as GeminiModel;
   }
 
@@ -194,7 +204,11 @@ export class GeminiFetchClient {
       body: JSON.stringify(body),
       signal: abortSignal,
     });
-    if (!res.ok) throw new Error(`Gemini count tokens ${res.status}`);
+    if (!res.ok) {
+      const text = await res.text().catch(() => "");
+      const { httpErrorFromResponse } = await import("../../errors/http-error");
+      throw httpErrorFromResponse(res as unknown as Response, text);
+    }
     const json = (await res.json()) as CountTokensResponse;
     if (json.totalTokenCount && !json.totalTokens) json.totalTokens = json.totalTokenCount;
     return json;
@@ -209,7 +223,11 @@ export class GeminiFetchClient {
       body: JSON.stringify(body),
       signal: abortSignal,
     });
-    if (!res.ok) throw new Error(`Gemini embed content ${res.status}`);
+    if (!res.ok) {
+      const text = await res.text().catch(() => "");
+      const { httpErrorFromResponse } = await import("../../errors/http-error");
+      throw httpErrorFromResponse(res as unknown as Response, text);
+    }
     return (await res.json()) as EmbedContentResponse;
   }
 
@@ -222,7 +240,11 @@ export class GeminiFetchClient {
       body: JSON.stringify(body),
       signal: abortSignal,
     });
-    if (!res.ok) throw new Error(`Gemini batch embed ${res.status}`);
+    if (!res.ok) {
+      const text = await res.text().catch(() => "");
+      const { httpErrorFromResponse } = await import("../../errors/http-error");
+      throw httpErrorFromResponse(res as unknown as Response, text);
+    }
     return (await res.json()) as BatchEmbedContentsResponse;
   }
 }

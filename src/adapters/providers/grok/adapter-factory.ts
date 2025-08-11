@@ -28,7 +28,11 @@ export function buildGrokAdapter(
         body: JSON.stringify(input),
         signal,
       });
-      if (!res.ok) throw new Error(`Grok API error ${res.status}`);
+      if (!res.ok) {
+        const text = await res.text().catch(() => "");
+        const { httpErrorFromResponse } = await import("../../errors/http-error");
+        throw httpErrorFromResponse(res as unknown as Response, text);
+      }
       return await res.json();
     },
     async *stream({ input, signal }: GenerateParams<any>) {
@@ -45,7 +49,8 @@ export function buildGrokAdapter(
       });
       if (!res.ok || !res.body) {
         const text = await res.text().catch(() => "");
-        throw new Error(`Grok stream error ${res.status}: ${text}`);
+        const { httpErrorFromResponse } = await import("../../errors/http-error");
+        throw httpErrorFromResponse(res as unknown as Response, text);
       }
       const reader = (res.body as ReadableStream<Uint8Array>).getReader();
       const decoder = new TextDecoder();
@@ -78,7 +83,11 @@ export function buildGrokAdapter(
       const res = await fetch(url.toString(), {
         headers: { Authorization: `Bearer ${resolvedKey}` },
       });
-      if (!res.ok) throw new Error(`Grok models error ${res.status}`);
+      if (!res.ok) {
+        const text = await res.text().catch(() => "");
+        const { httpErrorFromResponse } = await import("../../errors/http-error");
+        throw httpErrorFromResponse(res as unknown as Response, text);
+      }
       const json = (await res.json()) as { data?: Array<{ id?: string }> };
       const data = (json.data || [])
         .map((m) => ({ id: m.id || "", object: "model" as const }))

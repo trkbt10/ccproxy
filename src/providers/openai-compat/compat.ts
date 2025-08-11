@@ -26,6 +26,9 @@ export type OpenAICompatStreamEvent =
   | { type: "response.created"; response: { id: string; status: string } }
   | { type: "response.output_text.delta"; delta: string }
   | { type: "response.output_text.done" }
+  | { type: "response.output_item.added"; item: { type: "function_call"; id?: string; name: string; call_id?: string; arguments?: string } }
+  | { type: "response.function_call_arguments.delta"; item_id?: string; delta: string }
+  | { type: "response.output_item.done"; item: { type: "function_call"; id?: string; name: string; call_id?: string; arguments?: string } }
   | { type: "response.completed"; response: { id: string; status: string } };
 
 export function buildTextResponse(text: string, model?: string): OpenAICompatResponse {

@@ -8,7 +8,7 @@ import {
   writeCombinedMarkdownReport,
 } from "./compat-coverage";
 import type { Provider } from "../../src/config/types";
-import { isGrokChatCompletion, ensureGrokStream } from "../../src/adapters/providers/grok/guards";
+import { isGrokChatCompletion, ensureGrokStream } from "../../src/adapters/providers/guards";
 import { getAdapterFor } from "../../src/adapters/providers/registry";
 import type { OpenAICompatStreamEvent } from "../../src/adapters/providers/openai-compat/compat";
 
@@ -156,7 +156,7 @@ describe("Grok OpenAI-compat (real API)", () => {
   }, 30000);
 
   it("chat stream tool_call delta (real)", async () => {
-    const adapter = getAdapterFor(provider, getHeader);
+    const adapter = getAdapterFor(provider);
     const model = await pickCheapGrokModel(adapter);
     const tools = [
       {

@@ -8,7 +8,7 @@ import { geminiToOpenAIStream } from "../../src/adapters/providers/gemini/openai
 import { getAdapterFor } from "../../src/adapters/providers/registry";
 import type { Provider } from "../../src/config/types";
 import type { GenerateContentRequest } from "../../src/adapters/providers/gemini/fetch-client";
-import { isGeminiResponse, ensureGeminiStream } from "../../src/adapters/providers/gemini/guards";
+import { isGeminiResponse, ensureGeminiStream } from "../../src/adapters/providers/guards";
 
 describe("Gemini OpenAI-compat (real API)", () => {
   const provider: Provider = { type: "gemini" };
@@ -166,7 +166,7 @@ describe("Gemini OpenAI-compat (real API)", () => {
   }, 30000);
 
   it("chat stream tool_call delta (real)", async () => {
-    const adapter = getAdapterFor(provider, getHeader);
+    const adapter = getAdapterFor(provider);
     const model = await pickCheapGeminiModel(adapter);
     const tools = [
       {
@@ -233,7 +233,7 @@ describe("Gemini OpenAI-compat (real API)", () => {
     }
   }, 30000);
   it("chat function_call roundtrip (real)", async () => {
-    const adapter = getAdapterFor(provider, getHeader);
+    const adapter = getAdapterFor(provider);
     const model = await pickCheapGeminiModel(adapter);
     const tools = [
       {

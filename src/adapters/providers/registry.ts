@@ -5,6 +5,7 @@ import { buildGeminiAdapter } from "./gemini/adapter-factory";
 import { buildGrokAdapter } from "./grok/adapter-factory";
 import { buildOpenAIAdapter } from "./openai/adapter-factory";
 import { buildGroqAdapter } from "./groq/adapter-factory";
+import { buildClaudeAdapter } from "./claude/adapter-factory";
 
 // API key selection and provider specifics are handled within each adapter factory.
 
@@ -18,6 +19,9 @@ export function getAdapterFor(
     }
     case "groq": {
       return buildGroqAdapter(provider, modelHint);
+    }
+    case "claude": {
+      return buildClaudeAdapter(provider, modelHint) as unknown as ProviderAdapter;
     }
     case "gemini": {
       return buildGeminiAdapter(

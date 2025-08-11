@@ -1,7 +1,7 @@
 /**
  * Represents the context of a conversation session
  */
-import { UnifiedIdRegistry } from "../id-management/unified-id-manager";
+import { UnifiedIdRegistry, UnifiedIdManager } from "../id-management/unified-id-manager";
 // Type for message content
 type MessageContent = string | Record<string, unknown>;
 
@@ -177,9 +177,57 @@ export class ConversationStore {
   getIdManager(conversationId: string) {
     return this.unifiedIdRegistry.getManager(conversationId);
   }
+
+  // --- ID management facades (to reduce layer awareness) ---
+
+  /**
+   * Register a mapping between OpenAI call_id and Claude tool_use_id for a conversation
+   */
+  registerIdMapping(
+    conversationId: string,
+    openaiCallId: string,
+    claudeToolUseId: string,
+    toolName?: string,
+    context?: Record<string, unknown>
+  ): void {
+    const manager = this.unifiedIdRegistry.getManager(conversationId);
+    manager.registerMapping(openaiCallId, claudeToolUseId, toolName, context);
+  }
+
+  /**
+   * Resolve OpenAI call_id from Claude tool_use_id within a conversation
+   */
+  getOpenAICallId(conversationId: string, claudeToolUseId: string): string | undefined {
+    const manager = this.unifiedIdRegistry.getManager(conversationId);
+    return manager.getOpenAICallId(claudeToolUseId);
+  }
+
+  /**
+   * Resolve Claude tool_use_id from OpenAI call_id within a conversation
+   */
+  getClaudeToolUseId(conversationId: string, openaiCallId: string): string | undefined {
+    const manager = this.unifiedIdRegistry.getManager(conversationId);
+    return manager.getClaudeToolUseId(openaiCallId);
+  }
+
+  /**
+   * Get or allocate an OpenAI call_id for a given Claude tool_use_id within a conversation
+   */
+  getOrCreateOpenAICallIdForToolUse(
+    conversationId: string,
+    claudeToolUseId: string,
+    toolName?: string,
+    context?: Record<string, unknown>
+  ): string {
+    const manager = this.unifiedIdRegistry.getManager(conversationId);
+    return manager.getOrCreateOpenAICallIdForToolUse(claudeToolUseId, toolName, context);
+  }
 }
 
 /**
  * Singleton instance of the conversation store.
  */
 export const conversationStore = new ConversationStore();
+
+// Re-export for single entry point convenience
+export { UnifiedIdManager };

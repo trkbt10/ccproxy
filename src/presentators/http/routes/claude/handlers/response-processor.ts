@@ -7,7 +7,8 @@ import type {
 import { streamSSE } from "hono/streaming";
 import type { Context } from "hono";
 import type { MessageCreateParams as ClaudeMessageCreateParams } from "@anthropic-ai/sdk/resources/messages";
-import { streamingPipelineFactory } from "../../../streaming/streaming-pipeline";
+import { OpenAIToClaudeSSEStream } from "../../../../../adapters/message-converter/openai-to-claude/streaming-sse";
+import { HonoSSESink } from "../../../streaming/hono-sse-sink";
 import { convertOpenAIResponseToClaude } from "../../../../../adapters/message-converter/openai-to-claude/response";
 import { conversationStore } from "../../../../../utils/conversation/conversation-store";
 import { claudeToResponsesLocal as claudeToResponses } from "../../../../../adapters/providers/claude/request-to-responses";
@@ -110,36 +111,38 @@ async function processStreamingResponse(
   c: Context
 ): Promise<Response> {
   return streamSSE(c, async (stream) => {
-    const pipeline = streamingPipelineFactory.create(stream, {
-      requestId: config.requestId,
-      logEnabled: config.routingConfig?.logging?.eventsEnabled === true,
-    });
-
     const context = { requestId: config.requestId, conversationId: config.conversationId, stream: true };
     logDebug("OpenAI Request Params", openaiReq, context);
 
+    const sink = new HonoSSESink(stream);
+    const sse = new OpenAIToClaudeSSEStream(
+      sink,
+      config.conversationId,
+      config.requestId,
+      config.routingConfig?.logging?.eventsEnabled === true
+    );
+
     try {
-      await pipeline.start();
+      await sse.start("msg_" + config.requestId);
       const iterable = await config.openai.responses.create(
         { ...openaiReq, stream: true },
         config.signal ? { signal: config.signal } : undefined
       );
 
       for await (const event of iterable as AsyncIterable<ResponseStreamEvent>) {
-        if (pipeline.isClientClosed()) break;
         if (config.signal?.aborted) break;
-        await pipeline.processEvent(event);
+        await sse.processEvent(event);
       }
 
-      const { responseId } = pipeline.getResult();
+      const { responseId } = sse.getResult();
       conversationStore.updateConversationState({ conversationId: config.conversationId, requestId: config.requestId, responseId });
       logInfo("Streaming completed", { responseId }, context);
     } catch (error) {
-      await pipeline.handleError(error);
+      try { await (sse as any).error?.("api_error", String(error)); } catch {}
       handleError(config.requestId, openaiReq, error, config.conversationId);
       throw error;
     } finally {
-      streamingPipelineFactory.release(config.requestId);
+      sse.cleanup();
     }
   });
 }

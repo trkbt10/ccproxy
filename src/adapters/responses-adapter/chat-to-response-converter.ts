@@ -120,7 +120,7 @@ const createFunctionCall = (
   const toolUseId = generateId("toolu");
   
   // Store the mapping for future reference
-  callIdManager.addMapping(toolCall.id, toolUseId, {
+  callIdManager.registerMapping(toolCall.id, toolUseId, toolCall.function.name, {
     source: "chat-to-response-converter",
     operation: "createFunctionCall"
   });

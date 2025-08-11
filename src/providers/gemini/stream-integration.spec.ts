@@ -1,4 +1,3 @@
-import { describe, it, expect } from "bun:test";
 import { mkdir, writeFile } from "node:fs/promises";
 import { dirname } from "node:path";
 import { GeminiFetchClient } from "./fetch-client";
@@ -16,7 +15,8 @@ async function logJSON(file: string, data: unknown) {
 }
 
 function envModel(): string | null {
-  const m = process.env.GOOGLE_AI_TEST_MODEL || process.env.GEMINI_TEST_MODEL || null;
+  const m =
+    process.env.GOOGLE_AI_TEST_MODEL || process.env.GEMINI_TEST_MODEL || null;
   return m ? m.replace(/^models\//, "") : null;
 }
 
@@ -33,8 +33,7 @@ describe("Gemini stream integration (diagnostics)", () => {
           role: "user" as const,
           parts: [
             {
-              text:
-                "200語以上の長文で、人工知能の歴史を複数段落で詳しく要約してください。段落の間に空行を入れ、箇条書きを1つ含めてください。",
+              text: "200語以上の長文で、人工知能の歴史を複数段落で詳しく要約してください。段落の間に空行を入れ、箇条書きを1つ含めてください。",
             },
           ],
         },
@@ -46,11 +45,14 @@ describe("Gemini stream integration (diagnostics)", () => {
     const raw: ChunkSummary[] = [];
     async function* gen() {
       for await (const ch of client.streamGenerateContent(model!, input)) {
-        const parts = (ch.candidates?.[0]?.content?.parts || []) as Array<
-          { text?: string; functionCall?: { name?: string } }
-        >;
+        const parts = (ch.candidates?.[0]?.content?.parts || []) as Array<{
+          text?: string;
+          functionCall?: { name?: string };
+        }>;
         const summary: ChunkSummary = {
-          texts: parts.filter((p) => typeof p.text === "string" && p.text.length > 0).length,
+          texts: parts.filter(
+            (p) => typeof p.text === "string" && p.text.length > 0
+          ).length,
           hasFunctionCall: parts.some((p) => !!p.functionCall),
           functionName: parts.find((p) => p.functionCall)?.functionCall?.name,
         };
@@ -78,74 +80,83 @@ describe("Gemini stream integration (diagnostics)", () => {
     expect(events[events.length - 1]).toBe("response.completed");
   });
 
-  maybe("streams tool functionCall events when forced (diagnostic)", async () => {
-    const client = new GeminiFetchClient({ apiKey: apiKey! });
-    const tools = [
-      {
-        functionDeclarations: [
-          {
-            name: "get_current_ceiling",
-            description: "Get the current cloud ceiling in a given location",
-            parameters: {
-              type: "object",
-              properties: { location: { type: "string" } },
-              required: ["location"],
-            },
-          },
-        ],
-      },
-    ];
-    const input = {
-      contents: [
+  maybe(
+    "streams tool functionCall events when forced (diagnostic)",
+    async () => {
+      const client = new GeminiFetchClient({ apiKey: apiKey! });
+      const tools = [
         {
-          role: "user" as const,
-          parts: [
+          functionDeclarations: [
             {
-              text:
-                "必ずツール get_current_ceiling を location=San Francisco で呼び出してください。テキストで回答しないでください。",
+              name: "get_current_ceiling",
+              description: "Get the current cloud ceiling in a given location",
+              parameters: {
+                type: "object",
+                properties: { location: { type: "string" } },
+                required: ["location"],
+              },
             },
           ],
         },
-      ],
-    } as const;
-    const body = {
-      ...input,
-      tools,
-      toolConfig: { functionCallingConfig: { mode: "ANY", allowedFunctionNames: ["get_current_ceiling"] } },
-      generationConfig: { maxOutputTokens: 64 },
-    };
+      ];
+      const input = {
+        contents: [
+          {
+            role: "user" as const,
+            parts: [
+              {
+                text: "必ずツール get_current_ceiling を location=San Francisco で呼び出してください。テキストで回答しないでください。",
+              },
+            ],
+          },
+        ],
+      } as const;
+      const body = {
+        ...input,
+        tools,
+        toolConfig: {
+          functionCallingConfig: {
+            mode: "ANY",
+            allowedFunctionNames: ["get_current_ceiling"],
+          },
+        },
+        generationConfig: { maxOutputTokens: 64 },
+      };
 
-    const raw: ChunkSummary[] = [];
-    async function* gen() {
-      for await (const ch of client.streamGenerateContent(model!, body)) {
-        const parts = (ch.candidates?.[0]?.content?.parts || []) as Array<
-          { text?: string; functionCall?: { name?: string } }
-        >;
-        const summary: ChunkSummary = {
-          texts: parts.filter((p) => typeof p.text === "string" && p.text.length > 0).length,
-          hasFunctionCall: parts.some((p) => !!p.functionCall),
-          functionName: parts.find((p) => p.functionCall)?.functionCall?.name,
-        };
-        raw.push(summary);
-        yield ch;
+      const raw: ChunkSummary[] = [];
+      async function* gen() {
+        for await (const ch of client.streamGenerateContent(model!, body)) {
+          const parts = (ch.candidates?.[0]?.content?.parts || []) as Array<{
+            text?: string;
+            functionCall?: { name?: string };
+          }>;
+          const summary: ChunkSummary = {
+            texts: parts.filter(
+              (p) => typeof p.text === "string" && p.text.length > 0
+            ).length,
+            hasFunctionCall: parts.some((p) => !!p.functionCall),
+            functionName: parts.find((p) => p.functionCall)?.functionCall?.name,
+          };
+          raw.push(summary);
+          yield ch;
+        }
       }
+
+      const events: string[] = [];
+      for await (const ev of geminiToOpenAIStream(gen())) {
+        events.push(ev.type);
+      }
+
+      await logJSON("reports/openai-compat/gemini-stream-diag.json", {
+        case: "tool_call_stream",
+        model,
+        request: body,
+        raw,
+        events,
+      });
+
+      expect(events[0]).toBe("response.created");
+      expect(events[events.length - 1]).toBe("response.completed");
     }
-
-    const events: string[] = [];
-    for await (const ev of geminiToOpenAIStream(gen())) {
-      events.push(ev.type);
-    }
-
-    await logJSON("reports/openai-compat/gemini-stream-diag.json", {
-      case: "tool_call_stream",
-      model,
-      request: body,
-      raw,
-      events,
-    });
-
-    expect(events[0]).toBe("response.created");
-    expect(events[events.length - 1]).toBe("response.completed");
-  });
+  );
 });
-

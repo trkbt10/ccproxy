@@ -1,6 +1,10 @@
-import { describe, it, expect } from "bun:test";
 import { ResponsesAPI } from "./responses-api";
-import type { Response as OpenAIResponse, ResponseCreateParamsNonStreaming, ResponseCreateParamsStreaming, ResponseStreamEvent } from "openai/resources/responses/responses";
+import type {
+  Response as OpenAIResponse,
+  ResponseCreateParamsNonStreaming,
+  ResponseCreateParamsStreaming,
+  ResponseStreamEvent,
+} from "openai/resources/responses/responses";
 
 const API_KEY = process.env.OPENAI_API_KEY;
 const MODEL = process.env.OPENAI_DEFAULT_MODEL || "gpt-4o-mini";
@@ -28,7 +32,10 @@ describe("ResponsesAPI emulator (OpenAI-backed)", () => {
     };
     const stream = await api.create(params);
 
-    let created = false, delta = false, done = false, completed = false;
+    let created = false,
+      delta = false,
+      done = false,
+      completed = false;
     for await (const ev of stream as AsyncIterable<ResponseStreamEvent>) {
       if (ev.type === "response.created") created = true;
       if (ev.type === "response.output_text.delta") delta = true;

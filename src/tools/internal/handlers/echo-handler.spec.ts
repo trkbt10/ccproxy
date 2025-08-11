@@ -1,4 +1,3 @@
-import { describe, it, expect } from "bun:test";
 import { echoHandler } from "./echo";
 import type { InternalToolHandler } from "../registry";
 

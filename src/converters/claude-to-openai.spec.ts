@@ -85,7 +85,9 @@ describe("claude-to-openai converter", () => {
       };
 
       const callIdManager = new CallIdManager();
-      callIdManager.registerMapping("call_456", "tool_123", "test_tool", { source: "test" });
+      callIdManager.registerMapping("call_456", "tool_123", "test_tool", {
+        source: "test",
+      });
 
       const result = convertToolResult(toolResult, callIdManager);
 
@@ -110,7 +112,9 @@ describe("claude-to-openai converter", () => {
       };
 
       const callIdManager = new CallIdManager();
-      callIdManager.registerMapping("call_999", "tool_789", "test_tool", { source: "test" });
+      callIdManager.registerMapping("call_999", "tool_789", "test_tool", {
+        source: "test",
+      });
 
       const result = convertToolResult(toolResult, callIdManager);
 
@@ -288,7 +292,9 @@ describe("claude-to-openai converter", () => {
       };
 
       const callIdManager = new CallIdManager();
-      callIdManager.registerMapping("call_001", "tool_001", "calculator", { source: "test" });
+      callIdManager.registerMapping("call_001", "tool_001", "calculator", {
+        source: "test",
+      });
 
       const result = convertClaudeMessage(message, callIdManager);
 
@@ -345,7 +351,9 @@ describe("claude-to-openai converter", () => {
       };
 
       const callIdManager = new CallIdManager();
-      callIdManager.registerMapping("call_002", "tool_002", "get_weather", { source: "test" });
+      callIdManager.registerMapping("call_002", "tool_002", "get_weather", {
+        source: "test",
+      });
 
       const result = convertClaudeMessage(message, callIdManager);
 
@@ -418,8 +426,12 @@ describe("claude-to-openai converter", () => {
       };
 
       const callIdManager = new CallIdManager();
-      callIdManager.registerMapping("call_mixed_1", "tool_mixed_1", "analyze", { source: "test" });
-      callIdManager.registerMapping("call_mixed_2", "tool_mixed_2", "process", { source: "test" });
+      callIdManager.registerMapping("call_mixed_1", "tool_mixed_1", "analyze", {
+        source: "test",
+      });
+      callIdManager.registerMapping("call_mixed_2", "tool_mixed_2", "process", {
+        source: "test",
+      });
 
       const result = convertClaudeMessage(message, callIdManager);
 
@@ -554,11 +566,16 @@ describe("claude-to-openai converter", () => {
 
       const callIdManager = new CallIdManager();
       const userResult = convertClaudeMessage(userMessage, callIdManager)[0];
-      const assistantResult = convertClaudeMessage(assistantMessage, callIdManager)[0];
+      const assistantResult = convertClaudeMessage(
+        assistantMessage,
+        callIdManager
+      )[0];
 
       // Check that the results are EasyInputMessage type with role property
       expect("role" in userResult && userResult.role).toBe("user");
-      expect("role" in assistantResult && assistantResult.role).toBe("assistant");
+      expect("role" in assistantResult && assistantResult.role).toBe(
+        "assistant"
+      );
     });
   });
 

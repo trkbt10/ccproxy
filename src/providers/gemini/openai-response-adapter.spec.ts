@@ -1,4 +1,3 @@
-import { describe, it, expect } from "bun:test";
 import { geminiToOpenAIResponse } from "./openai-response-adapter";
 import type { GenerateContentResponse, GeminiPart } from "./fetch-client";
 
@@ -35,7 +34,9 @@ describe("geminiToOpenAIResponse", () => {
           content: {
             parts: [
               { text: "Tool: " } as GeminiPart,
-              { functionCall: { name: "get_weather", args: { city: "Tokyo" } } } as GeminiPart,
+              {
+                functionCall: { name: "get_weather", args: { city: "Tokyo" } },
+              } as GeminiPart,
             ],
           },
         },
@@ -53,4 +54,3 @@ describe("geminiToOpenAIResponse", () => {
     }
   });
 });
-

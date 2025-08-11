@@ -16,7 +16,14 @@ import {
 import { resolveModelForProvider } from "../../src/adapters/providers/shared/model-mapper";
 
 describe("Gemini OpenAI-compat (real API)", () => {
-  const provider: Provider = { type: "gemini" };
+  const apiKeyFromEnv =
+    process.env.GOOGLE_AI_STUDIO_API_KEY ||
+    process.env.GEMINI_API_KEY ||
+    process.env.GOOGLE_API_KEY ||
+    process.env.GOOGLE_AI_API_KEY;
+  const provider: Provider = apiKeyFromEnv
+    ? { type: "gemini", apiKey: apiKeyFromEnv }
+    : { type: "gemini" };
 
   async function selectGeminiModel(
     adapter: ReturnType<typeof getAdapterFor>,

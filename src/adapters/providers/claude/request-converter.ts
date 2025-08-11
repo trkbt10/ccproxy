@@ -1,4 +1,4 @@
-import type { ChatCompletionCreateParams, ChatCompletionMessageParam, ChatCompletionTool, ChatCompletionContentPart } from "openai/resources/chat/completions";
+import type { ChatCompletionCreateParams, ChatCompletionMessageParam, ChatCompletionTool } from "openai/resources/chat/completions";
 import type { MessageCreateParams as ClaudeMessageCreateParams, Tool as ClaudeTool } from "@anthropic-ai/sdk/resources/messages";
 import { contentToPlainText } from "./guards";
 
@@ -59,7 +59,7 @@ function convertMessages(msgs: ChatCompletionMessageParam[]): ClaudeMessageCreat
 }
 
 export function chatCompletionToClaudeLocal(request: ChatCompletionCreateParams): ClaudeMessageCreateParams {
-  const model = mapModel(request.model as string);
+  const model = mapModel(typeof request.model === 'string' ? request.model : String(request.model));
   const messages = convertMessages(request.messages);
   const systemTexts = (request.messages || [])
     .filter((m) => m.role === "system")
@@ -69,7 +69,7 @@ export function chatCompletionToClaudeLocal(request: ChatCompletionCreateParams)
   const claudeReq: ClaudeMessageCreateParams = {
     model,
     messages,
-    max_tokens: (request as { max_tokens?: number | null }).max_tokens ?? 4096,
+    max_tokens: typeof request.max_tokens === 'number' ? request.max_tokens : 4096,
     stream: !!request.stream,
   };
 
@@ -78,11 +78,11 @@ export function chatCompletionToClaudeLocal(request: ChatCompletionCreateParams)
   if (tools) claudeReq.tools = tools;
   const choice = convertToolChoice(request.tool_choice);
   if (choice) claudeReq.tool_choice = choice;
-  if ((request as { temperature?: number | null }).temperature != null) claudeReq.temperature = (request as { temperature?: number | null }).temperature ?? undefined;
-  if ((request as { top_p?: number | null }).top_p != null) claudeReq.top_p = (request as { top_p?: number | null }).top_p ?? undefined;
-  if ((request as { stop?: string | string[] | null }).stop) {
-    const stop = (request as { stop?: string | string[] | null }).stop;
-    claudeReq.stop_sequences = Array.isArray(stop) ? stop : [stop as string];
+  if (request.temperature != null) claudeReq.temperature = request.temperature ?? undefined;
+  if (request.top_p != null) claudeReq.top_p = request.top_p ?? undefined;
+  if (request.stop) {
+    const stop = request.stop;
+    claudeReq.stop_sequences = Array.isArray(stop) ? stop : [String(stop)];
   }
   return claudeReq;
 }

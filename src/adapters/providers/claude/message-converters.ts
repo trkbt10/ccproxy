@@ -7,6 +7,7 @@ import type {
   ContentBlockParam,
 } from "@anthropic-ai/sdk/resources/messages";
 import type {
+  ResponseInputItem,
   EasyInputMessage,
   ResponseFunctionToolCall,
   ResponseFunctionToolCallOutputItem,
@@ -53,8 +54,8 @@ export function convertToolResult(
 export function convertClaudeMessage(
   message: ClaudeMessageParam,
   idManager: UnifiedIdManager
-): Array<EasyInputMessage | ResponseFunctionToolCall | ResponseFunctionToolCallOutputItem> {
-  const out: Array<EasyInputMessage | ResponseFunctionToolCall | ResponseFunctionToolCallOutputItem> = [];
+): ResponseInputItem[] {
+  const out: ResponseInputItem[] = [];
   const role = message.role;
   const content = message.content;
   if (typeof content === 'string') {

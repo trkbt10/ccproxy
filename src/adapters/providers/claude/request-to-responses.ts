@@ -1,5 +1,5 @@
 import type { MessageCreateParams as ClaudeMessageCreateParams, Tool as ClaudeTool } from "@anthropic-ai/sdk/resources/messages";
-import type { ResponseCreateParams, Tool as OpenAITool, FunctionTool } from "openai/resources/responses/responses";
+import type { ResponseCreateParams, Tool as OpenAITool, FunctionTool, ResponseInputItem } from "openai/resources/responses/responses";
 import type { ResponsesModel as OpenAIResponseModel } from "openai/resources/shared";
 import type { UnifiedIdManager } from "../../../utils/id-management/unified-id-manager";
 import { convertClaudeMessage } from "./message-converters";
@@ -13,23 +13,23 @@ export function claudeToResponsesLocal(
   _providerId?: string
 ): ResponseCreateParams {
   const model = modelResolver();
-  const inputItems: NonNullable<ResponseCreateParams["input"]> = [];
+  const inputItems: ResponseInputItem[] = [];
 
   for (const m of req.messages) {
     const parts = convertClaudeMessage(m, idManager);
-    inputItems.push(...(parts as any));
+    inputItems.push(...parts);
   }
 
   const tools = mapClaudeToolsToResponses(Array.isArray(req.tools) ? req.tools.filter((t): t is Extract<ClaudeTool, { input_schema: unknown }> => typeof (t as any).input_schema === 'object' && (t as any).input_schema !== null) : undefined);
 
   const body: ResponseCreateParams = {
-    model: model as unknown as string,
+    model: model,
     input: inputItems,
     instructions: typeof req.system === 'string' ? req.system : undefined,
     stream: !!req.stream,
   };
   if (tools && tools.length > 0) body.tools = tools;
-  if (typeof req.max_tokens === 'number') (body as any).max_output_tokens = req.max_tokens;
+  if (typeof req.max_tokens === 'number') body.max_output_tokens = req.max_tokens;
   if (typeof req.temperature === 'number') body.temperature = req.temperature;
   if (typeof req.top_p === 'number') body.top_p = req.top_p;
   return body;

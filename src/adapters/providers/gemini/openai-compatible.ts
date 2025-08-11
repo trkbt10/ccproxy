@@ -8,7 +8,7 @@ import type {
 } from "openai/resources/responses/responses";
 import type { OpenAICompatibleClient } from "../openai-compat/types";
 import type { GenerateContentRequest } from "./fetch-client";
-import { ensureGeminiStream, isGeminiResponse } from "./guards";
+import { ensureGeminiStream, isGeminiResponse } from "../guards";
 import { responsesToGeminiRequest } from "./request";
 import { geminiToOpenAIStream } from "./openai-stream-adapter";
 import { geminiToOpenAIResponse } from "./openai-response-adapter";

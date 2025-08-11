@@ -19,3 +19,14 @@ export type ToolCallDelta = {
 export function isFunctionToolDelta(v: unknown): v is ToolCallDelta {
   return typeof v === "object" && v !== null && (v as { type?: string }).type === "function";
 }
+
+// Consolidated guards re-exports for providers
+export {
+  isGeminiResponse,
+  ensureGeminiStream,
+} from "./gemini/guards";
+
+export {
+  isGrokChatCompletion,
+  ensureGrokStream,
+} from "./grok/guards";

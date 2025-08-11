@@ -1,7 +1,7 @@
-import { existsSync } from "node:fs";
 import type { RoutingConfig } from "../../../../config/types";
 import { writeConfigRaw } from "../../../../utils/json/config-io";
-import { getConfigPath, hasFlag } from "../utils";
+import type { ConfigOptions } from "../../types";
+import { checkFileExistsWithForce } from "../../utils/errors";
 
 function defaultConfig(): RoutingConfig {
   return {
@@ -11,12 +11,13 @@ function defaultConfig(): RoutingConfig {
   };
 }
 
-export async function cmdConfigInit(): Promise<void> {
-  const filePath = getConfigPath();
-  if (existsSync(filePath) && !hasFlag("force")) {
-    console.error(`Config already exists: ${filePath} (use --force to overwrite)`);
-    process.exit(1);
-  }
+export async function cmdConfigInit(options: ConfigOptions): Promise<void> {
+  const filePath = options.config;
+  checkFileExistsWithForce(
+    filePath,
+    options.force || false,
+    `Config already exists: ${filePath} (use --force to overwrite)`
+  );
   const cfg = defaultConfig();
   await writeConfigRaw(filePath, cfg);
   console.log(`Initialized config at ${filePath}`);

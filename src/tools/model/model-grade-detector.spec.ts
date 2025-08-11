@@ -4,7 +4,8 @@ import {
   GEMINI_MODELS,
   GROQ_MODELS,
   OPENAI_MODELS,
-} from "./test-mock-models";
+  ANTHROPIC_MODELS,
+} from "./__mocks__/all-models";
 
 describe("detectModelGrade", () => {
   describe("High-grade models", () => {
@@ -112,6 +113,7 @@ describe("getModelsByGrade", () => {
     ...GEMINI_MODELS,
     ...GROQ_MODELS,
     ...OPENAI_MODELS,
+    ...ANTHROPIC_MODELS,
   ];
 
   it("should filter models by grade", () => {
@@ -173,6 +175,37 @@ describe("getModelsByGrade", () => {
       expect(detectModelGrade("gpt-4o-mini")).toBe("low");
       expect(detectModelGrade("gpt-5-mini")).toBe("low");
       expect(detectModelGrade("gpt-5-nano")).toBe("low");
+    });
+  });
+
+  describe("Anthropic models grading", () => {
+    it("should detect Opus models as high-grade", () => {
+      expect(detectModelGrade("claude-3-opus-20240229")).toBe("high");
+      expect(detectModelGrade("claude-3-opus-latest")).toBe("high");
+      expect(detectModelGrade("claude-3-5-opus-20241022")).toBe("high");
+      expect(detectModelGrade("claude-3-5-opus-latest")).toBe("high");
+    });
+
+    it("should detect Sonnet models as mid-grade", () => {
+      expect(detectModelGrade("claude-3-sonnet-20240229")).toBe("mid");
+      expect(detectModelGrade("claude-3-5-sonnet-20240620")).toBe("mid");
+      expect(detectModelGrade("claude-3-5-sonnet-20241022")).toBe("mid");
+      expect(detectModelGrade("claude-3-5-sonnet-latest")).toBe("mid");
+    });
+
+    it("should detect Haiku models as low-grade", () => {
+      expect(detectModelGrade("claude-3-haiku-20240307")).toBe("low");
+      expect(detectModelGrade("claude-3-5-haiku-20241022")).toBe("low");
+      expect(detectModelGrade("claude-3-5-haiku-latest")).toBe("low");
+    });
+
+    it("should detect Claude 2 models as mid-grade", () => {
+      expect(detectModelGrade("claude-2.0")).toBe("mid");
+      expect(detectModelGrade("claude-2.1")).toBe("mid");
+    });
+
+    it("should detect Claude Instant models as low-grade", () => {
+      expect(detectModelGrade("claude-instant-1.2")).toBe("low");
     });
   });
 });

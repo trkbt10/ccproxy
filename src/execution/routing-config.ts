@@ -9,6 +9,7 @@ import type {
 import type { OpenAICompatibleClient } from "../adapters/providers/openai-compat/types";
 import { buildOpenAICompatibleClientForGemini } from "../adapters/providers/gemini/openai-compatible";
 import { buildOpenAICompatibleClientForGrok } from "../adapters/providers/grok/openai-compatible";
+import { buildOpenAICompatibleClientForClaude } from "../adapters/providers/claude/openai-compatible";
 import type { RoutingConfig, Provider } from "../config/types";
 import { expandConfig } from "../config/expansion";
 import { configureLogger } from "../utils/logging/enhanced-logger";
@@ -103,6 +104,9 @@ export function buildProviderClient(
   }
   if (provider.type === "grok") {
     return buildOpenAICompatibleClientForGrok(provider, modelHint);
+  }
+  if (provider.type === "claude") {
+    return buildOpenAICompatibleClientForClaude(provider, modelHint);
   }
 
   // For other providers (e.g. openai, groq), use adapter-based OpenAI-compatible client

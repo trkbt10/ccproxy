@@ -22,12 +22,22 @@ export function resolvePort(portFromArg?: string | number): number {
   return Number.isNaN(env) ? 8082 : env;
 }
 
+export interface ServerOptions {
+  port?: number | string;
+  configPath?: string;
+  configOverrides?: Array<{ key: string; value: string }>;
+}
+
 /**
  * Starts a Node server for a given Hono app with unified startup logs.
  * Used by both CLI `serve` and the Claude-focused server entry.
  */
-export async function startHonoServer(app: Hono, opts?: { port?: number | string }): Promise<void> {
+export async function startHonoServer(app: Hono, opts?: ServerOptions): Promise<void> {
   const port = resolvePort(opts?.port ?? undefined);
+  
+  // TODO: Apply configPath and configOverrides to routing config loading
+  // For now, we'll implement this in a follow-up
+  
   serve({ fetch: app.fetch, port }, async (info) => {
     await printBannerWithProvider();
     const cfg = await loadRoutingConfigOnce();

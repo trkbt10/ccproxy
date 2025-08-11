@@ -79,10 +79,11 @@ function analyzeSpecialPatterns(model: string): GradeIndicators {
   // Thinking models are experimental but not necessarily high-grade
   if (/thinking/i.test(model)) indicators.high -= 1;
   
-  // Instant models are often mid-grade
-  if (/\binstant\b/i.test(model)) {
-    indicators.high += 1;
-    indicators.low -= 1;
+  // Instant models are often mid-grade, except for claude-instant
+  if (/\binstant\b/i.test(model) && !/claude-instant/i.test(model)) {
+    // Strong boost to counter the size penalty for small instant models
+    indicators.high += 2;
+    indicators.low -= 2;
   }
   
   // O-series model patterns
@@ -109,6 +110,26 @@ function analyzeFlashModels(model: string): GradeIndicators {
       // Flash without lite is mid-grade, slightly favor neither high nor low
       // We'll handle this by not adding any indicators
     }
+  }
+  
+  return indicators;
+}
+
+function analyzeAnthropicModels(model: string): GradeIndicators {
+  const indicators: GradeIndicators = { high: 0, low: 0 };
+  
+  // Anthropic-specific patterns
+  if (/\bopus\b/i.test(model)) indicators.high += 2;
+  if (/\bsonnet\b/i.test(model)) {
+    // Sonnet is mid-grade, neither high nor low
+    // No indicators added
+  }
+  if (/\bhaiku\b/i.test(model)) indicators.low += 2;
+  if (/\binstant\b/i.test(model)) indicators.low += 2;
+  
+  // Claude 2.x models are mid-grade
+  if (/claude-2\./i.test(model)) {
+    // No indicators added for mid-grade
   }
   
   return indicators;
@@ -192,7 +213,8 @@ export function detectModelGrade(modelName: string): ModelGrade {
     analyzeHighGradeKeywords(model),
     analyzeLowGradeKeywords(model),
     analyzeSpecialPatterns(model),
-    analyzeFlashModels(model)
+    analyzeFlashModels(model),
+    analyzeAnthropicModels(model)
   );
   
   // Determine final grade

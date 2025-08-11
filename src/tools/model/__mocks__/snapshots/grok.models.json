@@ -1,0 +1,16 @@
+{
+  "providerId": "grok",
+  "providerType": "grok",
+  "count": 8,
+  "models": [
+    "grok-2-1212",
+    "grok-2-image-1212",
+    "grok-2-vision-1212",
+    "grok-3",
+    "grok-3-fast",
+    "grok-3-mini",
+    "grok-3-mini-fast",
+    "grok-4-0709"
+  ],
+  "generatedAt": "2025-08-11T07:02:05.842Z"
+}

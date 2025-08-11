@@ -1,5 +1,6 @@
 import type { MessageCreateParams as ClaudeMessageCreateParams } from "@anthropic-ai/sdk/resources/messages";
 import type { RoutingConfig, Step } from "../config/types";
+import type { UnknownRecord } from "../types/common";
 
 // Select the provider and model for the current request
 export function selectProviderForRequest(
@@ -78,14 +79,13 @@ function extractToolNames(req: ClaudeMessageCreateParams): string[] {
   return result;
 }
 
-type UnknownBlock = Record<string, unknown>;
 type ToolUseShape = { type: "tool_use"; name: string };
 
 function isToolUseBlock(b: unknown): b is ToolUseShape {
   if (typeof b !== "object" || b === null) {
     return false;
   }
-  const rec = b as UnknownBlock;
+  const rec = b as UnknownRecord;
   return rec.type === "tool_use" && typeof rec.name === "string";
 }
 

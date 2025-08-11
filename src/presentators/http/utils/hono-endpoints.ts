@@ -1,6 +1,5 @@
 import type { Hono } from "hono";
-
-type UnknownRecord = Record<string, unknown>;
+import type { UnknownRecord } from "../../../types/common";
 
 function asString(v: unknown): string {
   return typeof v === "string" ? v : "";

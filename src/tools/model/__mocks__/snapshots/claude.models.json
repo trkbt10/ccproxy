@@ -1,0 +1,17 @@
+{
+  "providerId": "claude",
+  "providerType": "claude",
+  "count": 9,
+  "models": [
+    "claude-3-5-haiku-20241022",
+    "claude-3-5-sonnet-20240620",
+    "claude-3-5-sonnet-20241022",
+    "claude-3-7-sonnet-20250219",
+    "claude-3-haiku-20240307",
+    "claude-3-opus-20240229",
+    "claude-opus-4-1-20250805",
+    "claude-opus-4-20250514",
+    "claude-sonnet-4-20250514"
+  ],
+  "generatedAt": "2025-08-11T07:02:05.801Z"
+}

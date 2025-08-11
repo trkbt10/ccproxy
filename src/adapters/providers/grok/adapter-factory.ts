@@ -1,23 +1,11 @@
 import type { Provider } from "../../../config/types";
 import type { ProviderAdapter, GenerateParams } from "../adapter";
+import { parseSSELine } from "../shared/sse";
 import { selectApiKey } from "../shared/select-api-key";
 
 // API key selection centralized in shared/select-api-key
 
-function parseSSELine(line: string): any | null {
-  const trimmed = line.trim();
-  if (!trimmed) return null;
-  const dataPrefix = /^data:\s*/i;
-  const payload = dataPrefix.test(trimmed)
-    ? trimmed.replace(dataPrefix, "")
-    : trimmed;
-  if (payload === "[DONE]") return null;
-  try {
-    return JSON.parse(payload);
-  } catch {
-    return null;
-  }
-}
+// parseSSELine centralized in shared/sse
 
 export function buildGrokAdapter(
   provider: Provider,

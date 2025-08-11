@@ -1,6 +1,6 @@
 import { existsSync } from "node:fs";
-import { expandConfig } from "../../config/expansion";
-import { readConfigRaw } from "../../utils/json/config-io";
+import { expandConfig } from "../../../../config/expansion";
+import { readConfigRaw } from "../../../../utils/json/config-io";
 import { getConfigPath, hasFlag } from "../utils";
 
 export async function cmdConfigShow(): Promise<void> {
@@ -13,3 +13,4 @@ export async function cmdConfigShow(): Promise<void> {
   const output = hasFlag("expanded") ? expandConfig(raw) : raw;
   console.log(JSON.stringify(output, null, 2));
 }
+

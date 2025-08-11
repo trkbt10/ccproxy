@@ -1,18 +1,12 @@
 import { existsSync } from "node:fs";
-import type { RoutingConfig } from "../../config/types";
-import { readConfigRaw } from "../../utils/json/config-io";
+import type { RoutingConfig } from "../../../../config/types";
+import { readConfigRaw } from "../../../../utils/json/config-io";
 import { getConfigPath } from "../utils";
 
 function listSummary(cfg: RoutingConfig): Record<string, unknown> {
   const providers = Object.keys(cfg.providers || {});
-  const tools = ((cfg.tools as Array<{ name: string }> | undefined) || []).map(
-    (t) => t.name
-  );
-  return {
-    logging: cfg.logging ? { ...cfg.logging } : undefined,
-    providers: providers,
-    tools: tools,
-  };
+  const tools = ((cfg.tools as Array<{ name: string }> | undefined) || []).map((t) => t.name);
+  return { logging: cfg.logging ? { ...cfg.logging } : undefined, providers, tools };
 }
 
 export async function cmdConfigList(): Promise<void> {
@@ -24,3 +18,4 @@ export async function cmdConfigList(): Promise<void> {
   const raw = await readConfigRaw(filePath);
   console.log(JSON.stringify(listSummary(raw), null, 2));
 }
+

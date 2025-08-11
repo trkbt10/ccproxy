@@ -1,16 +1,11 @@
 import { existsSync } from "node:fs";
-import type { RoutingConfig } from "../../config/types";
-import { writeConfigRaw } from "../../utils/json/config-io";
+import type { RoutingConfig } from "../../../../config/types";
+import { writeConfigRaw } from "../../../../utils/json/config-io";
 import { getConfigPath, hasFlag } from "../utils";
 
 function defaultConfig(): RoutingConfig {
   return {
-    logging: {
-      enabled: true,
-      eventsEnabled: false,
-      dir: "./logs",
-    },
-    // Providers can be configured later; "default" is synthesized from env when needed
+    logging: { enabled: true, eventsEnabled: false, dir: "./logs" },
     providers: {},
     tools: [],
   };
@@ -26,3 +21,4 @@ export async function cmdConfigInit(): Promise<void> {
   await writeConfigRaw(filePath, cfg);
   console.log(`Initialized config at ${filePath}`);
 }
+

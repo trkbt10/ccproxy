@@ -9,7 +9,7 @@ import { conversationStore } from "../../../utils/conversation/conversation-stor
 import { streamSSE } from "hono/streaming";
 import { selectProviderForRequest } from "../../../execution/tool-model-planner";
 import { buildProviderClient } from "../../../execution/routing-config";
-import { createResponseProcessor } from "../../../handlers/response-processor";
+import { createResponseProcessor } from "../../../presentators/http/handlers/response-processor";
 import type { RoutingConfig, Provider } from "../../../config/types";
 import type { UnifiedIdManager } from "../../../utils/id-management/unified-id-manager";
 

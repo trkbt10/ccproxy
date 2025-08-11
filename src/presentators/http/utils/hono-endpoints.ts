@@ -23,24 +23,16 @@ function extractFromArrayRoutes(routes: unknown[], fallbackMethod?: string): str
 }
 
 function extractFromRoutes(routes: unknown): string[] {
-  // Case 1: array of route entries
-  if (Array.isArray(routes)) {
-    return extractFromArrayRoutes(routes);
-  }
-
-  // Case 2: object map: method -> routeEntry[]
+  if (Array.isArray(routes)) return extractFromArrayRoutes(routes);
   if (routes && typeof routes === "object") {
     const out: string[] = [];
     const map = routes as UnknownRecord;
     for (const key of Object.keys(map)) {
       const arr = map[key];
-      if (Array.isArray(arr)) {
-        out.push(...extractFromArrayRoutes(arr, key));
-      }
+      if (Array.isArray(arr)) out.push(...extractFromArrayRoutes(arr, key));
     }
     return out;
   }
-
   return [];
 }
 
@@ -59,9 +51,7 @@ export function extractEndpoints(app: Hono): string[] {
     if (Object.prototype.hasOwnProperty.call(ro, "routes")) candidates.push(ro.routes);
   }
 
-  for (const r of candidates) {
-    endpoints.push(...extractFromRoutes(r));
-  }
-
+  for (const r of candidates) endpoints.push(...extractFromRoutes(r));
   return unique(endpoints).sort();
 }
+

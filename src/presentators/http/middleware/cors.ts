@@ -1,13 +1,9 @@
 import type { MiddlewareHandler } from "hono";
 
-// Simple CORS middleware to allow cross-origin requests
 export const corsMiddleware: MiddlewareHandler = async (c, next) => {
   c.header("Access-Control-Allow-Origin", "*");
   c.header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
-  c.header(
-    "Access-Control-Allow-Headers",
-    "Content-Type, Authorization, X-Requested-With"
-  );
+  c.header("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With");
 
   if (c.req.method === "OPTIONS") {
     return c.status(204);

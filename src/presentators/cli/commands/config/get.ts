@@ -1,6 +1,6 @@
 import { existsSync } from "node:fs";
-import { readConfigRaw } from "../../utils/json/config-io";
-import { getByPath } from "../../utils/path/object-path";
+import { readConfigRaw } from "../../../../utils/json/config-io";
+import { getByPath } from "../../../../utils/path/object-path";
 import { getConfigPath } from "../utils";
 
 export async function cmdConfigGet(pathArg?: string): Promise<void> {
@@ -17,3 +17,4 @@ export async function cmdConfigGet(pathArg?: string): Promise<void> {
   const value = getByPath(raw, pathArg);
   console.log(JSON.stringify(value, null, 2));
 }
+

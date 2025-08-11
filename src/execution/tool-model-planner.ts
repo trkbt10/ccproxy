@@ -15,8 +15,8 @@ export function selectProviderForRequest(
     const steps = planToolExecution(cfg, name, undefined);
     for (const s of steps) {
       if (s.kind === "responses_model") {
-        const providerId = s.providerId || "default";
-        const model = s.model || "gpt-4o-mini";
+        const providerId = s.providerId || cfg.defaults?.providerId || "default";
+        const model = s.model || cfg.defaults?.model || "gpt-4o-mini";
         
         // Verify provider exists if not using default
         if (providerId !== "default" && cfg.providers && !cfg.providers[providerId]) {
@@ -29,10 +29,17 @@ export function selectProviderForRequest(
   }
   
   // Use default provider
-  return {
-    providerId: "default",
-    model: "gpt-4o-mini",
-  };
+  // Determine providerId: explicit defaults -> 'default' -> only provider name if exactly one defined
+  const providers = cfg.providers || {};
+  const providerId = cfg.defaults?.providerId
+    ? cfg.defaults.providerId
+    : providers["default"]
+    ? "default"
+    : Object.keys(providers).length === 1
+    ? Object.keys(providers)[0]
+    : "default";
+  const model = cfg.defaults?.model || "gpt-4o-mini";
+  return { providerId, model };
 }
 
 // Create the execution plan (ordered steps) for a given tool and input
@@ -60,7 +67,8 @@ function matchesWhen(step: Step, input: unknown): boolean {
 
 function extractToolNames(req: ClaudeMessageCreateParams): string[] {
   const result: string[] = [];
-  for (const m of req.messages) {
+  const msgs = Array.isArray((req as any).messages) ? (req as any).messages : [];
+  for (const m of msgs) {
     if (Array.isArray(m.content)) {
       for (const b of m.content) {
         if (isToolUseBlock(b)) result.push(b.name);

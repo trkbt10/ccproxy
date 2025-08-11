@@ -48,6 +48,10 @@ export type InstructionConfig = {
 };
 
 export type RoutingConfig = {
+  defaults?: {
+    providerId?: string;
+    model?: string;
+  };
   logging?: {
     dir?: string;
     enabled?: boolean;

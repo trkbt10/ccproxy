@@ -13,6 +13,8 @@ import type { RoutingConfig, Provider } from "../config/types";
 import { expandConfig } from "../config/expansion";
 import { configureLogger } from "../utils/logging/enhanced-logger";
 import { resolveConfigPath } from "../config/paths";
+import { selectApiKey } from "../adapters/providers/shared/select-api-key";
+import { buildOpenAICompatibleClientFromAdapter } from "../adapters/providers/openai-compat/from-adapter";
 
 let cachedConfig: RoutingConfig | null = null;
 let loadingPromise: Promise<RoutingConfig> | null = null;
@@ -45,12 +47,29 @@ export async function loadRoutingConfigOnce(): Promise<RoutingConfig> {
       }
       cachedConfig = ensured;
       return ensured;
-    } catch {
-      // Fallback when no config file exists - empty providers
-      const fallback: RoutingConfig = { tools: [] };
-      // No config: use defaults for logger
-      cachedConfig = fallback;
-      return fallback;
+    } catch (e) {
+      // Config file not found or invalid: try dynamic synthesis from environment
+      const key = process.env.OPENAI_API_KEY || process.env.OPENAI_KEY || null;
+      if (key) {
+        const synthesized: RoutingConfig = {
+          providers: {
+            default: {
+              type: "openai",
+              apiKey: key,
+              defaultHeaders: { "OpenAI-Beta": "responses-2025-06-21" },
+            },
+          },
+          tools: [],
+          defaults: { providerId: "default", model: process.env.OPENAI_MODEL || "gpt-4o-mini" },
+        };
+        cachedConfig = synthesized;
+        return synthesized;
+      }
+      // Neither config nor environment is available: instruct user explicitly
+      const pathHint = resolveConfigPath();
+      throw new Error(
+        `No routing configuration found. Provide either: 1) environment variables (OPENAI_API_KEY or OPENAI_KEY), or 2) a config file at ${pathHint}.`
+      );
     } finally {
       loadingPromise = null;
     }
@@ -69,28 +88,7 @@ export function getRoutingConfigCache(): RoutingConfig | null {
 
 // Header-based API key resolution removed; providers must specify keys directly.
 
-function resolveApiKeyByModelPrefix(
-  provider: Provider,
-  modelHint?: string
-): string | null {
-  if (!modelHint) {
-    return null;
-  }
-  const mapping = provider.api?.keyByModelPrefix;
-  if (!mapping) {
-    return null;
-  }
-  // Check longest matching prefix first for determinism
-  const entries = Object.entries(mapping).sort(
-    (a, b) => b[0].length - a[0].length
-  );
-  for (const [prefix, apiKey] of entries) {
-    if (modelHint.startsWith(prefix)) {
-      return apiKey;
-    }
-  }
-  return null;
-}
+// API key resolution centralized in shared/select-api-key
 
 export function buildProviderClient(
   provider: Provider | undefined,
@@ -107,46 +105,6 @@ export function buildProviderClient(
     return buildOpenAICompatibleClientForGrok(provider, modelHint);
   }
 
-  // Choose API key in the following order (all from configuration/ENV):
-  // 1) provider.apiKey (direct from config)
-  // 2) apiKeyHeader + id -> provider.api.keys[id]
-  // 3) apiKeyByModelPrefix match
-  // 4) process.env.OPENAI_API_KEY (as ultimate fallback)
-  const keyFromProvider = provider.apiKey;
-  const keyFromApiHeader = null; // Header-based selection removed
-  const keyFromModel = resolveApiKeyByModelPrefix(provider, modelHint);
-
-  const apiKey = keyFromProvider || keyFromApiHeader || keyFromModel || null;
-  if (!apiKey) {
-    throw new Error(
-      "No API key available. Configure provider.apiKey or keyByModelPrefix in providers."
-    );
-  }
-
-  const options: ConstructorParameters<typeof OpenAI>[0] = {
-    apiKey,
-    defaultHeaders: provider.defaultHeaders,
-  };
-
-  if (provider.baseURL) {
-    options.baseURL = provider.baseURL;
-  }
-
-  const client = new OpenAI(options);
-  return {
-    responses: {
-      async create(
-        params: ResponseCreateParams,
-        options?: { signal?: AbortSignal }
-      ): Promise<OpenAIResponse | AsyncIterable<ResponseStreamEvent>> {
-        return client.responses.create(params, options);
-      },
-    },
-    models: {
-      async list() {
-        const res = await client.models.list();
-        return { data: res.data.map((m) => ({ id: m.id })) };
-      },
-    },
-  };
+  // For other providers (e.g. openai, groq), use adapter-based OpenAI-compatible client
+  return buildOpenAICompatibleClientFromAdapter(provider, modelHint);
 }

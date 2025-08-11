@@ -2,15 +2,7 @@ import { Hono } from "hono";
 import type { RoutingConfig } from "../../config/types";
 import { createChatCompletionsHandler } from "./handlers/chat-completions";
 import { modelsHandler } from "./handlers/models";
-
-// Type guard for error with status
-function isErrorWithStatus(err: unknown): err is Error & { status: number } {
-  return (
-    err instanceof Error &&
-    "status" in err &&
-    typeof (err as Error & { status: unknown }).status === "number"
-  );
-}
+import { isErrorWithStatus } from "../../presentators/http/utils/error-helpers";
 
 // Create router factory
 export const createOpenAIRouter = (routingConfig: RoutingConfig) => {

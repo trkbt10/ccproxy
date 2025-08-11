@@ -155,7 +155,7 @@ export class ClaudeSSEWriter extends SSEWriter {
     await this.writeClaudeEvent(event);
   }
 
-  async messageStop() {
+  async messageStop(_usage?: { input_tokens?: number; output_tokens?: number }) {
     const event: RawMessageStopEvent = { type: "message_stop" };
     await this.writeClaudeEvent(event);
   }

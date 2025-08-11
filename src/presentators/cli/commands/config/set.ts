@@ -1,7 +1,7 @@
 import { existsSync } from "node:fs";
-import { readConfigRaw, writeConfigRaw } from "../../utils/json/config-io";
-import { parseValueLiteral } from "../../utils/json/parse";
-import { setByPath } from "../../utils/path/object-path";
+import { readConfigRaw, writeConfigRaw } from "../../../../utils/json/config-io";
+import { parseValueLiteral } from "../../../../utils/json/parse";
+import { setByPath } from "../../../../utils/path/object-path";
 import { getConfigPath } from "../utils";
 
 export async function cmdConfigSet(pathArg?: string, valueArg?: string): Promise<void> {
@@ -20,3 +20,4 @@ export async function cmdConfigSet(pathArg?: string, valueArg?: string): Promise
   await writeConfigRaw(filePath, raw);
   console.log(`Updated ${pathArg} in ${filePath}`);
 }
+

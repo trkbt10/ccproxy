@@ -7,7 +7,7 @@ import { loadRoutingConfigOnce, buildProviderClient } from "../../execution/rout
 import { requestIdMiddleware } from "./middleware/request-id";
 import { clientDisconnectMiddleware } from "./middleware/client-disconnect";
 import { corsMiddleware } from "./middleware/cors";
-import { createOpenAIRouter } from "../../routes/openai/router";
+import { createOpenAIRouter } from "./routes/openai/router";
 import type { RoutingConfig } from "../../config/types";
 import { isErrorWithStatus } from "./utils/error-helpers";
 

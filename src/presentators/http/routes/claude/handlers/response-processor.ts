@@ -138,7 +138,7 @@ async function processStreamingResponse(
       conversationStore.updateConversationState({ conversationId: config.conversationId, requestId: config.requestId, responseId });
       logInfo("Streaming completed", { responseId }, context);
     } catch (error) {
-      try { await (sse as any).error?.("api_error", String(error)); } catch {}
+      try { await sse.error("api_error", String(error)); } catch {}
       handleError(config.requestId, openaiReq, error, config.conversationId);
       throw error;
     } finally {

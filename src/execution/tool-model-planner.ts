@@ -2,6 +2,31 @@ import type { MessageCreateParams as ClaudeMessageCreateParams } from "@anthropi
 import type { RoutingConfig, Step } from "../config/types";
 import type { UnknownRecord } from "../types/common";
 
+// Type guard for ClaudeMessageCreateParams
+function hasMessagesArray(obj: unknown): obj is { messages: unknown[] } {
+  return (
+    typeof obj === "object" &&
+    obj !== null &&
+    "messages" in obj &&
+    Array.isArray((obj as Record<string, unknown>).messages)
+  );
+}
+
+// Type guard for message with content array
+function hasContentArray(obj: unknown): obj is { content: unknown[] } {
+  return (
+    typeof obj === "object" &&
+    obj !== null &&
+    "content" in obj &&
+    Array.isArray((obj as Record<string, unknown>).content)
+  );
+}
+
+// Type guard for action input
+function isActionInput(obj: unknown): obj is { action?: unknown; dryRun?: unknown } {
+  return typeof obj === "object" && obj !== null;
+}
+
 // Select the provider and model for the current request
 export function selectProviderForRequest(
   cfg: RoutingConfig,
@@ -68,9 +93,13 @@ function matchesWhen(step: Step, input: unknown): boolean {
 
 function extractToolNames(req: ClaudeMessageCreateParams): string[] {
   const result: string[] = [];
-  const msgs = Array.isArray((req as any).messages) ? (req as any).messages : [];
-  for (const m of msgs) {
-    if (Array.isArray(m.content)) {
+  
+  if (!hasMessagesArray(req)) {
+    return result;
+  }
+  
+  for (const m of req.messages) {
+    if (hasContentArray(m)) {
       for (const b of m.content) {
         if (isToolUseBlock(b)) result.push(b.name);
       }
@@ -90,16 +119,18 @@ function isToolUseBlock(b: unknown): b is ToolUseShape {
 }
 
 function extractAction(input: unknown): "preview" | "plan" | "apply" | undefined {
-  if (typeof input !== "object" || input === null) {
+  if (!isActionInput(input)) {
     return undefined;
   }
-  const rec = input as Record<string, unknown> & { action?: unknown; dryRun?: unknown };
-  const a = rec.action;
+  
+  const a = input.action;
   if (a === "preview" || a === "plan" || a === "apply") {
-    return a as "preview" | "plan" | "apply";
+    return a;
   }
-  if (rec.dryRun === true) {
+  
+  if (input.dryRun === true) {
     return "preview";
   }
+  
   return undefined;
 }

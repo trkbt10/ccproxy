@@ -4,8 +4,6 @@ export type {
   Provider, 
   RoutingConfig, 
   Step,
-  ToolConfig,
-  ProviderType,
-  ProviderConfig,
-  LoggingConfig
+  ToolRule,
+  InstructionConfig,
 } from "./types";

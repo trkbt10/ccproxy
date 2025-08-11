@@ -14,9 +14,7 @@ import type {
   EasyInputMessage,
   ResponseInputImage,
 } from "openai/resources/responses/responses";
-import { convertClaudeImageToOpenAI } from "./message-converter/claude-to-openai/image";
-import { convertToolResult } from "./message-converter/claude-to-openai/tool";
-import { convertClaudeMessage } from "./message-converter/claude-to-openai/message";
+import { convertClaudeImageToOpenAI, convertToolResult, convertClaudeMessage } from "./providers/claude/message-converters";
 import { UnifiedIdManager as CallIdManager } from "../utils/id-management/unified-id-manager";
 
 describe("claude-to-openai converter", () => {

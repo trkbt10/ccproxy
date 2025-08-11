@@ -1,0 +1,121 @@
+import Anthropic from "@anthropic-ai/sdk";
+import type { Response as OpenAIResponse, ResponseCreateParams, ResponseStreamEvent, ResponseInput } from "openai/resources/responses/responses";
+import type { Provider } from "../../../config/types";
+import type { OpenAICompatibleClient } from "../openai-compat/types";
+import { selectApiKey } from "../shared/select-api-key";
+import { convertResponseInputToMessagesLocal, convertToolsForChatLocal, convertToolChoiceForChatLocal } from "./input-converters";
+import type { ChatCompletionCreateParams } from "openai/resources/chat/completions";
+import { claudeToOpenAIResponse, claudeToOpenAIStream } from "./openai-response-adapter";
+import { chatCompletionToClaudeLocal } from "./request-converter";
+import { conversationStore } from "../../../utils/conversation/conversation-store";
+import { UnifiedIdManager } from "../../../utils/id-management/unified-id-manager";
+import type { Message as ClaudeMessage } from "@anthropic-ai/sdk/resources/messages";
+
+function buildChatParams(
+  params: ResponseCreateParams
+): ChatCompletionCreateParams {
+  const messages: ChatCompletionCreateParams["messages"] = [];
+
+  if (params.instructions) {
+    messages.push({ role: "system", content: params.instructions });
+  }
+  if (params.input) {
+    if (typeof params.input === "string") {
+      messages.push({ role: "user", content: params.input });
+    } else {
+      const converted = convertResponseInputToMessagesLocal(params.input as ResponseInput);
+      messages.push(...converted);
+    }
+  }
+
+  const chatParams: ChatCompletionCreateParams = {
+    model: (params.model as string) || (process.env.ANTHROPIC_MODEL as string) || "claude-3-5-sonnet-20240620",
+    messages,
+    stream: !!params.stream,
+  };
+
+  if (params.max_output_tokens != null)
+    chatParams.max_tokens = params.max_output_tokens;
+  if (params.temperature != null)
+    chatParams.temperature = params.temperature as number;
+  if (params.top_p != null) chatParams.top_p = params.top_p as number;
+  if (params.tools) {
+    const mapped = convertToolsForChatLocal(params.tools);
+    if (mapped) chatParams.tools = mapped;
+  }
+  if (params.tool_choice) {
+    const choice = convertToolChoiceForChatLocal(params.tool_choice);
+    if (choice) chatParams.tool_choice = choice;
+  }
+
+  return chatParams;
+}
+
+export function buildOpenAICompatibleClientForClaude(
+  provider: Provider,
+  modelHint?: string
+): OpenAICompatibleClient {
+  const apiKey =
+    selectApiKey(provider, modelHint) || process.env.ANTHROPIC_API_KEY;
+  if (!apiKey) throw new Error("Missing Anthropic API key (ANTHROPIC_API_KEY)");
+  const anthropic = new Anthropic({ apiKey, baseURL: provider.baseURL });
+
+  let boundConversationId: string | undefined;
+  function getIdManager(): UnifiedIdManager | undefined {
+    if (boundConversationId) return conversationStore.getIdManager(boundConversationId);
+    return undefined;
+  }
+
+  return {
+    responses: {
+      async create(
+        params: ResponseCreateParams,
+        options?: { signal?: AbortSignal }
+      ): Promise<OpenAIResponse | AsyncIterable<ResponseStreamEvent>> {
+        const chatParams = buildChatParams(params);
+        const claudeReq = chatCompletionToClaudeLocal(chatParams);
+
+        if (chatParams.stream) {
+          const streamAny = (await anthropic.messages.create(
+            { ...claudeReq, stream: true },
+            { signal: options?.signal }
+          )) as unknown as AsyncIterable<import("@anthropic-ai/sdk/resources/messages").MessageStreamEvent>;
+          return claudeToOpenAIStream(
+            streamAny,
+            chatParams.model as string,
+            getIdManager()
+          ) as AsyncIterable<ResponseStreamEvent>;
+        }
+
+        const claudeResp = await anthropic.messages.create(
+          { ...claudeReq, stream: false },
+          { signal: options?.signal }
+        );
+        const response = claudeToOpenAIResponse(
+          claudeResp as ClaudeMessage,
+          chatParams.model as string,
+          getIdManager()
+        );
+        if (boundConversationId) {
+          conversationStore.updateConversationState({ conversationId: boundConversationId, requestId: 'n/a', responseId: response.id });
+        }
+        return response;
+      },
+    },
+    models: {
+      async list() {
+        const models = await anthropic.models.list();
+        const data = models.data.map((m) => ({
+          id: m.id,
+          object: "model" as const,
+          created: m.created_at ? new Date(m.created_at).getTime() : undefined,
+          owned_by: "anthropic",
+        }));
+        return { object: "list" as const, data };
+      },
+    },
+    setConversationId(convId: string) {
+      boundConversationId = convId;
+    },
+  };
+}

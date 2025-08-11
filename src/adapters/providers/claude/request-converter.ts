@@ -1,0 +1,96 @@
+import type { ChatCompletionCreateParams, ChatCompletionMessageParam, ChatCompletionTool, ChatCompletionContentPart } from "openai/resources/chat/completions";
+import type { MessageCreateParams as ClaudeMessageCreateParams, Tool as ClaudeTool } from "@anthropic-ai/sdk/resources/messages";
+import { contentToPlainText } from "./guards";
+
+function mapModel(model: string): string {
+  const map: Record<string, string> = {
+    "gpt-4": "claude-3-5-sonnet-20240620",
+    "gpt-4-turbo": "claude-3-5-sonnet-20240620",
+    "gpt-4o": "claude-3-5-sonnet-20240620",
+    "gpt-4o-mini": "claude-3-haiku-20240307",
+    "gpt-3.5-turbo": "claude-3-haiku-20240307",
+  };
+  return map[model] || model || "claude-3-5-sonnet-20240620";
+}
+
+function convertTools(tools?: ChatCompletionTool[]): ClaudeTool[] | undefined {
+  if (!tools) return undefined;
+  const out: ClaudeTool[] = [];
+  for (const t of tools) {
+    if (t.type === "function") {
+      const params = t.function.parameters;
+      const inputSchema: ClaudeTool["input_schema"] = isInputSchema(params)
+        ? params
+        : { type: "object", properties: {} };
+      out.push({
+        name: t.function.name,
+        description: t.function.description,
+        input_schema: inputSchema,
+      });
+    }
+  }
+  return out.length ? out : undefined;
+}
+
+function convertToolChoice(toolChoice: ChatCompletionCreateParams["tool_choice"]): ClaudeMessageCreateParams["tool_choice"] | undefined {
+  if (!toolChoice) return undefined;
+  if (toolChoice === "none") return { type: "none" };
+  if (toolChoice === "required" || toolChoice === "auto") return { type: "any" };
+  if (typeof toolChoice === "object" && toolChoice.type === "function") {
+    return { type: "tool", name: toolChoice.function.name };
+  }
+  return undefined;
+}
+
+function convertMessages(msgs: ChatCompletionMessageParam[]): ClaudeMessageCreateParams["messages"] {
+  const out: ClaudeMessageCreateParams["messages"] = [];
+  for (const m of msgs) {
+    if (m.role === "system") {
+      // system is handled at top-level in chatCompletionToClaudeLocal
+      continue;
+    }
+    const contentText = contentToPlainText(m.content);
+    if (m.role === "user" || m.role === "assistant") {
+      out.push({ role: m.role, content: contentText });
+    }
+  }
+  // Prepend a system message into system field via caller; we return messages without system entries
+  return out;
+}
+
+export function chatCompletionToClaudeLocal(request: ChatCompletionCreateParams): ClaudeMessageCreateParams {
+  const model = mapModel(request.model as string);
+  const messages = convertMessages(request.messages);
+  const systemTexts = (request.messages || [])
+    .filter((m) => m.role === "system")
+    .map((m) => contentToPlainText(m.content))
+    .filter(Boolean);
+
+  const claudeReq: ClaudeMessageCreateParams = {
+    model,
+    messages,
+    max_tokens: (request as { max_tokens?: number | null }).max_tokens ?? 4096,
+    stream: !!request.stream,
+  };
+
+  if (systemTexts.length) claudeReq.system = systemTexts.join("\n\n");
+  const tools = convertTools(request.tools);
+  if (tools) claudeReq.tools = tools;
+  const choice = convertToolChoice(request.tool_choice);
+  if (choice) claudeReq.tool_choice = choice;
+  if ((request as { temperature?: number | null }).temperature != null) claudeReq.temperature = (request as { temperature?: number | null }).temperature ?? undefined;
+  if ((request as { top_p?: number | null }).top_p != null) claudeReq.top_p = (request as { top_p?: number | null }).top_p ?? undefined;
+  if ((request as { stop?: string | string[] | null }).stop) {
+    const stop = (request as { stop?: string | string[] | null }).stop;
+    claudeReq.stop_sequences = Array.isArray(stop) ? stop : [stop as string];
+  }
+  return claudeReq;
+}
+
+function isInputSchema(v: unknown): v is { type: 'object' } & Record<string, unknown> {
+  return (
+    typeof v === 'object' &&
+    v !== null &&
+    (v as { type?: unknown }).type === 'object'
+  );
+}

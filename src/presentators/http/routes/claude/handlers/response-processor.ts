@@ -10,7 +10,7 @@ import type { MessageCreateParams as ClaudeMessageCreateParams } from "@anthropi
 import { streamingPipelineFactory } from "../../../streaming/streaming-pipeline";
 import { convertOpenAIResponseToClaude } from "../../../../../adapters/message-converter/openai-to-claude/response";
 import { conversationStore } from "../../../../../utils/conversation/conversation-store";
-import { claudeToResponses } from "../../../../../adapters/message-converter/claude-to-openai/request";
+import { claudeToResponsesLocal as claudeToResponses } from "../../../../../adapters/providers/claude/request-to-responses";
 import type { ResponsesModel as OpenAIResponseModel } from "openai/resources/shared";
 import {
   logError,
@@ -144,6 +144,10 @@ async function processStreamingResponse(
 }
 
 export function createResponseProcessor(config: ProcessorConfig) {
+  // Bind conversation to the OpenAI-compatible client if supported (for ID management)
+  if (typeof config.openai.setConversationId === 'function') {
+    config.openai.setConversationId(config.conversationId);
+  }
   async function buildOpenAIRequest(req: ClaudeMessageCreateParams): Promise<ResponseCreateParams> {
     const ctx = conversationStore.getConversationContext(config.conversationId);
     const idManager = conversationStore.getIdManager(config.conversationId);

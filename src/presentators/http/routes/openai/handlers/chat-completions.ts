@@ -27,12 +27,12 @@ export const createChatCompletionsHandler =
       abortController,
     });
 
-    if (plan.type === "claude_json") {
+    if (plan.type === "json") {
       const body = await plan.getBody();
       return c.json(body);
     }
 
-    if (plan.type === "claude_stream") {
+    if (plan.type === "stream") {
       return streamSSE(c, async (sse) => {
         for await (const chunk of plan.stream) {
           await sse.writeSSE({ data: JSON.stringify(chunk) });
@@ -41,6 +41,6 @@ export const createChatCompletionsHandler =
       });
     }
 
-    // responses_processor: delegate to existing processor which handles SSE/JSON internally
-    return plan.process(c);
+    // Fallback shouldn't happen; return 500 if it does
+    return c.json({ error: "Plan type not supported" }, 500);
   };

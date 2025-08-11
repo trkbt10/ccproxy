@@ -21,6 +21,7 @@ export function buildOpenAICompatibleClientForGemini(
 ): OpenAICompatibleClient {
   const adapter = getAdapterFor(provider, modelHint);
   let resolveToolName: ((callId: string) => string | undefined) | undefined;
+  let boundConversationId: string | undefined;
   return {
     responses: {
       async create(
@@ -60,6 +61,9 @@ export function buildOpenAICompatibleClientForGemini(
     },
     setToolNameResolver(resolver: (callId: string) => string | undefined) {
       resolveToolName = resolver;
+    },
+    setConversationId(conversationId: string) {
+      boundConversationId = conversationId;
     },
   };
 }

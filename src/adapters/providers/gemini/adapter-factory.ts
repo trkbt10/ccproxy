@@ -15,8 +15,9 @@ export function buildGeminiAdapter(
 ): ProviderAdapter<GenerateContentRequest, GenerateContentResponse> {
   const apiKey = selectApiKey(provider, modelHint);
   if (!apiKey) throw new Error("Missing Gemini API key");
+  const resolvedKey: string = apiKey;
   const client = new GeminiFetchClient({
-    apiKey,
+    apiKey: resolvedKey,
     baseURL: provider.baseURL,
   });
   const adapter: ProviderAdapter<GenerateContentRequest, GenerateContentResponse> = {

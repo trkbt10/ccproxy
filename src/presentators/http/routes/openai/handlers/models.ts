@@ -1,6 +1,6 @@
 import type { Context } from "hono";
 import type { RoutingConfig, Provider } from "../../../../../config/types";
-import { buildProviderClient } from "../../../../../execution/routing-config";
+import { buildProviderClient } from "../../../../../adapters/providers/build-provider-client";
 
 function pickDefaultProvider(cfg: RoutingConfig): Provider | undefined {
   const id = cfg.defaults?.providerId || "default";

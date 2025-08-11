@@ -11,7 +11,7 @@ export interface ProviderAdapter<TInput = unknown, TOutput = unknown> {
 
   generate(params: GenerateParams<TInput>): Promise<TOutput>;
 
-  stream?(params: StreamParams<TInput>): AsyncGenerator<TOutput, void, unknown>;
+  stream(params: StreamParams<TInput>): AsyncGenerator<TOutput, void, unknown>;
 
   countTokens?(params: { model: string; input: unknown; signal?: AbortSignal }): Promise<unknown>;
 

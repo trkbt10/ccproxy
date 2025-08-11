@@ -58,7 +58,8 @@ export function buildOpenAICompatibleClientForClaude(
 ): OpenAICompatibleClient {
   const apiKey = selectApiKey(provider, modelHint);
   if (!apiKey) throw new Error("Missing Anthropic API key (configure provider.apiKey or api.keyByModelPrefix)");
-  const anthropic = new Anthropic({ apiKey, baseURL: provider.baseURL });
+  const resolvedKey: string = apiKey;
+  const anthropic = new Anthropic({ apiKey: resolvedKey, baseURL: provider.baseURL });
 
   let boundConversationId: string | undefined;
   function getIdManager(): UnifiedIdManager | undefined {

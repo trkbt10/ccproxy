@@ -7,7 +7,7 @@ import type {
   ResponseStreamEvent,
   ResponseFunctionToolCall,
 } from "openai/resources/responses/responses";
-import { buildProviderClient } from "../../../execution/routing-config";
+import { buildProviderClient } from "../build-provider-client";
 
 export type ChatCompletionsPlan =
   | { type: "json"; getBody: () => Promise<ChatCompletion> }

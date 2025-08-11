@@ -3,7 +3,7 @@ import type { RoutingConfig } from "../../../../config/types";
 import type { MessageCreateParams as ClaudeMessageCreateParams } from "@anthropic-ai/sdk/resources/messages";
 import { countTokens } from "./handlers/token-counter";
 import { selectProviderForRequest } from "../../../../execution/tool-model-planner";
-import { buildProviderClient } from "../../../../execution/routing-config";
+import { buildProviderClient } from "../../../../adapters/providers/build-provider-client";
 import { createResponseProcessor } from "./handlers/response-processor";
 
 export function createClaudeRouter(routingConfig: RoutingConfig) {

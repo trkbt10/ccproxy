@@ -14,6 +14,7 @@ export function buildGrokAdapter(
   const baseURL = provider.baseURL || "https://api.x.ai/v1";
   const apiKey = selectApiKey(provider, modelHint);
   if (!apiKey) throw new Error("Missing Grok API key");
+  const resolvedKey: string = apiKey;
   const adapter: ProviderAdapter<any, any> = {
     name: "grok",
     async generate({ input, signal }: GenerateParams<any>) {
@@ -22,7 +23,7 @@ export function buildGrokAdapter(
         method: "POST",
         headers: {
           "content-type": "application/json",
-          Authorization: `Bearer ${apiKey}`,
+          Authorization: `Bearer ${resolvedKey}`,
         },
         body: JSON.stringify(input),
         signal,
@@ -37,7 +38,7 @@ export function buildGrokAdapter(
         method: "POST",
         headers: {
           "content-type": "application/json",
-          Authorization: `Bearer ${apiKey}`,
+          Authorization: `Bearer ${resolvedKey}`,
         },
         body: JSON.stringify(body),
         signal,
@@ -75,7 +76,7 @@ export function buildGrokAdapter(
     async listModels() {
       const url = new URL(baseURL.replace(/\/$/, "") + "/models");
       const res = await fetch(url.toString(), {
-        headers: { Authorization: `Bearer ${apiKey}` },
+        headers: { Authorization: `Bearer ${resolvedKey}` },
       });
       if (!res.ok) throw new Error(`Grok models error ${res.status}`);
       const json = (await res.json()) as { data?: Array<{ id?: string }> };

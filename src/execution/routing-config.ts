@@ -1,21 +1,10 @@
 import { readFile } from "node:fs/promises";
 import path from "node:path";
-import OpenAI from "openai";
-import type {
-  Response as OpenAIResponse,
-  ResponseCreateParams,
-  ResponseStreamEvent,
-} from "openai/resources/responses/responses";
-import type { OpenAICompatibleClient } from "../adapters/providers/openai-compat/types";
-import { buildOpenAICompatibleClientForGemini } from "../adapters/providers/gemini/openai-compatible";
-import { buildOpenAICompatibleClientForGrok } from "../adapters/providers/grok/openai-compatible";
-import { buildOpenAICompatibleClientForClaude } from "../adapters/providers/claude/openai-compatible";
-import type { RoutingConfig, Provider } from "../config/types";
+import type { RoutingConfig } from "../config/types";
 import { expandConfig } from "../config/expansion";
 import { configureLogger } from "../utils/logging/enhanced-logger";
 import { resolveConfigPath } from "../config/paths";
 import { selectApiKey } from "../adapters/providers/shared/select-api-key";
-import { buildOpenAICompatibleClientFromAdapter } from "../adapters/providers/openai-compat/from-adapter";
 
 let cachedConfig: RoutingConfig | null = null;
 let loadingPromise: Promise<RoutingConfig> | null = null;
@@ -42,12 +31,15 @@ export async function loadRoutingConfigOnce(): Promise<RoutingConfig> {
       if (ensured.providers) {
         for (const [pid, p] of Object.entries(ensured.providers)) {
           // Keys must be provided in config (apiKey or keyByModelPrefix). No env fallback here.
-          const hasDirect = typeof p.apiKey === 'string' && p.apiKey.length > 0;
-          const hasPrefixMap = !!p.api && p.api.keyByModelPrefix && Object.keys(p.api.keyByModelPrefix).length > 0;
+          const hasDirect = typeof p.apiKey === "string" && p.apiKey.length > 0;
+          const hasPrefixMap =
+            !!p.api &&
+            p.api.keyByModelPrefix &&
+            Object.keys(p.api.keyByModelPrefix).length > 0;
           if (!hasDirect && !hasPrefixMap) {
             throw new Error(
               `Provider '${pid}' (${p.type}) is missing API key configuration. ` +
-              `Specify providers['${pid}'].apiKey or providers['${pid}'].api.keyByModelPrefix in the config.`
+                `Specify providers['${pid}'].apiKey or providers['${pid}'].api.keyByModelPrefix in the config.`
             );
           }
         }
@@ -76,7 +68,10 @@ export async function loadRoutingConfigOnce(): Promise<RoutingConfig> {
             },
           },
           tools: [],
-          defaults: { providerId: "default", model: process.env.OPENAI_MODEL || "gpt-4o-mini" },
+          defaults: {
+            providerId: "default",
+            model: process.env.OPENAI_MODEL || "gpt-4o-mini",
+          },
         };
         cachedConfig = synthesized;
         return synthesized;
@@ -98,32 +93,4 @@ export function getRoutingConfigCache(): RoutingConfig | null {
   return cachedConfig;
 }
 
-// No implicit default provider synthesis. Providers must be specified in config.
-
-// resolveConfigPath now provided from src/config/paths
-
-// Header-based API key resolution removed; providers must specify keys directly.
-
-// API key resolution centralized in shared/select-api-key
-
-export function buildProviderClient(
-  provider: Provider | undefined,
-  modelHint?: string
-): OpenAICompatibleClient {
-  if (!provider) {
-    throw new Error("No provider configured. Define providers in RoutingConfig.");
-  }
-
-  if (provider.type === "gemini") {
-    return buildOpenAICompatibleClientForGemini(provider, modelHint);
-  }
-  if (provider.type === "grok") {
-    return buildOpenAICompatibleClientForGrok(provider, modelHint);
-  }
-  if (provider.type === "claude") {
-    return buildOpenAICompatibleClientForClaude(provider, modelHint);
-  }
-
-  // For other providers (e.g. openai, groq), use adapter-based OpenAI-compatible client
-  return buildOpenAICompatibleClientFromAdapter(provider, modelHint);
-}
+// buildProviderClient moved to src/adapters/providers/build-provider-client.ts

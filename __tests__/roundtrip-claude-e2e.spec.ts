@@ -10,13 +10,7 @@ import { loadRoutingConfigOnce } from "../src/execution/routing-config";
 import { conversationStore } from "../src/utils/conversation/conversation-store";
 
 function isRequest(input: Parameters<typeof fetch>[0]): input is Request {
-  return (
-    typeof input === "object" &&
-    input !== null &&
-    "method" in (input as Record<string, unknown>) &&
-    "headers" in (input as Record<string, unknown>) &&
-    "url" in (input as Record<string, unknown>)
-  );
+  return typeof Request !== "undefined" && input instanceof Request;
 }
 
 function getPathFromUrlish(urlish: string): string {
@@ -39,7 +33,7 @@ function buildAppForClaudeRoute() {
 
 // In-memory fetch that dispatches to the Hono app
 function makeInMemoryFetch(app: Hono, conversationId: string): typeof fetch {
-  const fetchImpl: typeof fetch = async (input, init) => {
+  const core = async (input: Parameters<typeof fetch>[0], init?: RequestInit) => {
     const method = isRequest(input) ? input.method : init?.method;
     const headers = new Headers(isRequest(input) ? input.headers : init?.headers);
     const body = isRequest(input) ? input.body : init?.body;
@@ -59,7 +53,10 @@ function makeInMemoryFetch(app: Hono, conversationId: string): typeof fetch {
     });
     return res;
   };
-  return fetchImpl;
+  const impl = core as unknown as typeof fetch;
+  // Provide preconnect to satisfy Bun's typing
+  (impl as any).preconnect = (globalThis.fetch as any)?.preconnect ?? ((_url: string) => {});
+  return impl;
 }
 
 describe("E2E roundtrip: Claude SDK -> Proxy -> OpenAI (Responses)", () => {
@@ -111,7 +108,7 @@ describe("E2E roundtrip: Claude SDK -> Proxy -> OpenAI (Responses)", () => {
 
     const seenEvents: RawMessageStreamEvent["type"][] = [];
     const toolUseIds: string[] = [];
-    stream.on("event", (e: RawMessageStreamEvent) => {
+    stream.on("streamEvent", (e: RawMessageStreamEvent) => {
       seenEvents.push(e.type);
       if (e.type === "content_block_start") {
         const block = e.content_block;
@@ -139,4 +136,3 @@ describe("E2E roundtrip: Claude SDK -> Proxy -> OpenAI (Responses)", () => {
     }
   });
 });
-

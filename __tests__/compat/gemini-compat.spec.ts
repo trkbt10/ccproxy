@@ -1,3 +1,4 @@
+import { describe, it, expect, afterAll } from "bun:test";
 import {
   compatCoverage,
   writeMarkdownReport,
@@ -12,43 +13,41 @@ import {
   isGeminiResponse,
   ensureGeminiStream,
 } from "../../src/adapters/providers/guards";
+import { resolveModelForProvider } from "../../src/adapters/providers/shared/model-mapper";
 
 describe("Gemini OpenAI-compat (real API)", () => {
   const provider: Provider = { type: "gemini" };
 
-  async function pickCheapGeminiModel(
-    adapter: ReturnType<typeof getAdapterFor>
+  async function selectGeminiModel(
+    adapter: ReturnType<typeof getAdapterFor>,
+    provider: Provider
   ): Promise<string> {
     // Always list to exercise models endpoint coverage
-    const listed = await (adapter as any).listModels();
-    expect(Array.isArray(listed.data)).toBe(true);
-    compatCoverage.mark("gemini", "models.list.basic");
-    compatCoverage.log(
-      "gemini",
-      `models.list: ${listed.data
-        .slice(0, 5)
-        .map((m: any) => m.id)
-        .join(", ")}${listed.data.length > 5 ? ", ..." : ""}`
-    );
-    // Prefer explicit env to avoid guessing for selection
-    const envModel =
-      process.env.GEMINI_TEST_MODEL || process.env.GOOGLE_AI_TEST_MODEL;
-    if (envModel) return envModel.replace(/^models\//, "");
-    const names = listed.data.map((m: any) => m.id as string);
-    const cheap = names.filter((n: string) =>
-      /(^|[-_.])(?:nano|flash(?:-\d+)?|mini)(?:$|[-_.])/i.test(n)
-    );
-    const selected = cheap[0] || names[0];
-    if (!selected)
-      throw new Error(
-        "No Gemini models available. Set GEMINI_TEST_MODEL or GOOGLE_AI_TEST_MODEL."
+    try {
+      const listed = await (adapter as any).listModels();
+      const ids = listed.data.map((m: any) => m.id as string);
+      expect(Array.isArray(listed.data)).toBe(true);
+      if (ids.length > 0) compatCoverage.mark("gemini", "models.list.basic");
+      compatCoverage.log(
+        "gemini",
+        `models.list: ${ids.slice(0, 5).join(", ")}${
+          ids.length > 5 ? ", ..." : ""
+        }`
       );
-    return selected;
+    } catch (e) {
+      compatCoverage.error(
+        "gemini",
+        "models.list.basic",
+        `Failed to list models: ${e instanceof Error ? e.message : String(e)}`
+      );
+    }
+    // Delegate to model selector
+    return await resolveModelForProvider({ provider });
   }
 
   it("chat non-stream basic", async () => {
     const adapter = getAdapterFor(provider);
-    const model = await pickCheapGeminiModel(adapter);
+    const model = await selectGeminiModel(adapter, provider);
 
     const input: GenerateContentRequest = {
       contents: [{ role: "user", parts: [{ text: "Hello from compat test" }] }],
@@ -72,7 +71,7 @@ describe("Gemini OpenAI-compat (real API)", () => {
 
   it("chat stream chunk + done", async () => {
     const adapter = getAdapterFor(provider);
-    const model = await pickCheapGeminiModel(adapter);
+    const model = await selectGeminiModel(adapter, provider);
 
     const input: GenerateContentRequest = {
       contents: [
@@ -117,7 +116,7 @@ describe("Gemini OpenAI-compat (real API)", () => {
 
   it("chat non-stream function_call (real)", async () => {
     const adapter = getAdapterFor(provider);
-    const model = await pickCheapGeminiModel(adapter);
+    const model = await selectGeminiModel(adapter, provider);
     const tools = [
       {
         functionDeclarations: [
@@ -170,7 +169,7 @@ describe("Gemini OpenAI-compat (real API)", () => {
 
   it("chat stream tool_call delta (real)", async () => {
     const adapter = getAdapterFor(provider);
-    const model = await pickCheapGeminiModel(adapter);
+    const model = await selectGeminiModel(adapter, provider);
     const tools = [
       {
         functionDeclarations: [

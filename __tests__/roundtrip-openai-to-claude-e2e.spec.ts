@@ -6,13 +6,7 @@ import { createClaudeRouter } from "../src/presentators/http/routes/claude/route
 import type { RoutingConfig } from "../src/config/types";
 
 function isRequest(input: Parameters<typeof fetch>[0]): input is Request {
-  return (
-    typeof input === "object" &&
-    input !== null &&
-    "method" in (input as Record<string, unknown>) &&
-    "headers" in (input as Record<string, unknown>) &&
-    "url" in (input as Record<string, unknown>)
-  );
+  return typeof Request !== "undefined" && input instanceof Request;
 }
 
 function getPathFromUrlish(urlish: string): string {
@@ -33,7 +27,7 @@ function buildAppForOpenAItoClaude(cfg: RoutingConfig) {
 }
 
 function makeInMemoryFetch(app: Hono, conversationId: string): typeof fetch {
-  const fetchImpl: typeof fetch = async (input, init) => {
+  const core = async (input: Parameters<typeof fetch>[0], init?: RequestInit) => {
     const method = isRequest(input) ? input.method : init?.method;
     const headers = new Headers(isRequest(input) ? input.headers : init?.headers);
     const body = isRequest(input) ? input.body : init?.body;
@@ -48,7 +42,9 @@ function makeInMemoryFetch(app: Hono, conversationId: string): typeof fetch {
 
     return app.request(path, { method: method || "GET", headers, body });
   };
-  return fetchImpl;
+  const impl = core as unknown as typeof fetch;
+  (impl as any).preconnect = (globalThis.fetch as any)?.preconnect ?? ((_url: string) => {});
+  return impl;
 }
 
 describe("E2E roundtrip: OpenAI Chat -> Proxy -> Claude", () => {
@@ -112,11 +108,13 @@ describe("E2E roundtrip: OpenAI Chat -> Proxy -> Claude", () => {
       const toolCalls = choice.message.tool_calls;
       expect(Array.isArray(toolCalls) && toolCalls.length > 0).toBe(true);
       const first = toolCalls?.[0];
-      expect(first?.type).toBe("function");
-      expect(first?.function?.name).toBe("echo");
+      if (first && first.type === "function") {
+        expect(first.function.name).toBe("echo");
+      } else {
+        throw new Error("Expected first tool_call to be a function");
+      }
     } finally {
       globalThis.fetch = originalFetch;
     }
   });
 });
-

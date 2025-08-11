@@ -258,8 +258,7 @@ describe("Claude OpenAI-compat (real API)", () => {
       s as AsyncIterable<any>,
       model
     )) {
-      const e: OpenAICompatStreamEvent = ev;
-      types.push(e.type);
+      types.push(ev.type);
     }
     expect(types).toContain("response.output_item.added");
     expect(types).toContain("response.function_call_arguments.delta");

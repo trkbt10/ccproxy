@@ -8,6 +8,7 @@ import type {
 } from "openai/resources/responses/responses";
 import type { OpenAICompatibleClient } from "../adapters/providers/openai-compat/types";
 import { buildOpenAICompatibleClientForGemini } from "../adapters/providers/gemini/openai-compatible";
+import { buildOpenAICompatibleClientForGrok } from "../adapters/providers/grok/openai-compatible";
 import type { RoutingConfig, Provider } from "../config/types";
 import { expandConfig } from "../config/expansion";
 import { configureLogger } from "../utils/logging/enhanced-logger";
@@ -101,6 +102,9 @@ export function buildProviderClient(
 
   if (provider.type === "gemini") {
     return buildOpenAICompatibleClientForGemini(provider, modelHint);
+  }
+  if (provider.type === "grok") {
+    return buildOpenAICompatibleClientForGrok(provider, modelHint);
   }
 
   // Choose API key in the following order (all from configuration/ENV):

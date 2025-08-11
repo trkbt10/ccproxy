@@ -1,5 +1,5 @@
 import OpenAI from "openai";
-import type { Provider } from "../config/types";
+import type { Provider } from "../../config/types";
 import type { ProviderAdapter, GenerateParams } from "./adapter";
 import {
   GeminiFetchClient,
@@ -157,7 +157,14 @@ export function getAdapterFor(
               const parts = (ev.candidates?.[0]?.content?.parts || []) as Array<
                 { functionCall?: { name?: string } } & Record<string, unknown>
               >;
-              if (parts.some((p) => p && p.functionCall && typeof p.functionCall.name === "string")) {
+              if (
+                parts.some(
+                  (p) =>
+                    p &&
+                    p.functionCall &&
+                    typeof p.functionCall.name === "string"
+                )
+              ) {
                 seenFunctionCall = true;
               }
             } catch {
@@ -167,11 +174,20 @@ export function getAdapterFor(
           }
           // Synthesize a functionCall at the end when tools are forced but Gemini didn't stream any
           try {
-            const anyConfig = (params.input as any)?.toolConfig?.functionCallingConfig;
-            const allowed: string[] | undefined = anyConfig?.allowedFunctionNames;
+            const anyConfig = (params.input as any)?.toolConfig
+              ?.functionCallingConfig;
+            const allowed: string[] | undefined =
+              anyConfig?.allowedFunctionNames;
             const mode: string | undefined = anyConfig?.mode;
-            const fnName = Array.isArray(allowed) && allowed[0] ? String(allowed[0]) : undefined;
-            if (!seenFunctionCall && fnName && (mode === "ANY" || mode === "AUTO")) {
+            const fnName =
+              Array.isArray(allowed) && allowed[0]
+                ? String(allowed[0])
+                : undefined;
+            if (
+              !seenFunctionCall &&
+              fnName &&
+              (mode === "ANY" || mode === "AUTO")
+            ) {
               const synthetic: GenerateContentResponse = {
                 candidates: [
                   {

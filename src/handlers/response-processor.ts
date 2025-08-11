@@ -1,12 +1,16 @@
-import type { OpenAICompatibleClient } from "../providers/openai-compat/types";
-import type { Response as OpenAIResponse, ResponseCreateParams, ResponseStreamEvent } from "openai/resources/responses/responses";
+import type { OpenAICompatibleClient } from "../adapters/providers/openai-compat/types";
+import type {
+  Response as OpenAIResponse,
+  ResponseCreateParams,
+  ResponseStreamEvent,
+} from "openai/resources/responses/responses";
 import { streamSSE } from "hono/streaming";
 import type { Context } from "hono";
 import type { MessageCreateParams as ClaudeMessageCreateParams } from "@anthropic-ai/sdk/resources/messages";
 import { streamingPipelineFactory } from "../utils/streaming/streaming-pipeline";
-import { convertOpenAIResponseToClaude } from "../converters/message-converter/openai-to-claude/response";
+import { convertOpenAIResponseToClaude } from "../adapters/message-converter/openai-to-claude/response";
 import { conversationStore } from "../utils/conversation/conversation-store";
-import { claudeToResponses } from "../converters/message-converter/claude-to-openai/request";
+import { claudeToResponses } from "../adapters/message-converter/claude-to-openai/request";
 import {
   logError,
   logInfo,
@@ -162,13 +166,14 @@ async function processStreamingResponse(
 
     try {
       // Pass the abort signal to OpenAI API for streaming
-      const streamOrResp = await config.openai.responses.create(
-        {
-          ...openaiReq,
-          stream: true,
-        },
-        config.signal ? { signal: config.signal } : undefined
-      )
+      const streamOrResp = await config.openai.responses
+        .create(
+          {
+            ...openaiReq,
+            stream: true,
+          },
+          config.signal ? { signal: config.signal } : undefined
+        )
         .catch(async (error) => {
           // Check if error is due to abort
           if (config.signal?.aborted || error.name === "AbortError") {
@@ -185,8 +190,14 @@ async function processStreamingResponse(
           throw error;
         });
 
-      function isResponseEventStream(v: unknown): v is AsyncIterable<ResponseStreamEvent> {
-        return typeof v === "object" && v !== null && Symbol.asyncIterator in (v as Record<string, unknown>);
+      function isResponseEventStream(
+        v: unknown
+      ): v is AsyncIterable<ResponseStreamEvent> {
+        return (
+          typeof v === "object" &&
+          v !== null &&
+          Symbol.asyncIterator in (v as Record<string, unknown>)
+        );
       }
 
       if (!isResponseEventStream(streamOrResp)) {

@@ -1,4 +1,4 @@
-import type { Provider } from "../../config/types";
+import type { Provider } from "../../../config/types";
 import { getAdapterFor } from "../registry";
 import type {
   ResponseCreateParams,

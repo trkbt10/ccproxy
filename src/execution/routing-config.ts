@@ -6,8 +6,8 @@ import type {
   ResponseCreateParams,
   ResponseStreamEvent,
 } from "openai/resources/responses/responses";
-import type { OpenAICompatibleClient } from "../providers/openai-compat/types";
-import { buildOpenAICompatibleClientForGemini } from "../providers/gemini/openai-compatible";
+import type { OpenAICompatibleClient } from "../adapters/providers/openai-compat/types";
+import { buildOpenAICompatibleClientForGemini } from "../adapters/providers/gemini/openai-compatible";
 import type { RoutingConfig, Provider } from "../config/types";
 import { expandConfig } from "../config/expansion";
 import { configureLogger } from "../utils/logging/enhanced-logger";
@@ -122,7 +122,9 @@ function resolveApiKeyByModelPrefix(
     return null;
   }
   // Check longest matching prefix first for determinism
-  const entries = Object.entries(mapping).sort((a, b) => b[0].length - a[0].length);
+  const entries = Object.entries(mapping).sort(
+    (a, b) => b[0].length - a[0].length
+  );
   for (const [prefix, apiKey] of entries) {
     if (modelHint.startsWith(prefix)) {
       return apiKey;
@@ -145,7 +147,7 @@ export function buildProviderClient(
         "No OpenAI API key available. Provide OPENAI_API_KEY environment variable or configure providers."
       );
     }
-    
+
     const client = new OpenAI({
       apiKey,
       defaultHeaders: {
@@ -180,7 +182,12 @@ export function buildProviderClient(
   const keyFromApiHeader = resolveApiKeyFromHeader(provider, getHeader);
   const keyFromModel = resolveApiKeyByModelPrefix(provider, modelHint);
 
-  const apiKey = keyFromProvider || keyFromApiHeader || keyFromModel || process.env.OPENAI_API_KEY || null;
+  const apiKey =
+    keyFromProvider ||
+    keyFromApiHeader ||
+    keyFromModel ||
+    process.env.OPENAI_API_KEY ||
+    null;
   if (!apiKey) {
     throw new Error(
       "No OpenAI API key available. Configure provider apiKey or provide OPENAI_API_KEY environment variable."

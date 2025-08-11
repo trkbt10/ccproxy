@@ -1,28 +1,9 @@
 import OpenAI from "openai";
 import type { Provider } from "../../../config/types";
 import type { ProviderAdapter } from "../adapter";
+import { selectApiKey } from "../shared/select-api-key";
 
-function selectApiKey(
-  provider: Provider,
-  modelHint?: string
-): string | null {
-  const keyFromProvider = provider.apiKey;
-  // Header-based selection removed
-  const keyFromMap = null;
-  let keyFromModel: string | null = null;
-  if (modelHint && provider.api?.keyByModelPrefix) {
-    const entries = Object.entries(provider.api.keyByModelPrefix).sort(
-      (a, b) => b[0].length - a[0].length
-    );
-    for (const [prefix, apiKey] of entries) {
-      if (modelHint.startsWith(prefix)) {
-        keyFromModel = apiKey;
-        break;
-      }
-    }
-  }
-  return keyFromProvider || keyFromMap || keyFromModel || null;
-}
+// API key selection centralized in shared/select-api-key
 
 export function buildOpenAIAdapter(
   provider: Provider,

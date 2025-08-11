@@ -7,15 +7,49 @@ import { getMetadataHandler } from "./metadata-handler";
 import { UnifiedIdManager } from "../../../utils/id-management/unified-id-manager";
 import type {
   ResponseStreamEvent as OpenAIResponseStreamEvent,
-  ResponseOutputItemAddedEvent as OpenAIResponseOutputItemAddedEvent,
-  ResponseOutputItemDoneEvent as OpenAIResponseOutputItemDoneEvent,
+  ResponseOutputItemAddedEvent,
+  ResponseOutputItemDoneEvent,
   ResponseWebSearchCallInProgressEvent,
   ResponseWebSearchCallSearchingEvent,
   ResponseWebSearchCallCompletedEvent,
   ResponseCreatedEvent,
   ResponseContentPartAddedEvent,
   ResponseContentPartDoneEvent,
+  ResponseCompletedEvent,
+  ResponseFunctionToolCall,
 } from "openai/resources/responses/responses";
+
+// Type guards for OpenAI Response events
+function isFunctionCallItem(item: any): item is ResponseFunctionToolCall & { id: string } {
+  return item?.type === "function_call" && 
+         typeof item?.id === "string" && 
+         typeof item?.call_id === "string" &&
+         typeof item?.name === "string";
+}
+
+function isResponseCompletedEvent(ev: OpenAIResponseStreamEvent): ev is ResponseCompletedEvent {
+  return ev.type === "response.completed";
+}
+
+function isResponseOutputItemAddedEvent(ev: OpenAIResponseStreamEvent): ev is ResponseOutputItemAddedEvent {
+  return ev.type === "response.output_item.added";
+}
+
+function isResponseOutputItemDoneEvent(ev: OpenAIResponseStreamEvent): ev is ResponseOutputItemDoneEvent {
+  return ev.type === "response.output_item.done";
+}
+
+function isWebSearchInProgressEvent(ev: OpenAIResponseStreamEvent): ev is ResponseWebSearchCallInProgressEvent {
+  return ev.type === "response.web_search_call.in_progress";
+}
+
+function isWebSearchSearchingEvent(ev: OpenAIResponseStreamEvent): ev is ResponseWebSearchCallSearchingEvent {
+  return ev.type === "response.web_search_call.searching";
+}
+
+function isWebSearchCompletedEvent(ev: OpenAIResponseStreamEvent): ev is ResponseWebSearchCallCompletedEvent {
+  return ev.type === "response.web_search_call.completed";
+}
 
 export class StreamState {
   private usage = { input_tokens: 0, output_tokens: 0 };
@@ -97,22 +131,23 @@ export class StreamState {
         break;
       }
       case "response.output_item.added": {
-        if ((ev as any).item?.type === "function_call" && this.isItemIdString(ev as any)) {
+        if (isResponseOutputItemAddedEvent(ev) && isFunctionCallItem(ev.item)) {
+          const item = ev.item;
           logDebug(
             "function_call event",
-            { id: (ev as any).item.id, call_id: (ev as any).item.call_id, name: (ev as any).item.name, type: (ev as any).item.type },
+            { id: item.id, call_id: item.call_id, name: item.name, type: item.type },
             this.getLogContext()
           );
-          const { metadata: toolMeta } = this.contentManager.addToolBlock((ev as any).item.id, (ev as any).item.name, (ev as any).item.call_id);
-          if ((ev as any).item.call_id) {
-            this.callIdManager.addMapping((ev as any).item.call_id, (ev as any).item.id, {
+          const { metadata: toolMeta } = this.contentManager.addToolBlock(item.id, item.name, item.call_id);
+          if (item.call_id) {
+            this.callIdManager.addMapping(item.call_id, item.id, {
               source: "stream-state",
               operation: "handleFunctionCall"
             });
-            logDebug(`Stored mapping: call_id ${(ev as any).item.call_id} -> tool_use_id ${(ev as any).item.id}`, undefined, this.getLogContext());
+            logDebug(`Stored mapping: call_id ${item.call_id} -> tool_use_id ${item.id}`, undefined, this.getLogContext());
           }
           if (!toolMeta.started) {
-            await this.sse.toolStart(toolMeta.index, { id: (ev as any).item.id, name: (ev as any).item.name });
+            await this.sse.toolStart(toolMeta.index, { id: item.id, name: item.name });
             this.contentManager.markStarted(toolMeta.id);
           }
         }
@@ -127,8 +162,9 @@ export class StreamState {
         break;
       }
       case "response.output_item.done": {
-        if ((ev as any).item?.type === "function_call" && this.isItemIdString(ev as any)) {
-          const toolBlockResult = this.contentManager.getToolBlock((ev as any).item.id);
+        if (isResponseOutputItemDoneEvent(ev) && isFunctionCallItem(ev.item)) {
+          const item = ev.item;
+          const toolBlockResult = this.contentManager.getToolBlock(item.id);
           if (toolBlockResult && !toolBlockResult.metadata.completed) {
             await this.sse.toolStop(toolBlockResult.metadata.index);
             this.contentManager.markCompleted(toolBlockResult.metadata.id);
@@ -160,26 +196,37 @@ export class StreamState {
       }
       case "response.completed": {
         this.streamCompleted = true;
-        const resp: any = (ev as any).response;
-        if (resp?.usage?.output_tokens) this.usage.output_tokens = resp.usage.output_tokens;
-        if (resp?.usage?.input_tokens) this.usage.input_tokens = resp.usage.input_tokens;
+        if (isResponseCompletedEvent(ev)) {
+          const resp = ev.response;
+          if (resp?.usage?.output_tokens) this.usage.output_tokens = resp.usage.output_tokens;
+          if (resp?.usage?.input_tokens) this.usage.input_tokens = resp.usage.input_tokens;
+        }
         await this.sse.messageStop(this.usage);
         await this.sse.done();
         break;
       }
       case "response.web_search_call.in_progress": {
-        const e = ev as any as ResponseWebSearchCallInProgressEvent;
-        logDebug("web_search_call.in_progress", { query: (e as any).query }, this.getLogContext());
+        if (isWebSearchInProgressEvent(ev)) {
+          // Note: query property is not in the official type but may be present in runtime
+          const extendedEv = ev as ResponseWebSearchCallInProgressEvent & { query?: string };
+          logDebug("web_search_call.in_progress", { query: extendedEv.query }, this.getLogContext());
+        }
         break;
       }
       case "response.web_search_call.searching": {
-        const e = ev as any as ResponseWebSearchCallSearchingEvent;
-        logDebug("web_search_call.searching", { query: (e as any).query }, this.getLogContext());
+        if (isWebSearchSearchingEvent(ev)) {
+          // Note: query property is not in the official type but may be present in runtime
+          const extendedEv = ev as ResponseWebSearchCallSearchingEvent & { query?: string };
+          logDebug("web_search_call.searching", { query: extendedEv.query }, this.getLogContext());
+        }
         break;
       }
       case "response.web_search_call.completed": {
-        const e = ev as any as ResponseWebSearchCallCompletedEvent;
-        logDebug("web_search_call.completed", { query: (e as any).query, result_count: (e as any).result_count }, this.getLogContext());
+        if (isWebSearchCompletedEvent(ev)) {
+          // Note: query and result_count properties are not in the official type but may be present in runtime
+          const extendedEv = ev as ResponseWebSearchCallCompletedEvent & { query?: string; result_count?: number };
+          logDebug("web_search_call.completed", { query: extendedEv.query, result_count: extendedEv.result_count }, this.getLogContext());
+        }
         break;
       }
       default:
@@ -195,7 +242,4 @@ export class StreamState {
     return this.callIdManager;
   }
 
-  private isItemIdString(ev: any): ev is { item: { id: string } } {
-    return typeof ev?.item?.id === "string";
-  }
 }

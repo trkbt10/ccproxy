@@ -221,6 +221,6 @@ export function detectModelGrade(modelName: string): ModelGrade {
   return determineGradeFromIndicators(indicators);
 }
 
-export function getModelsByGrade(models: string[], grade: ModelGrade): string[] {
+export function getModelsByGrade(models: readonly string[], grade: ModelGrade): string[] {
   return models.filter(model => detectModelGrade(model) === grade);
 }

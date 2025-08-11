@@ -4,6 +4,8 @@ import type {
 } from "@anthropic-ai/sdk/resources/messages";
 import type {
   ResponseCreateParams as OpenAIResponseCreateParams,
+  ResponseInputItem as OpenAIResponseInputItem,
+  EasyInputMessage as OpenAIEasyInputMessage,
 } from "openai/resources/responses/responses";
 import { UnifiedIdManager } from "../../../utils/id-management/unified-id-manager";
 import { ensureCallIdManager } from "../../../utils/id-management/call-id-helpers";
@@ -21,10 +23,17 @@ export function openAIToClaude(
   
   // Convert input items to messages
   const inputItems = request.input || [];
-  const messages = convertOpenAIMessages(
-    typeof inputItems === 'string' ? [{ role: 'user', content: inputItems, type: 'message' } as any] : inputItems,
-    manager
-  );
+  const normalizedItems: OpenAIResponseInputItem[] =
+    typeof inputItems === 'string'
+      ? [
+          {
+            role: 'user',
+            content: inputItems,
+            type: 'message',
+          } as OpenAIEasyInputMessage,
+        ]
+      : (inputItems as OpenAIResponseInputItem[]);
+  const messages = convertOpenAIMessages(normalizedItems, manager);
   
   // Extract system message if present in first message
   let system: string | undefined;

@@ -58,7 +58,14 @@ export function convertOpenAIMessage(
             break;
 
           default:
-            console.warn(`[WARN] Unknown content type: ${(item as any).type}`);
+            {
+              let t = "unknown";
+              if (typeof item === "object" && item !== null) {
+                const obj = item as unknown as { type?: unknown };
+                if (typeof obj.type === "string") t = obj.type;
+              }
+              console.warn(`[WARN] Unknown content type: ${t}`);
+            }
         }
       }
 

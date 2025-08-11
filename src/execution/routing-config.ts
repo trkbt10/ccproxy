@@ -36,17 +36,11 @@ export async function loadRoutingConfigOnce(): Promise<RoutingConfig> {
       const ensured = ensureDefaultProvider(expanded);
 
       // Apply logging configuration (dir/enabled) from config
-      if (ensured && (ensured as any).logging) {
-        const logging = (ensured as any).logging as {
-          dir?: string;
-          enabled?: boolean;
-          debugEnabled?: boolean;
-          eventsEnabled?: boolean;
-        };
+      if (ensured.logging) {
         configureLogger({
-          dir: logging.dir,
-          enabled: logging.enabled,
-          debugEnabled: logging.debugEnabled,
+          dir: ensured.logging.dir,
+          enabled: ensured.logging.enabled,
+          debugEnabled: ensured.logging.debugEnabled,
         });
       }
       cachedConfig = ensured;

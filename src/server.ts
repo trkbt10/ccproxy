@@ -10,12 +10,9 @@ import { getBanner } from "./utils/logo/banner";
 const port = parseInt(process.env.PORT || "8082", 10) || 8082;
 
 function isHonoLike(obj: unknown): obj is Hono {
-  return (
-    !!obj &&
-    typeof obj === "object" &&
-    "route" in (obj as any) &&
-    "on" in (obj as any)
-  );
+  if (!obj || typeof obj !== "object") return false;
+  const rec = obj as Record<string, unknown>;
+  return "route" in rec && "on" in rec;
 }
 
 serve(

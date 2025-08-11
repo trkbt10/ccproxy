@@ -22,7 +22,11 @@ describe("geminiToOpenAIResponse", () => {
     // output[0] is message with output_text content
     expect(Array.isArray(out.output)).toBe(true);
     const msg = out.output?.[0];
-    expect(msg && (msg as any).type).toBe("message");
+    const msgType =
+      msg && typeof (msg as { type?: unknown }).type === 'string'
+        ? (msg as { type?: unknown }).type
+        : undefined;
+    expect(msgType).toBe("message");
     expect(out.usage?.input_tokens).toBe(1);
     expect(out.usage?.output_tokens).toBe(2);
   });

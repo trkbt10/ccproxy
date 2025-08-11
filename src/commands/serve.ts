@@ -26,7 +26,7 @@ export async function cmdServe(): Promise<void> {
       console.log(); // Add line spacing after provider info
     }
     
-    const eps = extractEndpoints(app as any);
+    const eps = extractEndpoints(app);
     await printStartupInfo(info.port, cfg, eps);
   });
 }

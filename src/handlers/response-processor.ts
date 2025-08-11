@@ -264,8 +264,8 @@ export const createResponseProcessor = (config: ProcessorConfig) => {
   const manager = conversationStore.getIdManager(config.conversationId);
 
   // If the underlying client supports tool name resolver (Gemini bridge), provide it
-  if (typeof (config.openai as any).setToolNameResolver === "function") {
-    (config.openai as any).setToolNameResolver((callId: string) =>
+  if (typeof config.openai.setToolNameResolver === "function") {
+    config.openai.setToolNameResolver((callId: string) =>
       manager.getToolNameByOpenAICallId(callId)
     );
   }

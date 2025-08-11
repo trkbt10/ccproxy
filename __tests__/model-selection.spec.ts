@@ -1,3 +1,4 @@
+import { describe, it, expect } from "bun:test";
 import { detectModelGrade } from "../src/tools/model/model-grade-detector";
 import {
   mapModelToProvider,

@@ -11,8 +11,8 @@ export function buildClaudeAdapter(
   provider: Provider,
   modelHint?: string
 ): ProviderAdapter<ClaudeMessageCreateParams, ClaudeMessage> {
-  const apiKey = selectApiKey(provider, modelHint) || process.env.ANTHROPIC_API_KEY;
-  if (!apiKey) throw new Error("Missing Anthropic API key (ANTHROPIC_API_KEY)");
+  const apiKey = selectApiKey(provider, modelHint);
+  if (!apiKey) throw new Error("Missing Anthropic API key (configure provider.apiKey or api.keyByModelPrefix)");
   const anthropic = new Anthropic({ apiKey, baseURL: provider.baseURL });
 
   return {
@@ -38,4 +38,3 @@ export function buildClaudeAdapter(
     },
   };
 }
-

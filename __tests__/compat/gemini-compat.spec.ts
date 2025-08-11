@@ -8,7 +8,7 @@ import { geminiToOpenAIResponse } from "../../src/adapters/providers/gemini/open
 import { geminiToOpenAIStream } from "../../src/adapters/providers/gemini/openai-stream-adapter";
 import { getAdapterFor } from "../../src/adapters/providers/registry";
 import type { Provider } from "../../src/config/types";
-import type { GenerateContentRequest } from "../../src/adapters/providers/gemini/fetch-client";
+import type { GenerateContentRequest, GeminiPart } from "../../src/adapters/providers/gemini/fetch-client";
 import {
   isGeminiResponse,
   ensureGeminiStream,
@@ -22,17 +22,14 @@ describe("Gemini OpenAI-compat (real API)", () => {
     adapter: ReturnType<typeof getAdapterFor>,
     provider: Provider
   ): Promise<string> {
-    // Always list to exercise models endpoint coverage
     try {
-      const listed = await (adapter as any).listModels();
-      const ids = listed.data.map((m: any) => m.id as string);
+      const listed = await adapter.listModels();
+      const ids = listed.data.map((m) => m.id);
       expect(Array.isArray(listed.data)).toBe(true);
       if (ids.length > 0) compatCoverage.mark("gemini", "models.list.basic");
       compatCoverage.log(
         "gemini",
-        `models.list: ${ids.slice(0, 5).join(", ")}${
-          ids.length > 5 ? ", ..." : ""
-        }`
+        `models.list: ${ids.slice(0, 5).join(", ")}${ids.length > 5 ? ", ..." : ""}`
       );
     } catch (e) {
       compatCoverage.error(
@@ -41,7 +38,6 @@ describe("Gemini OpenAI-compat (real API)", () => {
         `Failed to list models: ${e instanceof Error ? e.message : String(e)}`
       );
     }
-    // Delegate to model selector
     return await resolveModelForProvider({ provider });
   }
 
@@ -86,7 +82,7 @@ describe("Gemini OpenAI-compat (real API)", () => {
       ],
       generationConfig: {
         maxOutputTokens: 512,
-        responseMimeType: "text/plain" as any,
+        responseMimeType: "text/plain",
       },
     };
 
@@ -96,9 +92,7 @@ describe("Gemini OpenAI-compat (real API)", () => {
       `chat.stream request: ${JSON.stringify(input)}`
     );
     const stream = adapter.stream!({ model, input });
-    for await (const ev of geminiToOpenAIStream(
-      ensureGeminiStream(stream as AsyncIterable<unknown>)
-    )) {
+    for await (const ev of geminiToOpenAIStream(ensureGeminiStream(stream))) {
       types.push(ev.type);
     }
     compatCoverage.log("gemini", `chat.stream events: ${types.join(", ")}`);
@@ -150,7 +144,7 @@ describe("Gemini OpenAI-compat (real API)", () => {
         },
       },
       generationConfig: { maxOutputTokens: 32 },
-    } as GenerateContentRequest;
+    };
     compatCoverage.log(
       "gemini",
       `function_call (non-stream) request: ${JSON.stringify(input)}`
@@ -204,16 +198,14 @@ describe("Gemini OpenAI-compat (real API)", () => {
         },
       },
       generationConfig: { maxOutputTokens: 32 },
-    } as GenerateContentRequest;
+    };
     const types: string[] = [];
     compatCoverage.log(
       "gemini",
       `function_call (stream) request: ${JSON.stringify(input)}`
     );
     const stream = adapter.stream!({ model, input });
-    for await (const ev of geminiToOpenAIStream(
-      ensureGeminiStream(stream as AsyncIterable<unknown>)
-    )) {
+    for await (const ev of geminiToOpenAIStream(ensureGeminiStream(stream))) {
       types.push(ev.type);
     }
     compatCoverage.log(
@@ -236,7 +228,7 @@ describe("Gemini OpenAI-compat (real API)", () => {
   }, 30000);
   it("chat function_call roundtrip (real)", async () => {
     const adapter = getAdapterFor(provider);
-    const model = await pickCheapGeminiModel(adapter);
+    const model = await selectGeminiModel(adapter, provider);
     const tools = [
       {
         functionDeclarations: [
@@ -267,7 +259,7 @@ describe("Gemini OpenAI-compat (real API)", () => {
         },
       },
       generationConfig: { maxOutputTokens: 64 },
-    } as GenerateContentRequest;
+    };
     compatCoverage.log(
       "gemini",
       `roundtrip turn1 request: ${JSON.stringify(req1)}`
@@ -276,12 +268,17 @@ describe("Gemini OpenAI-compat (real API)", () => {
     if (!isGeminiResponse(raw1))
       throw new Error("Unexpected Gemini response shape (turn1)");
     const cand = raw1.candidates?.[0];
-    const parts = cand?.content?.parts || [];
-    const fn = (parts as any[]).find((p) => p && (p as any).functionCall);
-    expect(!!fn).toBe(true);
+    const parts = cand?.content?.parts ?? [];
+    const fnPart = parts.find(
+      (p: GeminiPart) =>
+        "functionCall" in p &&
+        p.functionCall &&
+        typeof p.functionCall.name === "string"
+    ) as Extract<GeminiPart, { functionCall: { name: string } }> | undefined;
+    expect(!!fnPart).toBe(true);
 
     // Turn 2: supply functionResponse (fake local result is fine for test)
-    const fnName = (fn as any).functionCall.name as string;
+    const fnName = fnPart!.functionCall.name;
     const result = {
       ok: true,
       city: "Tokyo",
@@ -298,7 +295,7 @@ describe("Gemini OpenAI-compat (real API)", () => {
         },
       ],
       generationConfig: { maxOutputTokens: 64 },
-    } as GenerateContentRequest;
+    };
     compatCoverage.log(
       "gemini",
       `roundtrip turn2 request: ${JSON.stringify(req2)}`

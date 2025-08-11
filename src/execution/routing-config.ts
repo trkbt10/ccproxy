@@ -38,6 +38,21 @@ export async function loadRoutingConfigOnce(): Promise<RoutingConfig> {
 
       const ensured = expanded;
 
+      // Validate API keys for configured providers: require keys from config.
+      if (ensured.providers) {
+        for (const [pid, p] of Object.entries(ensured.providers)) {
+          // Keys must be provided in config (apiKey or keyByModelPrefix). No env fallback here.
+          const hasDirect = typeof p.apiKey === 'string' && p.apiKey.length > 0;
+          const hasPrefixMap = !!p.api && p.api.keyByModelPrefix && Object.keys(p.api.keyByModelPrefix).length > 0;
+          if (!hasDirect && !hasPrefixMap) {
+            throw new Error(
+              `Provider '${pid}' (${p.type}) is missing API key configuration. ` +
+              `Specify providers['${pid}'].apiKey or providers['${pid}'].api.keyByModelPrefix in the config.`
+            );
+          }
+        }
+      }
+
       // Apply logging configuration (dir/enabled) from config
       if (ensured.logging) {
         configureLogger({

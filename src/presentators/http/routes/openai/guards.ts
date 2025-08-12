@@ -9,7 +9,7 @@ import type {
   ResponseInputItem,
   Tool,
 } from "openai/resources/responses/responses";
-import { isOpenAIResponse, isResponseEventStream } from "../openai-generic/guards";
+import { isOpenAIResponse, isResponseEventStream } from "../../../../adapters/providers/openai-generic/guards";
 
 function isObject(v: unknown): v is Record<string, unknown> {
   return typeof v === "object" && v !== null;
@@ -81,3 +81,4 @@ export function buildResponseInputFromChatMessages(messages: ChatCompletionCreat
 }
 
 export { isResponseEventStream, isOpenAIResponse };
+

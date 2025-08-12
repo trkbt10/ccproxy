@@ -1,11 +1,8 @@
 import type { Context } from "hono";
-import type { ChatCompletionCreateParams } from "openai/resources/chat/completions";
-import type { MessageCreateParams as ClaudeMessageCreateParams } from "@anthropic-ai/sdk/resources/messages";
-import { conversationStore } from "../../../../../utils/conversation/conversation-store";
 import { streamSSE } from "hono/streaming";
+import type { ChatCompletionCreateParams } from "openai/resources/chat/completions";
+import type { RoutingConfig } from "../../../../../config/types";
 import { planChatCompletions } from "../plan-chat-completions";
-import type { RoutingConfig, Provider } from "../../../../../config/types";
-import type { UnifiedIdManager } from "../../../../../utils/id-management/unified-id-manager";
 
 // Safe helpers to extract optional fields from unknown errors
 const getErrorStatus = (err: unknown): number | undefined => {
@@ -59,13 +56,26 @@ export const createChatCompletionsHandler =
           const status = getErrorStatus(err);
           const message = err instanceof Error ? err.message : String(err);
           const code = getErrorCode(err);
-          const type = code || (status === 401 ? 'unauthorized' : status === 429 ? 'rate_limited' : status && status >= 500 ? 'upstream_error' : 'api_error');
+          const type =
+            code ||
+            (status === 401
+              ? "unauthorized"
+              : status === 429
+              ? "rate_limited"
+              : status && status >= 500
+              ? "upstream_error"
+              : "api_error");
           try {
-            await sse.writeSSE({ event: 'error', data: JSON.stringify({ error: { type, message } }) });
+            await sse.writeSSE({
+              event: "error",
+              data: JSON.stringify({ error: { type, message } }),
+            });
           } catch {}
           throw err;
         } finally {
-          try { await sse.writeSSE({ data: "[DONE]" }); } catch {}
+          try {
+            await sse.writeSSE({ data: "[DONE]" });
+          } catch {}
         }
       });
     }

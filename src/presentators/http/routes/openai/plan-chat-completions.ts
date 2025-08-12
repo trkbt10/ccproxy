@@ -16,8 +16,10 @@ import {
   mapChatToolChoiceToResponses,
   isOpenAIResponse,
   isResponseEventStream,
-} from "../../../../adapters/providers/openai-compat/guards";
+  isFunctionTool,
+} from "./guards";
 import { isFunctionCallOutput } from "../../../../adapters/responses-adapter/type-guards";
+import { planToolExecution } from "../../../../execution/tool-model-planner";
 
 export type ChatCompletionsPlan =
   | { type: "json"; getBody: () => Promise<ChatCompletion> }
@@ -34,15 +36,15 @@ export async function planChatCompletions(
   chatRequest: ChatCompletionCreateParams,
   opts: PlanOptions
 ): Promise<ChatCompletionsPlan> {
-  const providerId = routingConfig.defaults?.providerId || "default";
-  const model =
-    (chatRequest.model as string) ||
-    routingConfig.defaults?.model ||
-    "gpt-4o-mini";
-  const openai = buildProviderClient(
-    routingConfig.providers?.[providerId],
-    model
+  const { providerId, model } = selectProviderForOpenAIChat(
+    routingConfig,
+    chatRequest
   );
+  const provider = routingConfig.providers?.[providerId];
+  if (!provider && providerId !== "default") {
+    throw new Error(`Provider '${providerId}' not found`);
+  }
+  const openai = buildProviderClient(provider, model);
 
   // Build OpenAI Responses request from Chat Completions request
   const openaiReq: ResponseCreateParams = mapChatToResponses(chatRequest);
@@ -70,6 +72,52 @@ export async function planChatCompletions(
     return mapResponseToChatCompletion(maybeResp, model);
   }
   return { type: "json", getBody };
+}
+
+function selectProviderForOpenAIChat(
+  cfg: RoutingConfig,
+  req: ChatCompletionCreateParams
+): { providerId: string; model: string } {
+  const names: string[] = [];
+  const choice = (req as { tool_choice?: unknown }).tool_choice as ChatCompletionCreateParams["tool_choice"] | undefined;
+  if (choice && typeof choice === "object" && (choice as { type?: unknown }).type === "function") {
+    const name = (choice as { function?: { name?: unknown } }).function?.name;
+    if (typeof name === "string") names.push(name);
+  }
+  if (names.length === 0 && Array.isArray(req.tools)) {
+    for (const t of req.tools) {
+      if (isFunctionTool(t)) names.push(t.function.name);
+    }
+  }
+
+  for (const name of names) {
+    const steps = planToolExecution(cfg, name, undefined);
+    for (const s of steps) {
+      if (s.kind === "responses_model") {
+        const providerId = s.providerId || cfg.defaults?.providerId || "default";
+        const modelFromReq = typeof req.model === "string" ? req.model : undefined;
+        const model = s.model || modelFromReq || cfg.defaults?.model;
+        if (!model) {
+          throw new Error("No model specified: provide request.model or defaults.model");
+        }
+        return { providerId, model };
+      }
+    }
+  }
+
+  const providers = cfg.providers || {};
+  const providerId = cfg.defaults?.providerId
+    ? cfg.defaults.providerId
+    : providers["default"]
+    ? "default"
+    : Object.keys(providers).length === 1
+    ? Object.keys(providers)[0]
+    : "default";
+  const model = (typeof req.model === "string" ? req.model : undefined) || cfg.defaults?.model;
+  if (!model) {
+    throw new Error("No model specified: provide request.model or defaults.model");
+  }
+  return { providerId, model };
 }
 
 function mapChatToResponses(

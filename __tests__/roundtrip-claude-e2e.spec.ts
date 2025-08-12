@@ -7,7 +7,7 @@ import type {
 } from "@anthropic-ai/sdk/resources/messages";
 import { createClaudeRouter } from "../src/presentators/http/routes/claude/router";
 import { loadRoutingConfigOnce } from "../src/execution/routing-config";
-import { conversationStore } from "../src/utils/conversation/conversation-store";
+// No global conversation store; conversions are deterministic
 
 function isRequest(input: Parameters<typeof fetch>[0]): input is Request {
   return typeof Request !== "undefined" && input instanceof Request;

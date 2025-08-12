@@ -7,7 +7,7 @@ import { convertResponseInputToMessagesLocal, convertToolsForChatLocal, convertT
 import type { ChatCompletionCreateParams } from "openai/resources/chat/completions";
 import { claudeToOpenAIResponse, claudeToOpenAIStream } from "./openai-response-adapter";
 import { chatCompletionToClaudeLocal } from "./request-converter";
-import { conversationStore } from "../../../utils/conversation/conversation-store";
+// Conversation state updates are handled by the HTTP response processor
 import type { Message as ClaudeMessage } from "@anthropic-ai/sdk/resources/messages";
 import { resolveModelForProvider } from "../shared/model-mapper";
 
@@ -91,7 +91,6 @@ export function buildOpenAICompatibleClientForClaude(
           { signal: options?.signal }
         );
         const response = claudeToOpenAIResponse(claudeResp as ClaudeMessage, chatParams.model as string);
-        if (boundConversationId) conversationStore.updateConversationState({ conversationId: boundConversationId, requestId: 'n/a', responseId: response.id });
         return response;
       },
     },

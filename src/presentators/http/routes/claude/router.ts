@@ -5,9 +5,12 @@ import { countTokens } from "./handlers/token-counter";
 import { selectProviderForRequest } from "../../../../execution/tool-model-planner";
 import { buildOpenAICompatibleClientForClaude } from "../../../../adapters/providers/claude/openai-compatible";
 import { createResponseProcessor } from "./handlers/response-processor";
+import { ConversationStore } from "../../../../utils/conversation/conversation-store";
 
 export function createClaudeRouter(routingConfig: RoutingConfig) {
   const router = new Hono();
+  // Conversation store owned by the router instance (effectively singleton per app)
+  const store = new ConversationStore();
 
   // Root banner text
   router.get("/", (c) => c.text("Claude to OpenAI Responses API Proxy"));
@@ -44,6 +47,7 @@ export function createClaudeRouter(routingConfig: RoutingConfig) {
       providerId: providerSelection.providerId,
       stream,
       signal: abortController.signal,
+      store,
     });
 
     try {

@@ -1,5 +1,5 @@
 import type { Provider } from "../../config/types";
-import { getAdapterFor } from "./registry";
+import OpenAI from "openai";
 import type {
   Response as OpenAIResponse,
   ResponseCreateParams,
@@ -8,6 +8,7 @@ import type {
 import type { OpenAICompatibleClient } from "./openai-client-types";
 import { isResponseEventStream } from "./openai-generic/guards";
 import { resolveModelForProvider } from "./shared/model-mapper";
+import { selectApiKey } from "./shared/select-api-key";
 
 export function buildOpenAICompatibleClient(
   provider: Provider,
@@ -26,34 +27,20 @@ export function buildOpenAICompatibleClient(
     return buildOpenAICompatibleClientForClaude(provider, modelHint);
   }
 
-  const adapter = getAdapterFor(provider, modelHint);
+  // Generic OpenAI-compatible path using OpenAI SDK
+  const apiKey = selectApiKey(provider, modelHint) || "";
+  const client = new OpenAI({ apiKey, baseURL: provider.baseURL, defaultHeaders: provider.defaultHeaders });
   return {
     responses: {
-      async create(
-        params: ResponseCreateParams,
-        options?: { signal?: AbortSignal }
-      ): Promise<OpenAIResponse | AsyncIterable<ResponseStreamEvent>> {
-        const model = await resolveModelForProvider({
-          provider,
-          sourceModel: (params.model as string | undefined) || (modelHint as string | undefined),
-          modelHint,
-        });
-        const out = await adapter.generate({ model, input: params, signal: options?.signal });
-        if (
-          (typeof out === "object" && out !== null && (out as { object?: unknown }).object === "response") ||
-          isResponseEventStream(out)
-        ) {
-          return out as OpenAIResponse | AsyncIterable<ResponseStreamEvent>;
-        }
-        throw new Error("Adapter did not return OpenAI-compatible response or stream");
+      async create(params: ResponseCreateParams, options?: { signal?: AbortSignal }) {
+        return client.responses.create(params as any, options?.signal ? { signal: options.signal } : undefined);
       },
     },
     models: {
       async list() {
-        const res = await adapter.listModels();
+        const res = await client.models.list();
         return { data: res.data.map((m) => ({ id: m.id })) };
       },
     },
   };
 }
-

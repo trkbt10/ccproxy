@@ -1,7 +1,7 @@
 import { compatCoverage, writeMarkdownReport } from "./compat-coverage";
 import type { Provider } from "../../src/config/types";
 import { buildOpenAICompatibleClientForClaude } from "../../src/adapters/providers/claude/openai-compatible";
-import { getAdapterFor } from "../../src/adapters/providers/registry";
+// Adapter registry removed from tests; use OpenAI-compatible clients
 import {
   claudeToOpenAIResponse,
   claudeToOpenAIStream,
@@ -141,11 +141,11 @@ describe("Claude OpenAI-compat (real API)", () => {
 
   // Chat (Claude-native) coverage
   async function pickClaudeModel() {
-    const adapter = getAdapterFor(provider);
     const env = process.env.ANTHROPIC_MODEL;
     if (env) return env;
     try {
-      const listed = await adapter.listModels();
+      const client = buildOpenAICompatibleClientForClaude(provider);
+      const listed = await client.models.list();
       const ids = listed.data.map((m) => m.id);
       if (ids.length > 0) return ids[0];
     } catch {}
@@ -153,39 +153,21 @@ describe("Claude OpenAI-compat (real API)", () => {
   }
 
   maybe("chat non-stream basic", async () => {
-    const adapter = getAdapterFor(provider);
+    const client = buildOpenAICompatibleClientForClaude(provider);
     const model = await pickClaudeModel();
-    const input: ClaudeMessageCreateParams = {
-      model,
-      messages: [{ role: "user", content: "Hello from chat basic" }],
-      stream: false,
-      max_tokens: 64,
-    };
-    const raw = (await adapter.generate({ model, input })) as any;
-    const out = claudeToOpenAIResponse(raw, model);
-    expect(out.object).toBe("response");
-    expect(Array.isArray(out.output)).toBe(true);
+    const out = await client.responses.create({ model, input: [{ type: 'message', role: 'user', content: [{ type: 'input_text', text: 'Hello from chat basic' }] }], stream: false });
+    expect((out as any).object).toBe("response");
+    expect(Array.isArray((out as any).output)).toBe(true);
     compatCoverage.mark("claude", "responses.non_stream.basic");
     compatCoverage.mark("claude", "chat.non_stream.basic");
   });
 
   maybe("chat stream chunk + done", async () => {
-    const adapter = getAdapterFor(provider);
+    const client = buildOpenAICompatibleClientForClaude(provider);
     const model = await pickClaudeModel();
-    const input: ClaudeMessageCreateParams = {
-      model,
-      messages: [{ role: "user", content: "Please stream a short reply" }],
-      stream: true,
-      max_tokens: 64,
-    };
     const types: string[] = [];
-    const s = adapter.stream!({ model, input });
-    for await (const ev of claudeToOpenAIStream(
-      s as AsyncIterable<any>,
-      model
-    )) {
-      types.push(ev.type);
-    }
+    const s = await client.responses.create({ model, input: [{ type: 'message', role: 'user', content: [{ type: 'input_text', text: 'Please stream a short reply' }] }], stream: true });
+    for await (const ev of (s as AsyncIterable<any>)) types.push(ev.type);
     expect(types[0]).toBe("response.created");
     expect(types).toContain("response.output_text.delta");
     expect(types).toContain("response.output_text.done");
@@ -199,67 +181,23 @@ describe("Claude OpenAI-compat (real API)", () => {
   });
 
   maybe("chat non-stream function_call", async () => {
-    const adapter = getAdapterFor(provider);
+    const client = buildOpenAICompatibleClientForClaude(provider);
     const model = await pickClaudeModel();
-    const tools: ClaudeMessageCreateParams["tools"] = [
-      {
-        name: "echo",
-        description: "Echo back text",
-        input_schema: {
-          type: "object",
-          properties: { text: { type: "string" } },
-          required: ["text"],
-        },
-      },
-    ];
-    const input: ClaudeMessageCreateParams = {
-      model,
-      messages: [{ role: "user", content: "Call echo with text='hi'" }],
-      tools,
-      tool_choice: { type: "tool", name: "echo" },
-      stream: false,
-      max_tokens: 64,
-    };
-    const raw = (await adapter.generate({ model, input })) as any;
-    const out = claudeToOpenAIResponse(raw, model);
-    const hasFn =
-      Array.isArray(out.output) &&
-      out.output.some((o) => o.type === "function_call");
+    const tools = [{ type: 'function', name: 'echo', parameters: { type: 'object', properties: { text: { type: 'string' } }, required: ['text'] } }];
+    const out = await client.responses.create({ model, input: [{ type: 'message', role: 'user', content: [{ type: 'input_text', text: "Call echo with text='hi'" }] }], tools, tool_choice: { type: 'function', name: 'echo' }, stream: false });
+    const hasFn = Array.isArray((out as any).output) && (out as any).output.some((o: any) => o.type === 'function_call');
     expect(hasFn).toBe(true);
     compatCoverage.mark("claude", "chat.non_stream.function_call");
     compatCoverage.mark("claude", "responses.non_stream.function_call");
   });
 
   maybe("chat stream tool_call delta", async () => {
-    const adapter = getAdapterFor(provider);
+    const client = buildOpenAICompatibleClientForClaude(provider);
     const model = await pickClaudeModel();
-    const tools: ClaudeMessageCreateParams["tools"] = [
-      {
-        name: "echo",
-        description: "Echo back text",
-        input_schema: {
-          type: "object",
-          properties: { text: { type: "string" } },
-          required: ["text"],
-        },
-      },
-    ];
-    const input: ClaudeMessageCreateParams = {
-      model,
-      messages: [{ role: "user", content: "Call echo with text='hello'" }],
-      tools,
-      tool_choice: { type: "tool", name: "echo" },
-      stream: true,
-      max_tokens: 64,
-    };
+    const tools = [{ type: 'function', name: 'echo', parameters: { type: 'object', properties: { text: { type: 'string' } }, required: ['text'] } }];
     const types: string[] = [];
-    const s = adapter.stream!({ model, input });
-    for await (const ev of claudeToOpenAIStream(
-      s as AsyncIterable<any>,
-      model
-    )) {
-      types.push(ev.type);
-    }
+    const s = await client.responses.create({ model, input: [{ type: 'message', role: 'user', content: [{ type: 'input_text', text: "Call echo with text='hello'" }] }], tools, tool_choice: { type: 'function', name: 'echo' }, stream: true });
+    for await (const ev of (s as AsyncIterable<any>)) types.push(ev.type);
     expect(types).toContain("response.output_item.added");
     expect(types).toContain("response.function_call_arguments.delta");
     expect(types).toContain("response.output_item.done");

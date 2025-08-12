@@ -1,5 +1,5 @@
 import type { Provider } from "../../../config/types";
-import { getAdapterFor } from "../registry";
+import { buildOpenAICompatibleClient } from "../openai-client";
 
 type CacheEntry = {
   data: string[] | null;
@@ -28,8 +28,8 @@ export async function getCachedModelIds(provider: Provider, modelHint?: string):
   const newEntry: CacheEntry = existing || { data: null, fetchedAt: null, loading: null };
   const load = (async () => {
     try {
-      const adapter = getAdapterFor(provider, modelHint);
-      const res = await adapter.listModels();
+      const client = buildOpenAICompatibleClient(provider, modelHint);
+      const res = await client.models.list();
       const ids = res.data.map((m) => m.id);
       newEntry.data = ids;
       newEntry.fetchedAt = now();

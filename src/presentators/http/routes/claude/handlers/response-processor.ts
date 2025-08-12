@@ -10,7 +10,7 @@ import type { MessageCreateParams as ClaudeMessageCreateParams } from "@anthropi
 import { OpenAIToClaudeSSEStream } from "../../../../../adapters/message-converter/openai-to-claude/streaming-sse";
 import { HonoSSESink } from "../../../streaming/hono-sse-sink";
 import { convertOpenAIResponseToClaude } from "../../../../../adapters/message-converter/openai-to-claude/response";
-import { conversationStore } from "../../../../../utils/conversation/conversation-store";
+import type { ConversationStore } from "../../../../../utils/conversation/conversation-store";
 // Using OpenAICompatibleClient for Responses-compatible flow
 import {
   logError,
@@ -33,6 +33,7 @@ export type ProcessorConfig = {
   signal?: AbortSignal;
   routingConfig?: RoutingConfig;
   providerId?: string;
+  store: ConversationStore;
 };
 
 export type ProcessorResult = { responseId?: string };
@@ -89,7 +90,7 @@ async function processNonStreamingResponse(
 
     const { message: claudeResponse } = convertOpenAIResponseToClaude(response);
 
-    conversationStore.updateConversationState({
+    config.store.updateConversationState({
       conversationId: config.conversationId,
       requestId: config.requestId,
       responseId: response.id,
@@ -136,7 +137,7 @@ async function processStreamingResponse(
       }
 
       const { responseId } = sse.getResult();
-      conversationStore.updateConversationState({
+      config.store.updateConversationState({
         conversationId: config.conversationId,
         requestId: config.requestId,
         responseId,

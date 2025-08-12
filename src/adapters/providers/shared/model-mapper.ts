@@ -5,7 +5,6 @@ import {
   getProviderAliases,
   getProviderByGrade,
 } from "../../../config/model-mapping";
-import { getAdapterFor } from "../registry";
 import { getCachedModelIds } from "./model-list-cache";
 // API key resolution happens inside adapters; no env fallback here
 

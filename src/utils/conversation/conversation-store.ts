@@ -184,10 +184,4 @@ export class ConversationStore {
   // getOrCreateOpenAICallIdForToolUse removed
 }
 
-/**
- * Singleton instance of the conversation store.
- */
-export const conversationStore = new ConversationStore();
-
-// Re-export for single entry point convenience
-// No UnifiedIdManager exports
+// No module-level singleton; instantiate and pass where needed

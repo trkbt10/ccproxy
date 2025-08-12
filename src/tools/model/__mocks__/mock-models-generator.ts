@@ -14,7 +14,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 import type { Provider, RoutingConfig } from "../../../config/types";
-import { getAdapterFor } from "../../../adapters/providers/registry";
+import { buildOpenAICompatibleClient } from "../../../adapters/providers/openai-client";
 
 type ModelsList = {
   object: "list";
@@ -29,8 +29,8 @@ async function ensureDir(dir: string) {
 }
 
 async function fetchModelsForProvider(providerId: string, provider: Provider) {
-  const adapter = getAdapterFor(provider);
-  const list: ModelsList = await adapter.listModels();
+  const client = buildOpenAICompatibleClient(provider);
+  const list = await client.models.list();
   const ids = (list.data || [])
     .map((m) => m.id)
     .filter(Boolean)

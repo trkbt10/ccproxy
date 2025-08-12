@@ -3,9 +3,26 @@ import type { ChatCompletionCreateParams } from "openai/resources/chat/completio
 import type { MessageCreateParams as ClaudeMessageCreateParams } from "@anthropic-ai/sdk/resources/messages";
 import { conversationStore } from "../../../../../utils/conversation/conversation-store";
 import { streamSSE } from "hono/streaming";
-import { planChatCompletions } from "../../../../../adapters/providers/openai-compat/chat-completions";
+import { planChatCompletions } from "../plan-chat-completions";
 import type { RoutingConfig, Provider } from "../../../../../config/types";
 import type { UnifiedIdManager } from "../../../../../utils/id-management/unified-id-manager";
+
+// Safe helpers to extract optional fields from unknown errors
+const getErrorStatus = (err: unknown): number | undefined => {
+  if (typeof err === "object" && err !== null && "status" in err) {
+    const status = (err as { status?: unknown }).status;
+    return typeof status === "number" ? status : undefined;
+  }
+  return undefined;
+};
+
+const getErrorCode = (err: unknown): string | undefined => {
+  if (typeof err === "object" && err !== null && "code" in err) {
+    const code = (err as { code?: unknown }).code;
+    return typeof code === "string" ? code : undefined;
+  }
+  return undefined;
+};
 
 export const createChatCompletionsHandler =
   (routingConfig: RoutingConfig) => async (c: Context) => {
@@ -39,9 +56,9 @@ export const createChatCompletionsHandler =
             await sse.writeSSE({ data: JSON.stringify(chunk) });
           }
         } catch (err) {
-          const status = (err as any)?.status ?? undefined;
+          const status = getErrorStatus(err);
           const message = err instanceof Error ? err.message : String(err);
-          const code = (err as any)?.code as string | undefined;
+          const code = getErrorCode(err);
           const type = code || (status === 401 ? 'unauthorized' : status === 429 ? 'rate_limited' : status && status >= 500 ? 'upstream_error' : 'api_error');
           try {
             await sse.writeSSE({ event: 'error', data: JSON.stringify({ error: { type, message } }) });

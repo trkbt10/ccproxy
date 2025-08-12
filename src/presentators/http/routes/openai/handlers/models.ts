@@ -10,18 +10,24 @@ function pickDefaultProvider(cfg: RoutingConfig): Provider | undefined {
   return first;
 }
 
-export const createModelsHandler = (routingConfig: RoutingConfig) => async (c: Context) => {
-  const provider = pickDefaultProvider(routingConfig);
-  if (!provider) {
-    return c.json({ object: "list", data: [] });
-  }
-  try {
-    const client = buildProviderClient(provider);
-    const list = await client.models.list();
-    const data = (list?.data || []).map((m) => ({ id: m.id, object: "model", created: Date.now(), owned_by: provider.type }));
-    return c.json({ object: "list", data });
-  } catch (err) {
-    console.warn("Failed to list models; falling back to empty list:", err);
-    return c.json({ object: "list", data: [] });
-  }
-};
+export const createModelsHandler =
+  (routingConfig: RoutingConfig) => async (c: Context) => {
+    const provider = pickDefaultProvider(routingConfig);
+    if (!provider) {
+      return c.json({ object: "list", data: [] });
+    }
+    try {
+      const client = buildProviderClient(provider);
+      const list = await client.models.list();
+      const data = (list?.data || []).map((m) => ({
+        id: m.id,
+        object: "model",
+        created: Date.now(),
+        owned_by: provider.type,
+      }));
+      return c.json({ object: "list", data });
+    } catch (err) {
+      console.warn("Failed to list models; falling back to empty list:", err);
+      return c.json({ object: "list", data: [] });
+    }
+  };

@@ -1,14 +1,23 @@
-import type { ChatCompletionCreateParams, ChatCompletion, ChatCompletionChunk } from "openai/resources/chat/completions";
-import type { RoutingConfig } from "../../../config/types";
-import type { Context } from "hono";
+import type {
+  ChatCompletionCreateParams,
+  ChatCompletion,
+  ChatCompletionChunk,
+} from "openai/resources/chat/completions";
+import type { RoutingConfig } from "../../../../config/types";
 import type {
   Response as OpenAIResponse,
   ResponseCreateParams,
   ResponseStreamEvent,
 } from "openai/resources/responses/responses";
-import { buildProviderClient } from "../build-provider-client";
-import { buildResponseInputFromChatMessages, mapChatToolsToResponses, mapChatToolChoiceToResponses, isOpenAIResponse, isResponseEventStream } from "./guards";
-import { isFunctionCallOutput } from "../../responses-adapter/type-guards";
+import { buildProviderClient } from "../../../../adapters/providers/build-provider-client";
+import {
+  buildResponseInputFromChatMessages,
+  mapChatToolsToResponses,
+  mapChatToolChoiceToResponses,
+  isOpenAIResponse,
+  isResponseEventStream,
+} from "../../../../adapters/providers/openai-compat/guards";
+import { isFunctionCallOutput } from "../../../../adapters/responses-adapter/type-guards";
 
 export type ChatCompletionsPlan =
   | { type: "json"; getBody: () => Promise<ChatCompletion> }
@@ -25,9 +34,15 @@ export async function planChatCompletions(
   chatRequest: ChatCompletionCreateParams,
   opts: PlanOptions
 ): Promise<ChatCompletionsPlan> {
-  const providerId = routingConfig.defaults?.providerId || 'default';
-  const model = (chatRequest.model as string) || routingConfig.defaults?.model || 'gpt-4o-mini';
-  const openai = buildProviderClient(routingConfig.providers?.[providerId], model);
+  const providerId = routingConfig.defaults?.providerId || "default";
+  const model =
+    (chatRequest.model as string) ||
+    routingConfig.defaults?.model ||
+    "gpt-4o-mini";
+  const openai = buildProviderClient(
+    routingConfig.providers?.[providerId],
+    model
+  );
 
   // Build OpenAI Responses request from Chat Completions request
   const openaiReq: ResponseCreateParams = mapChatToResponses(chatRequest);
@@ -35,24 +50,31 @@ export async function planChatCompletions(
   if (chatRequest.stream) {
     async function* iterator(): AsyncIterable<ChatCompletionChunk> {
       const maybeStream = await openai.responses.create(openaiReq);
-      if (!isResponseEventStream(maybeStream)) throw new Error("Expected ResponseStreamEvent iterable");
+      if (!isResponseEventStream(maybeStream))
+        throw new Error("Expected ResponseStreamEvent iterable");
       for await (const ev of maybeStream) {
         const chunk = mapResponseEventToChatChunk(ev, model);
         if (chunk) yield chunk;
       }
     }
-    return { type: 'stream', stream: iterator() };
+    return { type: "stream", stream: iterator() };
   }
 
   async function getBody(): Promise<ChatCompletion> {
-    const maybeResp = await openai.responses.create({ ...openaiReq, stream: false });
-    if (!isOpenAIResponse(maybeResp)) throw new Error("Expected OpenAIResponse");
+    const maybeResp = await openai.responses.create({
+      ...openaiReq,
+      stream: false,
+    });
+    if (!isOpenAIResponse(maybeResp))
+      throw new Error("Expected OpenAIResponse");
     return mapResponseToChatCompletion(maybeResp, model);
   }
-  return { type: 'json', getBody };
+  return { type: "json", getBody };
 }
 
-function mapChatToResponses(chat: ChatCompletionCreateParams): ResponseCreateParams {
+function mapChatToResponses(
+  chat: ChatCompletionCreateParams
+): ResponseCreateParams {
   const input = buildResponseInputFromChatMessages(chat.messages);
   const tools = mapChatToolsToResponses(chat.tools);
   const tool_choice = mapChatToolChoiceToResponses(chat.tool_choice);
@@ -69,42 +91,55 @@ function mapChatToResponses(chat: ChatCompletionCreateParams): ResponseCreatePar
   return req;
 }
 
-function mapResponseToChatCompletion(resp: OpenAIResponse, model: string): ChatCompletion {
-  const text = (resp.output_text || '') as string;
-  const toolCalls = Array.isArray(resp.output) ? resp.output.filter((i) => isFunctionCallOutput(i)) : [];
+function mapResponseToChatCompletion(
+  resp: OpenAIResponse,
+  model: string
+): ChatCompletion {
+  const text = (resp.output_text || "") as string;
+  const toolCalls = Array.isArray(resp.output)
+    ? resp.output.filter((i) => isFunctionCallOutput(i))
+    : [];
   return {
     id: resp.id,
-    object: 'chat.completion',
+    object: "chat.completion",
     created: resp.created_at || Math.floor(Date.now() / 1000),
     model,
     choices: [
       {
         index: 0,
         message: {
-          role: 'assistant',
+          role: "assistant",
           content: text || null,
           refusal: null,
           tool_calls: toolCalls.length
-            ? toolCalls.map((t) => ({ id: t.call_id, type: 'function' as const, function: { name: t.name, arguments: t.arguments } }))
+            ? toolCalls.map((t) => ({
+                id: t.call_id,
+                type: "function" as const,
+                function: { name: t.name, arguments: t.arguments },
+              }))
             : undefined,
+        },
+        finish_reason: "stop",
+        logprobs: null,
       },
-      finish_reason: 'stop',
-      logprobs: null,
-    },
-  ],
+    ],
     usage: {
       prompt_tokens: resp.usage?.input_tokens || 0,
       completion_tokens: resp.usage?.output_tokens || 0,
-      total_tokens: (resp.usage?.input_tokens || 0) + (resp.usage?.output_tokens || 0),
+      total_tokens:
+        (resp.usage?.input_tokens || 0) + (resp.usage?.output_tokens || 0),
     },
   };
 }
 
-function mapResponseEventToChatChunk(ev: ResponseStreamEvent, model: string): ChatCompletionChunk | null {
-  if (ev.type === 'response.output_text.delta') {
+function mapResponseEventToChatChunk(
+  ev: ResponseStreamEvent,
+  model: string
+): ChatCompletionChunk | null {
+  if (ev.type === "response.output_text.delta") {
     return {
       id: `chatcmpl_${Date.now()}`,
-      object: 'chat.completion.chunk',
+      object: "chat.completion.chunk",
       created: Math.floor(Date.now() / 1000),
       model,
       choices: [
@@ -117,17 +152,17 @@ function mapResponseEventToChatChunk(ev: ResponseStreamEvent, model: string): Ch
       ],
     };
   }
-  if (ev.type === 'response.completed') {
+  if (ev.type === "response.completed") {
     return {
       id: `chatcmpl_${Date.now()}`,
-      object: 'chat.completion.chunk',
+      object: "chat.completion.chunk",
       created: Math.floor(Date.now() / 1000),
       model,
       choices: [
         {
           index: 0,
           delta: {},
-          finish_reason: 'stop',
+          finish_reason: "stop",
           logprobs: null,
         },
       ],

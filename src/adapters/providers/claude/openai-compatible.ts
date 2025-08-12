@@ -8,7 +8,6 @@ import type { ChatCompletionCreateParams } from "openai/resources/chat/completio
 import { claudeToOpenAIResponse, claudeToOpenAIStream } from "./openai-response-adapter";
 import { chatCompletionToClaudeLocal } from "./request-converter";
 import { conversationStore } from "../../../utils/conversation/conversation-store";
-import { UnifiedIdManager } from "../../../utils/id-management/unified-id-manager";
 import type { Message as ClaudeMessage } from "@anthropic-ai/sdk/resources/messages";
 import { resolveModelForProvider } from "../shared/model-mapper";
 
@@ -62,10 +61,7 @@ export function buildOpenAICompatibleClientForClaude(
   const anthropic = new Anthropic({ apiKey: resolvedKey, baseURL: provider.baseURL });
 
   let boundConversationId: string | undefined;
-  function getIdManager(): UnifiedIdManager | undefined {
-    if (boundConversationId) return conversationStore.getIdManager(boundConversationId);
-    return undefined;
-  }
+  // No longer using per-conversation ID manager; conversions are deterministic
 
   return {
     responses: {
@@ -87,25 +83,15 @@ export function buildOpenAICompatibleClientForClaude(
             { ...claudeReq, stream: true },
             { signal: options?.signal }
           )) as unknown as AsyncIterable<import("@anthropic-ai/sdk/resources/messages").MessageStreamEvent>;
-          return claudeToOpenAIStream(
-            streamAny,
-            chatParams.model as string,
-            getIdManager()
-          ) as AsyncIterable<ResponseStreamEvent>;
+          return claudeToOpenAIStream(streamAny, chatParams.model as string) as AsyncIterable<ResponseStreamEvent>;
         }
 
         const claudeResp = await anthropic.messages.create(
           { ...claudeReq, stream: false },
           { signal: options?.signal }
         );
-        const response = claudeToOpenAIResponse(
-          claudeResp as ClaudeMessage,
-          chatParams.model as string,
-          getIdManager()
-        );
-        if (boundConversationId) {
-          conversationStore.updateConversationState({ conversationId: boundConversationId, requestId: 'n/a', responseId: response.id });
-        }
+        const response = claudeToOpenAIResponse(claudeResp as ClaudeMessage, chatParams.model as string);
+        if (boundConversationId) conversationStore.updateConversationState({ conversationId: boundConversationId, requestId: 'n/a', responseId: response.id });
         return response;
       },
     },

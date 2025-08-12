@@ -11,18 +11,16 @@ import type {
   ChatCompletionMessageToolCall 
 } from "openai/resources/chat/completions";
 import { hasContent, hasToolCalls, isFunctionToolCall } from "./type-guards";
-import { UnifiedIdManager } from "../../utils/id-management/unified-id-manager";
 
 export const convertChatCompletionToResponse = (
-  completion: ChatCompletion,
-  callIdManager: UnifiedIdManager
+  completion: ChatCompletion
 ): OpenAIResponse => {
   const message = completion.choices[0]?.message;
   if (!message) {
     throw new Error("No message in completion");
   }
 
-  const output = buildOutputItems(message, callIdManager);
+  const output = buildOutputItems(message);
   const status = determineStatus(completion);
   const incompleteDetails = determineIncompleteDetails(completion);
 
@@ -70,8 +68,7 @@ export const convertChatCompletionToResponse = (
 };
 
 const buildOutputItems = (
-  message: ChatCompletionMessage,
-  callIdManager: UnifiedIdManager
+  message: ChatCompletionMessage
 ): ResponseOutputItem[] => {
   const output: ResponseOutputItem[] = [];
 
@@ -97,7 +94,7 @@ const buildOutputItems = (
   // Handle tool calls
   if (hasToolCalls(message)) {
     for (const toolCall of message.tool_calls) {
-      const functionCall = createFunctionCall(toolCall, callIdManager);
+      const functionCall = createFunctionCall(toolCall);
       if (functionCall) {
         output.push(functionCall);
       }
@@ -108,8 +105,7 @@ const buildOutputItems = (
 };
 
 const createFunctionCall = (
-  toolCall: ChatCompletionMessageToolCall,
-  callIdManager: UnifiedIdManager
+  toolCall: ChatCompletionMessageToolCall
 ): ResponseFunctionToolCall | null => {
   // Check if this is a function tool call
   if (!isFunctionToolCall(toolCall)) {
@@ -117,18 +113,10 @@ const createFunctionCall = (
     return null;
   }
   
-  const toolUseId = generateId("toolu");
-  
-  // Store the mapping for future reference
-  callIdManager.registerMapping(toolCall.id, toolUseId, toolCall.function.name, {
-    source: "chat-to-response-converter",
-    operation: "createFunctionCall"
-  });
-  
-  // Now TypeScript knows toolCall has function property
+  // Use the OpenAI tool call id as both id and call_id in Responses shape
   return {
     type: "function_call",
-    id: toolUseId,
+    id: toolCall.id,
     call_id: toolCall.id,
     name: toolCall.function.name,
     arguments: toolCall.function.arguments,

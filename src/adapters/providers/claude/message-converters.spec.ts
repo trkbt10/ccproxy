@@ -1,6 +1,6 @@
 import type { ImageBlockParam, URLImageSource, Base64ImageSource, ToolResultBlockParam, MessageParam } from "@anthropic-ai/sdk/resources/messages";
 import { convertClaudeImageToOpenAI, convertToolResult, convertClaudeMessage } from "./message-converters";
-import { UnifiedIdManager as CallIdManager } from "../../../utils/id-management/unified-id-manager";
+// UnifiedIdManager removed; conversions are deterministic
 
 describe("Claude provider local converters", () => {
   test("convertClaudeImageToOpenAI base64", () => {
@@ -21,14 +21,9 @@ describe("Claude provider local converters", () => {
     expect(res).toEqual({ type: 'input_image', image_url: 'https://example.com/img.jpg', detail: 'auto' });
   });
 
-  test("convertToolResult mapping and fallback", () => {
+  test("convertToolResult deterministic call_id", () => {
     const toolRes: ToolResultBlockParam = { type: 'tool_result', tool_use_id: 'tool_1', content: 'ok' };
-    const m = new CallIdManager();
-    // fallback when no mapping
-    expect(convertToolResult(toolRes, m)).toEqual({ id: 'tool_1', type: 'function_call_output', call_id: 'tool_1', output: 'ok' });
-    // with mapping
-    m.registerMapping('call_1', 'tool_1', 't', { source: 'test' });
-    expect(convertToolResult(toolRes, m)).toEqual({ id: 'tool_1', type: 'function_call_output', call_id: 'call_1', output: 'ok' });
+    expect(convertToolResult(toolRes)).toEqual({ id: 'tool_1', type: 'function_call_output', call_id: 'call_1', output: 'ok' });
   });
 
   test("convertClaudeMessage assistant text + tool_use", () => {
@@ -39,9 +34,7 @@ describe("Claude provider local converters", () => {
         { type: 'tool_use', id: 'tool_a', name: 'calc', input: { a: 1 } },
       ],
     };
-    const m = new CallIdManager();
-    m.registerMapping('call_a', 'tool_a', 'calc', { source: 'test' });
-    const res = convertClaudeMessage(msg, m);
+    const res = convertClaudeMessage(msg);
     expect(res).toEqual([
       { type: 'message', role: 'assistant', content: 'Hello.' },
       { type: 'function_call', call_id: 'call_a', name: 'calc', arguments: JSON.stringify({ a: 1 }) },
@@ -58,9 +51,7 @@ describe("Claude provider local converters", () => {
         { type: 'tool_result', tool_use_id: 'tool_x', content: 'R' },
       ],
     };
-    const m = new CallIdManager();
-    m.registerMapping('call_x', 'tool_x', 't', { source: 'test' });
-    const res = convertClaudeMessage(msg, m);
+    const res = convertClaudeMessage(msg);
     expect(res).toEqual([
       { type: 'message', role: 'user', content: [ { type: 'input_text', text: 'A' }, { type: 'input_text', text: 'B' } ] },
       { type: 'message', role: 'user', content: [ { type: 'input_image', image_url: 'https://example.com/i.png', detail: 'auto' } ] },
@@ -68,4 +59,3 @@ describe("Claude provider local converters", () => {
     ]);
   });
 });
-

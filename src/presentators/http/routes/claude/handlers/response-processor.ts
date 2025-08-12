@@ -11,8 +11,7 @@ import { OpenAIToClaudeSSEStream } from "../../../../../adapters/message-convert
 import { HonoSSESink } from "../../../streaming/hono-sse-sink";
 import { convertOpenAIResponseToClaude } from "../../../../../adapters/message-converter/openai-to-claude/response";
 import { conversationStore } from "../../../../../utils/conversation/conversation-store";
-import { claudeToResponsesLocal as claudeToResponses } from "../../../../../adapters/providers/claude/request-to-responses";
-import type { ResponsesModel as OpenAIResponseModel } from "openai/resources/shared";
+// Using OpenAICompatibleClient for Responses-compatible flow
 import {
   logError,
   logInfo,
@@ -22,7 +21,7 @@ import {
   logPerformance,
 } from "../../../../../utils/logging/migrate-logger";
 import type { RoutingConfig } from "../../../../../config/types";
-import { UnifiedIdManager } from "../../../../../utils/id-management/unified-id-manager";
+// ID manager no longer required; conversions are deterministic
 
 export type ProcessorConfig = {
   requestId: string;
@@ -36,10 +35,7 @@ export type ProcessorConfig = {
   providerId?: string;
 };
 
-export type ProcessorResult = {
-  responseId?: string;
-  callIdManager?: UnifiedIdManager;
-};
+export type ProcessorResult = { responseId?: string };
 
 function handleError(
   requestId: string,
@@ -55,15 +51,6 @@ function handleError(
     (error as Error & { status?: number }).status === 400 &&
     error.message?.includes("No tool output found")
   ) {
-    if (conversationId) {
-      const manager = conversationStore.getIdManager(conversationId);
-      const debugReport = manager.generateDebugReport();
-      logError("Tool output not found - ID mapping debug report", new Error(debugReport), {
-        ...context,
-        conversationId,
-      });
-    }
-
     logUnexpected(
       "Tool output should be found in conversation history",
       "No tool output found error",
@@ -100,8 +87,7 @@ async function processNonStreamingResponse(
     if (!isOpenAIResponse(respOrStream)) throw new Error("Expected non-streaming OpenAI response shape");
     const response = respOrStream;
 
-    const manager = conversationStore.getIdManager(config.conversationId);
-    const { message: claudeResponse } = convertOpenAIResponseToClaude(response, manager);
+    const { message: claudeResponse } = convertOpenAIResponseToClaude(response);
 
     conversationStore.updateConversationState({
       conversationId: config.conversationId,
@@ -182,23 +168,21 @@ async function processStreamingResponse(
 }
 
 export function createResponseProcessor(config: ProcessorConfig) {
-  // Bind conversation to the OpenAI-compatible client if supported (for ID management)
-  if (typeof config.openai.setConversationId === "function") {
-    config.openai.setConversationId(config.conversationId);
-  }
+  // Build minimal Responses request from Claude request (text-only)
   async function buildOpenAIRequest(req: ClaudeMessageCreateParams): Promise<ResponseCreateParams> {
-    const ctx = conversationStore.getConversationContext(config.conversationId);
-    const idManager = conversationStore.getIdManager(config.conversationId);
-    const modelResolver = () => config.model as OpenAIResponseModel;
-    const openaiReq = claudeToResponses(
-      req,
-      modelResolver,
-      idManager,
-      ctx.lastResponseId,
-      config.routingConfig,
-      config.providerId
-    );
-    return openaiReq;
+    return {
+      model: config.model,
+      input: [
+        {
+          type: "message",
+          role: req.messages?.[0]?.role || "user",
+          content: [
+            { type: "input_text", text: String((req.messages?.[0] as any)?.content || "") },
+          ],
+        },
+      ],
+      stream: config.stream,
+    } as ResponseCreateParams;
   }
 
   async function process(c: Context): Promise<Response> {

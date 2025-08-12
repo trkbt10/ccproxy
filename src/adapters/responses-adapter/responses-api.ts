@@ -18,7 +18,6 @@ import { convertChatCompletionToResponse } from "./chat-to-response-converter";
 import { StreamHandler } from "./stream-handler";
 import { convertResponseInputToMessages } from "./input-converter";
 import { convertToolsForChat, convertToolChoiceForChat } from "./tool-converter";
-import { UnifiedIdManager } from "../../utils/id-management/unified-id-manager";
 
 export type ResponsesAPIOptions = {
   apiKey: string;
@@ -33,7 +32,6 @@ export type ResponsesAPIOptions = {
  */
 export class ResponsesAPI {
   private openai: OpenAI;
-  private callIdManager: UnifiedIdManager;
 
   constructor(options: ResponsesAPIOptions) {
     this.openai = new OpenAI({
@@ -42,7 +40,6 @@ export class ResponsesAPI {
       maxRetries: options.maxRetries ?? 3,
       timeout: options.timeout ?? 60000,
     });
-    this.callIdManager = new UnifiedIdManager();
   }
 
   /**
@@ -150,7 +147,7 @@ export class ResponsesAPI {
       stream: false,
     });
 
-    return convertChatCompletionToResponse(completion, this.callIdManager);
+    return convertChatCompletionToResponse(completion);
   }
 
   private async handleStreamingResponse(
@@ -166,24 +163,5 @@ export class ResponsesAPI {
     return handler.handleStream(stream);
   }
 
-  /**
-   * Gets the current call ID manager
-   */
-  getCallIdManager(): UnifiedIdManager {
-    return this.callIdManager;
-  }
-
-  /**
-   * Sets a new call ID manager (useful for maintaining state across requests)
-   */
-  setCallIdManager(manager: UnifiedIdManager): void {
-    this.callIdManager = manager;
-  }
-
-  /**
-   * Clears the call ID mappings
-   */
-  clearCallIdMappings(): void {
-    this.callIdManager = new UnifiedIdManager();
-  }
+  // Legacy ID manager APIs removed: deterministic conversion makes them unnecessary
 }

@@ -9,14 +9,10 @@ import type { OpenAICompatibleClient } from "./openai-client-types";
 import { isResponseEventStream } from "./openai-generic/guards";
 import { resolveModelForProvider } from "./shared/model-mapper";
 
-export function buildOpenAIClient(
-  provider: Provider | undefined,
+export function buildOpenAICompatibleClient(
+  provider: Provider,
   modelHint?: string
 ): OpenAICompatibleClient {
-  if (!provider) {
-    throw new Error("No provider configured. Define providers in RoutingConfig.");
-  }
-  // Delegate to specialized clients where needed
   if (provider.type === "gemini") {
     const { buildOpenAICompatibleClientForGemini } = require("./gemini/openai-compatible");
     return buildOpenAICompatibleClientForGemini(provider, modelHint);
@@ -30,7 +26,6 @@ export function buildOpenAIClient(
     return buildOpenAICompatibleClientForClaude(provider, modelHint);
   }
 
-  // Generic path for OpenAI-compatible adapters
   const adapter = getAdapterFor(provider, modelHint);
   return {
     responses: {
@@ -40,16 +35,10 @@ export function buildOpenAIClient(
       ): Promise<OpenAIResponse | AsyncIterable<ResponseStreamEvent>> {
         const model = await resolveModelForProvider({
           provider,
-          sourceModel:
-            (params.model as string | undefined) ||
-            (modelHint as string | undefined),
+          sourceModel: (params.model as string | undefined) || (modelHint as string | undefined),
           modelHint,
         });
-        const out = await adapter.generate({
-          model,
-          input: params,
-          signal: options?.signal,
-        });
+        const out = await adapter.generate({ model, input: params, signal: options?.signal });
         if (
           (typeof out === "object" && out !== null && (out as { object?: unknown }).object === "response") ||
           isResponseEventStream(out)

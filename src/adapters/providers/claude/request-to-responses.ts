@@ -2,13 +2,11 @@ import type { MessageCreateParams as ClaudeMessageCreateParams, Tool as ClaudeTo
 import type { ResponseCreateParams, Tool as OpenAITool, FunctionTool, ResponseInputItem, ToolChoiceOptions, ToolChoiceFunction } from "openai/resources/responses/responses";
 import type { ToolChoice as ClaudeToolChoice } from "@anthropic-ai/sdk/resources/messages";
 import type { ResponsesModel as OpenAIResponseModel } from "openai/resources/shared";
-import type { UnifiedIdManager } from "../../../utils/id-management/unified-id-manager";
 import { convertClaudeMessage } from "./message-converters";
 
 export function claudeToResponsesLocal(
   req: ClaudeMessageCreateParams,
   modelResolver: () => OpenAIResponseModel,
-  idManager: UnifiedIdManager,
   _lastResponseId?: string | undefined,
   _routingConfig?: unknown,
   _providerId?: string
@@ -17,7 +15,7 @@ export function claudeToResponsesLocal(
   const inputItems: ResponseInputItem[] = [];
 
   for (const m of req.messages) {
-    const parts = convertClaudeMessage(m, idManager);
+    const parts = convertClaudeMessage(m);
     inputItems.push(...parts);
   }
 

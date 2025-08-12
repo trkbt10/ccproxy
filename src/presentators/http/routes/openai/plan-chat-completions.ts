@@ -9,7 +9,7 @@ import type {
   ResponseCreateParams,
   ResponseStreamEvent,
 } from "openai/resources/responses/responses";
-import { buildOpenAIClient } from "../../../../adapters/providers/openai-client";
+import { buildOpenAICompatibleClient } from "../../../../adapters/providers/openai-client";
 import {
   buildResponseInputFromChatMessages,
   mapChatToolsToResponses,
@@ -44,14 +44,14 @@ export async function planChatCompletions(
   if (!provider && providerId !== "default") {
     throw new Error(`Provider '${providerId}' not found`);
   }
-  const openai = buildOpenAIClient(provider, model);
+  const openai = buildOpenAICompatibleClient(provider!, model);
 
   // Build OpenAI Responses request from Chat Completions request
   const openaiReq: ResponseCreateParams = mapChatToResponses(chatRequest);
 
   if (chatRequest.stream) {
     async function* iterator(): AsyncIterable<ChatCompletionChunk> {
-      const maybeStream = await openai.responses.create(openaiReq);
+      const maybeStream = await openai.responses.create({ ...openaiReq, stream: true }, opts.abortController ? { signal: opts.abortController.signal } : undefined);
       if (!isResponseEventStream(maybeStream))
         throw new Error("Expected ResponseStreamEvent iterable");
       for await (const ev of maybeStream) {
@@ -63,10 +63,7 @@ export async function planChatCompletions(
   }
 
   async function getBody(): Promise<ChatCompletion> {
-    const maybeResp = await openai.responses.create({
-      ...openaiReq,
-      stream: false,
-    });
+    const maybeResp = await openai.responses.create({ ...openaiReq, stream: false }, opts.abortController ? { signal: opts.abortController.signal } : undefined);
     if (!isOpenAIResponse(maybeResp))
       throw new Error("Expected OpenAIResponse");
     return mapResponseToChatCompletion(maybeResp, model);

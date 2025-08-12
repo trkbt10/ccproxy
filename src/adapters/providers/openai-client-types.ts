@@ -22,5 +22,11 @@ export type OpenAICompatibleClient = {
   setConversationId?(conversationId: string): void;
 };
 
-export type { OpenAIResponse, ResponseCreateParams, ResponseCreateParamsNonStreaming, ResponseCreateParamsStreaming, ResponseStreamEvent };
+export type {
+  OpenAIResponse,
+  ResponseCreateParams,
+  ResponseCreateParamsNonStreaming,
+  ResponseCreateParamsStreaming,
+  ResponseStreamEvent,
+};
 

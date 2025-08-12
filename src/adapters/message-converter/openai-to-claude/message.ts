@@ -13,15 +13,14 @@ import type {
   ResponseFunctionToolCall as OpenAIResponseFunctionToolCall,
   ResponseFunctionToolCallOutputItem as OpenAIResponseFunctionToolCallOutputItem,
 } from "openai/resources/responses/responses";
-import { UnifiedIdManager } from "../../../utils/id-management/unified-id-manager";
+import { toClaudeToolUseIdFromOpenAI } from "../../../utils/conversation/id-conversion";
 import { convertOpenAIImageToClaude } from "./image";
 
 /**
  * Convert OpenAI message to Claude message format
  */
 export function convertOpenAIMessage(
-  message: OpenAIResponseInputItem,
-  callIdManager: UnifiedIdManager
+  message: OpenAIResponseInputItem
 ): ClaudeMessageParam {
 
   // Check if it's a message type (EasyInputMessage or ResponseInputItem.Message)
@@ -77,7 +76,7 @@ export function convertOpenAIMessage(
   // Handle function call
   if ('type' in message && message.type === "function_call") {
     const funcCall = message as OpenAIResponseFunctionToolCall;
-    const toolUseId = callIdManager.getClaudeToolUseId(funcCall.call_id) || funcCall.call_id;
+    const toolUseId = toClaudeToolUseIdFromOpenAI(funcCall.call_id);
 
     const toolUseBlock: ClaudeToolUseBlock = {
       type: "tool_use",
@@ -95,14 +94,11 @@ export function convertOpenAIMessage(
   // Handle function call output
   if ('type' in message && message.type === "function_call_output") {
     const funcOutput = message as OpenAIResponseFunctionToolCallOutputItem;
-    const toolUseId = callIdManager.getClaudeToolUseId(funcOutput.call_id);
-    if (!toolUseId) {
-      console.warn(`[WARN] No tool_use_id found for call_id: ${funcOutput.call_id}`);
-    }
+    const toolUseId = toClaudeToolUseIdFromOpenAI(funcOutput.call_id);
 
     const toolResultBlock: ClaudeToolResultBlock = {
       type: "tool_result",
-      tool_use_id: toolUseId || funcOutput.call_id, // Fallback to call_id if mapping not found
+      tool_use_id: toolUseId,
       content: funcOutput.output,
     };
 
@@ -125,15 +121,14 @@ export function convertOpenAIMessage(
  * Convert multiple OpenAI messages to Claude messages
  */
 export function convertOpenAIMessages(
-  messages: OpenAIResponseInputItem[],
-  callIdManager: UnifiedIdManager
+  messages: OpenAIResponseInputItem[]
 ): ClaudeMessageParam[] {
   const claudeMessages: ClaudeMessageParam[] = [];
   
   let currentMessage: ClaudeMessageParam | null = null;
 
   for (const message of messages) {
-    const converted = convertOpenAIMessage(message, callIdManager);
+    const converted = convertOpenAIMessage(message);
     
     // Merge consecutive messages with the same role
     if (currentMessage && currentMessage.role === converted.role) {

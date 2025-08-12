@@ -14,7 +14,7 @@ import type {
   ChatCompletionContentPartImage,
   ChatCompletionContentPartRefusal,
 } from "openai/resources/chat/completions";
-import { UnifiedIdManager } from "../../../utils/id-management/unified-id-manager";
+import { toClaudeToolUseIdFromOpenAI } from "../../../utils/conversation/id-conversion";
 import { logDebug } from "../../../utils/logging/migrate-logger";
 
 /**
@@ -22,7 +22,7 @@ import { logDebug } from "../../../utils/logging/migrate-logger";
  */
 export function convertChatCompletionMessages(
   messages: ChatCompletionMessageParam[],
-  callIdManager: UnifiedIdManager
+  _unused?: unknown
 ): { messages: ClaudeMessageParam[], system?: string } {
   const claudeMessages: ClaudeMessageParam[] = [];
   let systemPrompt: string | undefined;
@@ -49,13 +49,13 @@ export function convertChatCompletionMessages(
       }
     } else if (message.role === "assistant") {
       const assistantMsg = message as ChatCompletionAssistantMessageParam;
-      const content = convertAssistantMessageContent(assistantMsg, callIdManager);
+      const content = convertAssistantMessageContent(assistantMsg);
       if (content.length > 0) {
         claudeMessages.push({ role: "assistant", content });
       }
     } else if (message.role === "tool") {
       const toolMsg = message as ChatCompletionToolMessageParam;
-      const content = convertToolMessageContent(toolMsg, callIdManager);
+      const content = convertToolMessageContent(toolMsg);
       claudeMessages.push({ role: "user", content });
     }
   }
@@ -104,8 +104,7 @@ function convertUserMessageContent(
  * Convert assistant message content to Claude format
  */
 function convertAssistantMessageContent(
-  message: ChatCompletionAssistantMessageParam,
-  callIdManager: UnifiedIdManager
+  message: ChatCompletionAssistantMessageParam
 ): ContentBlockParam[] {
   const blocks: ContentBlockParam[] = [];
   
@@ -131,18 +130,7 @@ function convertAssistantMessageContent(
     for (const toolCall of message.tool_calls) {
       if (toolCall.type === "function") {
         // Map OpenAI tool call ID to Claude tool use ID
-        const claudeId = callIdManager.getClaudeToolUseId(toolCall.id);
-        const toolUseId = claudeId || `toolu_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`;
-        
-        // Register mapping if it's a new ID
-        if (!claudeId) {
-          callIdManager.registerMapping(
-            toolCall.id,
-            toolUseId,
-            toolCall.function.name,
-            { source: "chat-completion-assistant-message" }
-          );
-        }
+        const toolUseId = toClaudeToolUseIdFromOpenAI(toolCall.id);
         
         blocks.push({
           type: "tool_use",
@@ -167,21 +155,14 @@ function convertAssistantMessageContent(
  * Convert tool message to Claude format
  */
 function convertToolMessageContent(
-  message: ChatCompletionToolMessageParam,
-  callIdManager: UnifiedIdManager
+  message: ChatCompletionToolMessageParam
 ): Array<ContentBlockParam | ToolResultBlockParam> {
   // Get the Claude tool use ID from the OpenAI tool call ID
-  const claudeId = callIdManager.getClaudeToolUseId(message.tool_call_id);
-  
-  if (!claudeId) {
-    logDebug("Warning: No Claude ID mapping found for tool call", { 
-      openaiId: message.tool_call_id 
-    });
-  }
+  const claudeId = toClaudeToolUseIdFromOpenAI(message.tool_call_id);
   
   const toolResult: ToolResultBlockParam = {
     type: "tool_result",
-    tool_use_id: claudeId || message.tool_call_id, // Fallback to original ID
+    tool_use_id: claudeId,
     content: message.content,
   };
   

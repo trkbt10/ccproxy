@@ -15,30 +15,26 @@ export function buildOpenAIAdapter(
   provider: Provider,
   modelHint?: string
 ): ProviderAdapter<OpenAIResponseCreateParams, unknown> {
-  const apiKey = selectApiKey(provider, modelHint);
-  if (!apiKey) throw new Error("Missing OpenAI API key");
-  const resolvedKey: string = apiKey;
+  const resolvedKey = selectApiKey(provider, modelHint);
+  if (!resolvedKey) throw new Error("Missing OpenAI API key");
   const client = new OpenAI({
     apiKey: resolvedKey,
     baseURL: provider.baseURL,
     defaultHeaders: provider.defaultHeaders,
   });
-  type Req = Parameters<OpenAI["responses"]["create"]>[0];
   return {
     name: "openai",
     async generate(params) {
       const body: OpenAIResponseCreateParams = { ...(params.input as OpenAIResponseCreateParams), model: params.model };
-      return client.responses.create(
-        body,
-        params.signal ? { signal: params.signal } : undefined
-      );
+      return client.responses.create(body, params.signal ? { signal: params.signal } : undefined);
     },
     async *stream(params) {
-      const body: OpenAIResponseCreateParams = { ...(params.input as OpenAIResponseCreateParams), model: params.model, stream: true };
-      const maybeStream = await client.responses.create(
-        body,
-        params.signal ? { signal: params.signal } : undefined
-      );
+      const body: OpenAIResponseCreateParams = {
+        ...(params.input as OpenAIResponseCreateParams),
+        model: params.model,
+        stream: true,
+      };
+      const maybeStream = await client.responses.create(body, params.signal ? { signal: params.signal } : undefined);
       if (!isResponseEventStream(maybeStream)) {
         throw new Error("Expected OpenAI responses.create to return a stream when stream=true");
       }

@@ -1,6 +1,6 @@
 import type { ResponseStreamEvent as OpenAIResponseStreamEvent } from "openai/resources/responses/responses";
 import { GenerateContentResponse, GeminiPart } from "./fetch-client";
-import { UnifiedIdManager, IdFormat } from "../../../utils/id-management/unified-id-manager";
+import { generateOpenAICallId } from "../../../utils/conversation/id-conversion";
 
 function extractText(resp: GenerateContentResponse): string {
   const cand = resp.candidates && resp.candidates[0];
@@ -35,8 +35,7 @@ function extractFunctionCalls(
 }
 
 export async function* geminiToOpenAIStream(
-  src: AsyncIterable<GenerateContentResponse>,
-  idManager?: UnifiedIdManager
+  src: AsyncIterable<GenerateContentResponse>
 ): AsyncGenerator<OpenAIResponseStreamEvent, void, unknown> {
   const id = `resp_${Date.now()}`;
   yield {
@@ -78,11 +77,8 @@ export async function* geminiToOpenAIStream(
       const sig = `${c.name}|${c.arguments ?? ""}`;
       if (seenFnCalls.has(sig)) continue;
       seenFnCalls.add(sig);
-      const callId = sigToId.get(sig) || IdFormat.generateOpenAIId();
+      const callId = sigToId.get(sig) || generateOpenAICallId();
       sigToId.set(sig, callId);
-      if (idManager) {
-        idManager.recordToolCall({ id: callId, name: c.name, arguments: c.arguments ? JSON.parse(c.arguments) : undefined });
-      }
       yield {
         type: "response.output_item.added",
         item: {

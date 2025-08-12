@@ -12,7 +12,7 @@ import type {
   ResponseFunctionToolCall,
   ResponseFunctionToolCallOutputItem,
 } from "openai/resources/responses/responses";
-import { UnifiedIdManager } from "../../../utils/id-management/unified-id-manager";
+import { toOpenAICallIdFromClaude } from "../../../utils/conversation/id-conversion";
 
 function isBase64Source(src: unknown): src is Base64ImageSource {
   return (
@@ -43,17 +43,15 @@ export function convertClaudeImageToOpenAI(img: ImageBlockParam): { type: 'input
 }
 
 export function convertToolResult(
-  block: ToolResultBlockParam,
-  idManager: UnifiedIdManager
+  block: ToolResultBlockParam
 ): ResponseFunctionToolCallOutputItem {
-  const callId = idManager.getOpenAICallId(block.tool_use_id) || block.tool_use_id;
+  const callId = toOpenAICallIdFromClaude(block.tool_use_id);
   const output = typeof block.content === 'string' ? block.content : JSON.stringify(block.content);
   return { id: block.tool_use_id, type: 'function_call_output', call_id: callId, output };
 }
 
 export function convertClaudeMessage(
-  message: ClaudeMessageParam,
-  idManager: UnifiedIdManager
+  message: ClaudeMessageParam
 ): ResponseInputItem[] {
   const out: ResponseInputItem[] = [];
   const role = message.role;
@@ -82,8 +80,7 @@ export function convertClaudeMessage(
         const id = (b as { id: string }).id;
         const name = (b as { name: string }).name;
         const args = JSON.stringify((b as { input?: unknown }).input ?? {});
-        const existing = idManager.getOpenAICallId(id);
-        const callId = existing || id;
+        const callId = toOpenAICallIdFromClaude(id);
         out.push({ type: 'function_call', call_id: callId, name, arguments: args });
       }
     }
@@ -110,7 +107,7 @@ export function convertClaudeMessage(
         out.push({ role: 'user', content: [img] });
       } else if (t === 'tool_result') {
         flushTextParts();
-        out.push(convertToolResult(b as ToolResultBlockParam, idManager));
+        out.push(convertToolResult(b as ToolResultBlockParam));
       }
     }
     // final flush: if single part remaining, emit as plain string to match expected shape

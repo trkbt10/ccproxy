@@ -1,7 +1,7 @@
 /**
  * Represents the context of a conversation session
  */
-import { UnifiedIdRegistry, UnifiedIdManager } from "../id-management/unified-id-manager";
+// Deprecated: external ID manager removed; conversions are deterministic now
 // Type for message content
 type MessageContent = string | Record<string, unknown>;
 
@@ -38,7 +38,7 @@ export class ConversationStore {
   private conversations = new Map<string, ConversationContext>();
   private cleanupInterval: NodeJS.Timeout;
   private readonly maxAge = 30 * 60 * 1000; // 30 minutes
-  private readonly unifiedIdRegistry = new UnifiedIdRegistry();
+  // No external ID registry required
 
   /**
    * Creates a new ConversationStore instance.
@@ -54,7 +54,7 @@ export class ConversationStore {
   /**
    * Gets an existing conversation context or creates a new one.
    * Updates the last accessed timestamp for existing conversations.
-   * 
+   *
    * @param conversationId - Unique identifier for the conversation
    * @returns The conversation context
    */
@@ -77,7 +77,7 @@ export class ConversationStore {
   /**
    * Updates a conversation context with partial data.
    * Creates the conversation if it doesn't exist.
-   * 
+   *
    * @param conversationId - Unique identifier for the conversation
    * @param updates - Partial updates to apply to the context
    */
@@ -96,8 +96,6 @@ export class ConversationStore {
     const now = Date.now();
     for (const [id, context] of this.conversations.entries()) {
       if (now - context.lastAccessedAt.getTime() > this.maxAge) {
-        // Clear associated call_id mappings when conversation is purged by TTL
-        this.unifiedIdRegistry.clearManager(id);
         this.conversations.delete(id);
       }
     }
@@ -111,34 +109,24 @@ export class ConversationStore {
     if (this.cleanupInterval) {
       clearInterval(this.cleanupInterval);
     }
-    // Clear all associated call_id managers before wiping conversations
-    for (const id of this.conversations.keys()) {
-      this.unifiedIdRegistry.clearManager(id);
-    }
     this.conversations.clear();
   }
 
   /**
    * Updates conversation state with response details from an API call.
    * Stores response IDs for conversation continuity.
-   * 
+   *
    * @param params - Update parameters
    * @param params.conversationId - Unique identifier for the conversation
    * @param params.requestId - Current request ID for logging
    * @param params.responseId - OpenAI response ID to store for future requests
    */
-  updateConversationState({
-    conversationId,
-    requestId,
-    responseId,
-  }: ConversationUpdate): void {
+  updateConversationState({ conversationId, requestId, responseId }: ConversationUpdate): void {
     const updates: Record<string, unknown> = {};
 
     if (responseId) {
       updates.lastResponseId = responseId;
-      console.log(
-        `[Request ${requestId}] Stored response ID: ${responseId}`
-      );
+      console.log(`[Request ${requestId}] Stored response ID: ${responseId}`);
     }
 
     if (Object.keys(updates).length > 0) {
@@ -149,7 +137,7 @@ export class ConversationStore {
   /**
    * Retrieves the conversation context for a given conversation ID.
    * Creates a new context if one doesn't exist.
-   * 
+   *
    * @param conversationId - Unique identifier for the conversation
    * @returns The conversation context containing state and metadata
    */
@@ -159,69 +147,41 @@ export class ConversationStore {
 
   /**
    * Gets the call ID mapping for a conversation from the registry.
-   * 
+   *
    * @param conversationId - Unique identifier for the conversation
    * @returns The call ID mapping as a Map
    */
-  getCallIdMapping(conversationId: string): Map<string, string> {
-    const manager = this.unifiedIdRegistry.getManager(conversationId);
-    return manager.getMappingAsMap();
-  }
+  // getCallIdMapping removed — no longer needed
 
   /**
    * Gets the UnifiedIdManager for a specific conversation.
-   * 
+   *
    * @param conversationId - Unique identifier for the conversation
    * @returns The UnifiedIdManager instance for the conversation
    */
-  getIdManager(conversationId: string) {
-    return this.unifiedIdRegistry.getManager(conversationId);
-  }
+  // getIdManager removed — deterministic conversion obviates mapping
 
   // --- ID management facades (to reduce layer awareness) ---
 
   /**
    * Register a mapping between OpenAI call_id and Claude tool_use_id for a conversation
    */
-  registerIdMapping(
-    conversationId: string,
-    openaiCallId: string,
-    claudeToolUseId: string,
-    toolName?: string,
-    context?: Record<string, unknown>
-  ): void {
-    const manager = this.unifiedIdRegistry.getManager(conversationId);
-    manager.registerMapping(openaiCallId, claudeToolUseId, toolName, context);
-  }
+  // registerIdMapping removed — conversions are deterministic
 
   /**
    * Resolve OpenAI call_id from Claude tool_use_id within a conversation
    */
-  getOpenAICallId(conversationId: string, claudeToolUseId: string): string | undefined {
-    const manager = this.unifiedIdRegistry.getManager(conversationId);
-    return manager.getOpenAICallId(claudeToolUseId);
-  }
+  // getOpenAICallId removed
 
   /**
    * Resolve Claude tool_use_id from OpenAI call_id within a conversation
    */
-  getClaudeToolUseId(conversationId: string, openaiCallId: string): string | undefined {
-    const manager = this.unifiedIdRegistry.getManager(conversationId);
-    return manager.getClaudeToolUseId(openaiCallId);
-  }
+  // getClaudeToolUseId removed
 
   /**
    * Get or allocate an OpenAI call_id for a given Claude tool_use_id within a conversation
    */
-  getOrCreateOpenAICallIdForToolUse(
-    conversationId: string,
-    claudeToolUseId: string,
-    toolName?: string,
-    context?: Record<string, unknown>
-  ): string {
-    const manager = this.unifiedIdRegistry.getManager(conversationId);
-    return manager.getOrCreateOpenAICallIdForToolUse(claudeToolUseId, toolName, context);
-  }
+  // getOrCreateOpenAICallIdForToolUse removed
 }
 
 /**
@@ -230,4 +190,4 @@ export class ConversationStore {
 export const conversationStore = new ConversationStore();
 
 // Re-export for single entry point convenience
-export { UnifiedIdManager };
+// No UnifiedIdManager exports

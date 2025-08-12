@@ -12,18 +12,16 @@ import type {
   ContentBlock,
 } from "@anthropic-ai/sdk/resources/messages";
 import { isContentDelta, isContentStart, isContentStop, isInputJsonDelta, isMessageDeltaWithStop, isMessageStop, isTextBlock, isToolUseBlock, isTextDelta } from "./guards";
-import { UnifiedIdManager } from "../../../utils/id-management/unified-id-manager";
+import { toOpenAICallIdFromClaude } from "../../../utils/conversation/id-conversion";
 
 /**
  * Claude -> OpenAI Responses (non-stream)
  */
 export function claudeToOpenAIResponse(
   claude: ClaudeMessage,
-  requestModel: string,
-  idManager?: UnifiedIdManager
+  requestModel: string
 ): OpenAIResponse {
-  const manager = idManager || new UnifiedIdManager();
-  const { text, items } = extractItemsFromClaude(claude, manager);
+  const { text, items } = extractItemsFromClaude(claude);
   return buildResponse(items, requestModel, claude, text);
 }
 
@@ -32,8 +30,7 @@ export function claudeToOpenAIResponse(
  */
 export async function* claudeToOpenAIStream(
   events: AsyncIterable<MessageStreamEvent>,
-  requestModel: string,
-  idManager?: UnifiedIdManager
+  requestModel: string
 ): AsyncGenerator<ResponseStreamEvent, void, unknown> {
   const id = `resp_${Date.now()}`;
   let createdEmitted = false;
@@ -43,7 +40,6 @@ export async function* claudeToOpenAIStream(
   let textItemId: string | null = null;
   let contentIndex = 0;
   let accumulatedText = '';
-  const manager = idManager || new UnifiedIdManager();
   for await (const ev of events) {
     if (!createdEmitted) {
       createdEmitted = true;
@@ -58,7 +54,7 @@ export async function* claudeToOpenAIStream(
       const index = ev.index ?? 0;
       const block = ev.content_block as ContentBlock;
       if (isToolUseBlock(block)) {
-        const openaiId = manager.getOrCreateOpenAICallIdForToolUse(block.id, block.name, { source: 'stream' });
+        const openaiId = toOpenAICallIdFromClaude(block.id);
         tools.set(index, { id: openaiId, name: block.name, args: "" });
         const item: ResponseOutputItem = buildFunctionCallItem(openaiId, block.name, undefined);
         const added: ResponseStreamEvent = {
@@ -138,7 +134,7 @@ export async function* claudeToOpenAIStream(
   }
 }
 
-function extractItemsFromClaude(msg: ClaudeMessage, manager: UnifiedIdManager): { text: string; items: ResponseOutputItem[] } {
+function extractItemsFromClaude(msg: ClaudeMessage): { text: string; items: ResponseOutputItem[] } {
   const items: ResponseOutputItem[] = [];
   const textParts: string[] = [];
   for (const block of msg.content as ContentBlock[]) {
@@ -146,7 +142,7 @@ function extractItemsFromClaude(msg: ClaudeMessage, manager: UnifiedIdManager): 
       textParts.push(block.text);
     } else if (isToolUseBlock(block)) {
       const args = JSON.stringify((block as { input?: unknown }).input ?? {});
-      const openaiId = manager.getOrCreateOpenAICallIdForToolUse(block.id, block.name, { source: 'non_stream' });
+      const openaiId = toOpenAICallIdFromClaude(block.id);
       items.push(buildFunctionCallItem(openaiId, block.name, args));
     }
   }

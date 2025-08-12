@@ -12,8 +12,6 @@ import { ensureGeminiStream, isGeminiResponse } from "../gemini/guards";
 import { responsesToGeminiRequest } from "./request";
 import { geminiToOpenAIStream } from "./openai-stream-adapter";
 import { geminiToOpenAIResponse } from "./openai-response-adapter";
-import { conversationStore } from "../../../utils/conversation/conversation-store";
-import { UnifiedIdManager } from "../../../utils/id-management/unified-id-manager";
 import { resolveModelForProvider } from "../shared/model-mapper";
 
 // conversion logic moved to converters/providers/gemini/request
@@ -25,8 +23,6 @@ export function buildOpenAICompatibleClientForGemini(
   const adapter = getAdapterFor(provider, modelHint);
   let resolveToolName: ((callId: string) => string | undefined) | undefined;
   let boundConversationId: string | undefined;
-  const getIdManager = (): UnifiedIdManager | undefined =>
-    boundConversationId ? conversationStore.getIdManager(boundConversationId) : undefined;
   return {
     responses: {
       async create(
@@ -47,7 +43,7 @@ export function buildOpenAICompatibleClientForGemini(
             input: body,
             signal: options?.signal,
           });
-          return geminiToOpenAIStream(ensureGeminiStream(stream as AsyncIterable<unknown>), getIdManager());
+          return geminiToOpenAIStream(ensureGeminiStream(stream as AsyncIterable<unknown>));
         }
         const raw = await adapter.generate({
           model,
@@ -56,7 +52,7 @@ export function buildOpenAICompatibleClientForGemini(
         });
         if (!isGeminiResponse(raw))
           throw new Error("Unexpected Gemini response shape");
-        return geminiToOpenAIResponse(raw, model, getIdManager());
+        return geminiToOpenAIResponse(raw, model);
       },
     },
     models: {

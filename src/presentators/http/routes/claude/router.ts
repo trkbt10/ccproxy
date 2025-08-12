@@ -3,7 +3,7 @@ import type { RoutingConfig } from "../../../../config/types";
 import type { MessageCreateParams as ClaudeMessageCreateParams } from "@anthropic-ai/sdk/resources/messages";
 import { countTokens } from "./handlers/token-counter";
 import { selectProviderForRequest } from "../../../../execution/tool-model-planner";
-import { buildOpenAIClient } from "../../../../adapters/providers/openai-client";
+import { buildOpenAICompatibleClientForClaude } from "../../../../adapters/providers/claude/openai-compatible";
 import { createResponseProcessor } from "./handlers/response-processor";
 
 export function createClaudeRouter(routingConfig: RoutingConfig) {
@@ -33,7 +33,7 @@ export function createClaudeRouter(routingConfig: RoutingConfig) {
       throw new Error(`Provider '${providerSelection.providerId}' not found`);
     }
 
-    const openai = buildOpenAIClient(provider, providerSelection.model);
+    const openai = buildOpenAICompatibleClientForClaude(provider!, providerSelection.model);
     const processor = createResponseProcessor({
       requestId,
       conversationId,
@@ -71,16 +71,12 @@ export function createClaudeRouter(routingConfig: RoutingConfig) {
     if (!defaultProvider) {
       return c.json({ status: "error", message: "No default provider configured" }, 400);
     }
-    const openai = buildOpenAIClient(defaultProvider);
+    const openai = buildOpenAICompatibleClientForClaude(defaultProvider);
     const response = await openai.responses.create({
       model: "gpt-4o-mini",
       input: [{ role: "user", content: "Hello" }],
     });
-    return c.json({
-      status: "ok",
-      openai_connected: true,
-      test_response: response,
-    });
+    return c.json({ status: "ok", openai_connected: true, test_response: response });
   });
 
   return router;

@@ -1,5 +1,5 @@
 import { ContentBlockManager } from "../../../utils/streaming/content-block-manager";
-import { conversationStore } from "../../../utils/conversation/conversation-store";
+import { toClaudeToolUseIdFromOpenAI } from "../../../utils/conversation/id-conversion";
 import { logDebug, logInfo, logUnexpected, logWarn } from "../../../utils/logging/migrate-logger";
 import type {
   ResponseStreamEvent as OpenAIResponseStreamEvent,
@@ -137,13 +137,11 @@ export class OpenAIToClaudeSSEStream {
         if (isResponseOutputItemAddedEvent(ev) && isFunctionCallItem(ev.item)) {
           const item = ev.item;
           logDebug("function_call event", { id: item.id, call_id: item.call_id, name: item.name, type: item.type }, { requestId: this.requestId });
-          const { metadata: toolMeta } = this.contentManager.addToolBlock(item.id, item.name, item.call_id);
-          if (item.call_id) {
-            conversationStore.registerIdMapping(this.conversationId, item.call_id, item.id, item.name, { source: "streaming-adapter", operation: "handleFunctionCall" });
-            logDebug(`Stored mapping: call_id ${item.call_id} -> tool_use_id ${item.id}`, undefined, { requestId: this.requestId });
-          }
+          // Derive a Claude tool_use_id deterministically from the OpenAI call_id
+          const claudeToolUseId = toClaudeToolUseIdFromOpenAI(item.call_id);
+          const { metadata: toolMeta } = this.contentManager.addToolBlock(claudeToolUseId, item.name, item.call_id);
           if (!toolMeta.started) {
-            await this.toolStart(toolMeta.index, { id: item.id, name: item.name });
+            await this.toolStart(toolMeta.index, { id: claudeToolUseId, name: item.name });
             this.contentManager.markStarted(toolMeta.id);
           }
         }
@@ -221,7 +219,7 @@ export class OpenAIToClaudeSSEStream {
   }
 
   getResult() {
-    return { responseId: this.responseId, usage: this.usage, callIdManager: conversationStore.getIdManager(this.conversationId) };
+    return { responseId: this.responseId, usage: this.usage } as const;
   }
 
   cleanup(): void {

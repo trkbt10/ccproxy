@@ -1,0 +1,13 @@
+{
+  "providers": {
+    "open": {
+      "type": "openai",
+      "apiKey": "${OPENAI_API_KEY:-sk-fallback}"
+    },
+    "cla": {
+      "type": "claude",
+      "apiKey": "${ANTHROPIC_API_KEY}"
+    }
+  },
+  "tools": []
+}

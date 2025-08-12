@@ -130,8 +130,8 @@ describe("E2E roundtrip: Claude SDK -> Proxy -> OpenAI (Responses)", () => {
     expect(seenEvents).toContain("message_stop");
 
     if (toolUseIds.length > 0) {
-      const idManager = conversationStore.getIdManager(conversationId);
-      const openaiId = idManager.getOpenAICallId(toolUseIds[0]);
+      const { toOpenAICallIdFromClaude } = await import("../src/utils/conversation/id-conversion");
+      const openaiId = toOpenAICallIdFromClaude(toolUseIds[0]);
       expect(typeof openaiId === "string").toBe(true);
     }
   });

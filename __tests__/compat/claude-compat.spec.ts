@@ -1,13 +1,13 @@
 import { compatCoverage, writeMarkdownReport } from "./compat-coverage";
 import type { Provider } from "../../src/config/types";
-import { buildProviderClient } from "../../src/adapters/providers/build-provider-client";
+import { buildOpenAICompatibleClientForClaude } from "../../src/adapters/providers/claude/openai-compatible";
 import { getAdapterFor } from "../../src/adapters/providers/registry";
 import {
   claudeToOpenAIResponse,
   claudeToOpenAIStream,
 } from "../../src/adapters/providers/claude/openai-response-adapter";
 import type { MessageCreateParams as ClaudeMessageCreateParams } from "@anthropic-ai/sdk/resources/messages";
-import type { OpenAICompatStreamEvent } from "../../src/adapters/providers/openai-compat/compat";
+import type { OpenAICompatStreamEvent } from "../../src/adapters/providers/openai-responses/compat";
 import type {
   ResponseCreateParams,
   ResponseStreamEvent,
@@ -23,7 +23,7 @@ describe("Claude OpenAI-compat (real API)", () => {
   const provider: Provider = { type: "claude" };
 
   maybe("responses non-stream basic", async () => {
-    const client = buildProviderClient(
+    const client = buildOpenAICompatibleClientForClaude(
       provider,
       process.env.ANTHROPIC_MODEL || "claude-3-5-sonnet-20240620"
     );
@@ -37,7 +37,7 @@ describe("Claude OpenAI-compat (real API)", () => {
   });
 
   maybe("responses stream chunk + done", async () => {
-    const client = buildProviderClient(
+    const client = buildOpenAICompatibleClientForClaude(
       provider,
       process.env.ANTHROPIC_MODEL || "claude-3-5-sonnet-20240620"
     );
@@ -56,7 +56,7 @@ describe("Claude OpenAI-compat (real API)", () => {
   });
 
   maybe("responses non-stream function_call", async () => {
-    const client = buildProviderClient(
+    const client = buildOpenAICompatibleClientForClaude(
       provider,
       process.env.ANTHROPIC_MODEL || "claude-3-5-sonnet-20240620"
     );
@@ -92,7 +92,7 @@ describe("Claude OpenAI-compat (real API)", () => {
   });
 
   maybe("responses stream function_call events", async () => {
-    const client = buildProviderClient(
+    const client = buildOpenAICompatibleClientForClaude(
       provider,
       process.env.ANTHROPIC_MODEL || "claude-3-5-sonnet-20240620"
     );
@@ -129,7 +129,7 @@ describe("Claude OpenAI-compat (real API)", () => {
   });
 
   maybe("models list basic", async () => {
-    const client = buildProviderClient(
+    const client = buildOpenAICompatibleClientForClaude(
       provider,
       process.env.ANTHROPIC_MODEL || "claude-3-5-sonnet-20240620"
     );

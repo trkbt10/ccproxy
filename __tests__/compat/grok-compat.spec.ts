@@ -1,37 +1,18 @@
-import { describe, it, expect, afterAll } from "bun:test";
-import {
-  grokToOpenAIResponse,
-  grokToOpenAIStream,
-} from "../../src/adapters/providers/grok/openai-response-adapter";
-import {
-  compatCoverage,
-  writeMarkdownReport,
-  writeCombinedMarkdownReport,
-} from "./compat-coverage";
+import { grokToOpenAIResponse, grokToOpenAIStream } from "../../src/adapters/providers/grok/openai-response-adapter";
+import { compatCoverage, writeMarkdownReport, writeCombinedMarkdownReport } from "./compat-coverage";
 import type { Provider } from "../../src/config/types";
-import {
-  isGrokChatCompletion,
-  ensureGrokStream,
-} from "../../src/adapters/providers/guards";
 import { getAdapterFor } from "../../src/adapters/providers/registry";
 import { resolveModelForProvider } from "../../src/adapters/providers/shared/model-mapper";
+import { ensureGrokStream, isGrokChatCompletion } from "../../src/adapters/providers/grok/guards";
 
 describe("Grok OpenAI-compat (real API)", () => {
   const provider: Provider = { type: "grok" };
 
-  async function selectGrokModel(
-    adapter: ReturnType<typeof getAdapterFor>,
-    provider: Provider
-  ): Promise<string> {
+  async function selectGrokModel(adapter: ReturnType<typeof getAdapterFor>, provider: Provider): Promise<string> {
     try {
       const listed = await adapter.listModels();
       const ids = listed.data.map((m) => m.id);
-      compatCoverage.log(
-        "grok",
-        `models.list: ${ids.slice(0, 5).join(", ")}${
-          ids.length > 5 ? ", ..." : ""
-        }`
-      );
+      compatCoverage.log("grok", `models.list: ${ids.slice(0, 5).join(", ")}${ids.length > 5 ? ", ..." : ""}`);
       if (ids.length > 0) compatCoverage.mark("grok", "models.list.basic");
     } catch (e) {
       compatCoverage.error(
@@ -51,13 +32,9 @@ describe("Grok OpenAI-compat (real API)", () => {
       messages: [{ role: "user", content: "Hello from compat test" }],
       stream: false,
     };
-    compatCoverage.log(
-      "grok",
-      `chat.non_stream request: ${JSON.stringify(input)}`
-    );
+    compatCoverage.log("grok", `chat.non_stream request: ${JSON.stringify(input)}`);
     const raw = await adapter.generate({ model, input });
-    if (!isGrokChatCompletion(raw))
-      throw new Error("Unexpected Grok response shape");
+    if (!isGrokChatCompletion(raw)) throw new Error("Unexpected Grok response shape");
     const out = grokToOpenAIResponse(raw, model);
     expect(out.object).toBe("response");
     expect(out.status).toBe("completed");
@@ -77,9 +54,7 @@ describe("Grok OpenAI-compat (real API)", () => {
     const types: string[] = [];
     compatCoverage.log("grok", `chat.stream request: ${JSON.stringify(input)}`);
     const s = adapter.stream!({ model, input });
-    for await (const ev of grokToOpenAIStream(
-      ensureGrokStream(s as AsyncIterable<unknown>)
-    )) {
+    for await (const ev of grokToOpenAIStream(ensureGrokStream(s as AsyncIterable<unknown>))) {
       types.push(ev.type);
     }
     compatCoverage.log("grok", `chat.stream events: ${types.join(", ")}`);
@@ -122,9 +97,7 @@ describe("Grok OpenAI-compat (real API)", () => {
     ];
     const input = {
       model,
-      messages: [
-        { role: "user", content: "What's the temperature in San Francisco?" },
-      ],
+      messages: [{ role: "user", content: "What's the temperature in San Francisco?" }],
       tools,
       tool_choice: {
         type: "function",
@@ -132,17 +105,11 @@ describe("Grok OpenAI-compat (real API)", () => {
       },
       stream: false,
     };
-    compatCoverage.log(
-      "grok",
-      `function_call (non-stream) request: ${JSON.stringify(input)}`
-    );
+    compatCoverage.log("grok", `function_call (non-stream) request: ${JSON.stringify(input)}`);
     const raw = await adapter.generate({ model, input });
-    if (!isGrokChatCompletion(raw))
-      throw new Error("Unexpected Grok response shape");
+    if (!isGrokChatCompletion(raw)) throw new Error("Unexpected Grok response shape");
     const out = grokToOpenAIResponse(raw, model);
-    const hasFn =
-      Array.isArray(out.output) &&
-      out.output.some((o) => o.type === "function_call");
+    const hasFn = Array.isArray(out.output) && out.output.some((o) => o.type === "function_call");
     expect(hasFn).toBe(true);
     compatCoverage.mark("grok", "chat.non_stream.function_call");
     compatCoverage.mark("grok", "responses.non_stream.function_call");
@@ -170,9 +137,7 @@ describe("Grok OpenAI-compat (real API)", () => {
     ];
     const input = {
       model,
-      messages: [
-        { role: "user", content: "Call tool to get ceiling for San Francisco" },
-      ],
+      messages: [{ role: "user", content: "Call tool to get ceiling for San Francisco" }],
       tools,
       tool_choice: {
         type: "function",
@@ -181,20 +146,12 @@ describe("Grok OpenAI-compat (real API)", () => {
       stream: true,
     };
     const types: string[] = [];
-    compatCoverage.log(
-      "grok",
-      `function_call (stream) request: ${JSON.stringify(input)}`
-    );
+    compatCoverage.log("grok", `function_call (stream) request: ${JSON.stringify(input)}`);
     const s = adapter.stream!({ model, input });
-    for await (const ev of grokToOpenAIStream(
-      ensureGrokStream(s as AsyncIterable<unknown>)
-    )) {
+    for await (const ev of grokToOpenAIStream(ensureGrokStream(s as AsyncIterable<unknown>))) {
       types.push(ev.type);
     }
-    compatCoverage.log(
-      "grok",
-      `function_call (stream) events: ${types.join(", ")}`
-    );
+    compatCoverage.log("grok", `function_call (stream) events: ${types.join(", ")}`);
     // Should include function call added/delta/done sequence (single chunk semantics)
     expect(types).toContain("response.output_item.added");
     expect(types).toContain("response.function_call_arguments.delta");
@@ -218,9 +175,7 @@ afterAll(async () => {
     try {
       await writeMarkdownReport(report);
       // eslint-disable-next-line no-console
-      console.log(
-        `Saved compatibility report: reports/openai-compat/${prov}.md`
-      );
+      console.log(`Saved compatibility report: reports/openai-compat/${prov}.md`);
     } catch (e) {
       // eslint-disable-next-line no-console
       console.warn("Failed to write compatibility report:", e);
@@ -234,9 +189,7 @@ afterAll(async () => {
     }));
     await writeCombinedMarkdownReport(combined);
     // eslint-disable-next-line no-console
-    console.log(
-      `Saved combined compatibility report: reports/openai-compat/summary.md`
-    );
+    console.log(`Saved combined compatibility report: reports/openai-compat/summary.md`);
   } catch (e) {
     // eslint-disable-next-line no-console
     console.warn("Failed to write combined report:", e);

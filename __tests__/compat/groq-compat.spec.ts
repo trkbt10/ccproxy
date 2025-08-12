@@ -1,8 +1,8 @@
 import { describe, it, expect, afterAll } from "bun:test";
 import type { Provider } from "../../src/config/types";
-import { getAdapterFor } from "../../src/adapters/providers/registry";
+// getAdapterFor removed; use OpenAI-compatible client instead
 import { compatCoverage, writeMarkdownReport, writeCombinedMarkdownReport } from "./compat-coverage";
-import { buildOpenAICompatibleClientFromAdapter } from "../../src/adapters/providers/openai-compat/from-adapter";
+import { buildOpenAICompatibleClientForGrok } from "../../src/adapters/providers/grok/openai-compatible";
 import type { Response as OpenAIResponse, ResponseStreamEvent } from "openai/resources/responses/responses";
 import { isOpenAIResponse, isResponseEventStream, responseHasFunctionCall } from "../../src/adapters/providers/openai-generic/guards";
 
@@ -23,10 +23,10 @@ describe("Groq OpenAI-compat (real API)", () => {
       return expect(true).toBe(true);
     }
 
-    const adapter = getAdapterFor(provider);
-    // listModels
+    const client = buildOpenAICompatibleClientForGrok(provider);
+    // models.list
     try {
-      const listed = await adapter.listModels();
+      const listed = await client.models.list();
       const ids = listed.data.map((m) => m.id);
       compatCoverage.log("groq", `models.list: ${ids.slice(0, 5).join(", ")}${ids.length > 5 ? ", ..." : ""}`);
       if (ids.length > 0) compatCoverage.mark("groq", "models.list.basic");
@@ -35,7 +35,6 @@ describe("Groq OpenAI-compat (real API)", () => {
     }
 
     // Use OpenAI-compatible client
-    const client = buildOpenAICompatibleClientFromAdapter(provider);
 
     // Pick model
     const model = env("GROQ_TEST_MODEL", "mixtral-8x7b-32768");
@@ -83,7 +82,7 @@ describe("Groq OpenAI-compat (real API)", () => {
 
   it("non-stream function_call", async () => {
     if (!apiKey) return expect(true).toBe(true);
-    const client = buildOpenAICompatibleClientFromAdapter(provider);
+    const client = buildOpenAICompatibleClientForGrok(provider);
     const model = env("GROQ_TEST_MODEL", "mixtral-8x7b-32768");
     const tools = [
       {
@@ -119,7 +118,7 @@ describe("Groq OpenAI-compat (real API)", () => {
 
   it("stream function_call delta", async () => {
     if (!apiKey) return expect(true).toBe(true);
-    const client = buildOpenAICompatibleClientFromAdapter(provider);
+    const client = buildOpenAICompatibleClientForGrok(provider);
     const model = env("GROQ_TEST_MODEL", "mixtral-8x7b-32768");
     const tools = [
       {

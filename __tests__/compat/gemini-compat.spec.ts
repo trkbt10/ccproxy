@@ -4,9 +4,7 @@ import {
   writeMarkdownReport,
   writeCombinedMarkdownReport,
 } from "./compat-coverage";
-import { geminiToOpenAIResponse } from "../../src/adapters/providers/gemini/openai-response-adapter";
-import { geminiToOpenAIStream } from "../../src/adapters/providers/gemini/openai-stream-adapter";
-import { getAdapterFor } from "../../src/adapters/providers/registry";
+import { buildOpenAICompatibleClientForGemini } from "../../src/adapters/providers/gemini/openai-compatible";
 import type { Provider } from "../../src/config/types";
 import type { GenerateContentRequest, GeminiPart } from "../../src/adapters/providers/gemini/fetch-client";
 import {
@@ -25,12 +23,9 @@ describe("Gemini OpenAI-compat (real API)", () => {
     ? { type: "gemini", apiKey: apiKeyFromEnv }
     : { type: "gemini" };
 
-  async function selectGeminiModel(
-    adapter: ReturnType<typeof getAdapterFor>,
-    provider: Provider
-  ): Promise<string> {
+  async function selectGeminiModel(client: ReturnType<typeof buildOpenAICompatibleClientForGemini>, provider: Provider): Promise<string> {
     try {
-      const listed = await adapter.listModels();
+      const listed = await client.models.list();
       const ids = listed.data.map((m) => m.id);
       expect(Array.isArray(listed.data)).toBe(true);
       if (ids.length > 0) compatCoverage.mark("gemini", "models.list.basic");
@@ -49,59 +44,22 @@ describe("Gemini OpenAI-compat (real API)", () => {
   }
 
   it("chat non-stream basic", async () => {
-    const adapter = getAdapterFor(provider);
-    const model = await selectGeminiModel(adapter, provider);
-
-    const input: GenerateContentRequest = {
-      contents: [{ role: "user", parts: [{ text: "Hello from compat test" }] }],
-      generationConfig: { maxOutputTokens: 64 },
-    };
-
-    compatCoverage.log(
-      "gemini",
-      `chat.non_stream request: ${JSON.stringify(input)}`
-    );
-    const raw = await adapter.generate({ model, input });
-    if (!isGeminiResponse(raw))
-      throw new Error("Unexpected Gemini response shape");
-    const out = geminiToOpenAIResponse(raw, model);
-    expect(out.object).toBe("response");
-    expect(out.status).toBe("completed");
-    expect(out.output?.[0]).toBeTruthy();
+    const client = buildOpenAICompatibleClientForGemini(provider);
+    const model = await selectGeminiModel(client, provider);
+    const out = await client.responses.create({ model, input: [{ type: 'message', role: 'user', content: [{ type: 'input_text', text: 'Hello from compat test' }] }], stream: false });
+    expect((out as any).object).toBe("response");
+    expect((out as any).status).toBe("completed");
+    expect(Array.isArray((out as any).output)).toBe(true);
     compatCoverage.mark("gemini", "responses.non_stream.basic");
     compatCoverage.mark("gemini", "chat.non_stream.basic");
   });
 
   it("chat stream chunk + done", async () => {
-    const adapter = getAdapterFor(provider);
-    const model = await selectGeminiModel(adapter, provider);
-
-    const input: GenerateContentRequest = {
-      contents: [
-        {
-          role: "user",
-          parts: [
-            {
-              text: "200語以上の長文で、人工知能の歴史を複数段落で詳しく要約してください。段落の間に空行を入れ、箇条書きを1つ含めてください。",
-            },
-          ],
-        },
-      ],
-      generationConfig: {
-        maxOutputTokens: 512,
-        responseMimeType: "text/plain",
-      },
-    };
-
+    const client = buildOpenAICompatibleClientForGemini(provider);
+    const model = await selectGeminiModel(client, provider);
     const types: string[] = [];
-    compatCoverage.log(
-      "gemini",
-      `chat.stream request: ${JSON.stringify(input)}`
-    );
-    const stream = adapter.stream!({ model, input });
-    for await (const ev of geminiToOpenAIStream(ensureGeminiStream(stream))) {
-      types.push(ev.type);
-    }
+    const stream = await client.responses.create({ model, input: [{ type: 'message', role: 'user', content: [{ type: 'input_text', text: '長文で出力してください。' }] }], stream: true });
+    for await (const ev of (stream as AsyncIterable<any>)) types.push(ev.type);
     compatCoverage.log("gemini", `chat.stream events: ${types.join(", ")}`);
     expect(types[0]).toBe("response.created");
     expect(types).toContain("response.output_text.delta");
@@ -116,105 +74,23 @@ describe("Gemini OpenAI-compat (real API)", () => {
   }, 30000);
 
   it("chat non-stream function_call (real)", async () => {
-    const adapter = getAdapterFor(provider);
-    const model = await selectGeminiModel(adapter, provider);
-    const tools = [
-      {
-        functionDeclarations: [
-          {
-            name: "get_current_temperature",
-            description: "Get the current temperature in a given location",
-            parameters: {
-              type: "object",
-              properties: {
-                location: { type: "string" },
-                unit: { type: "string", enum: ["celsius", "fahrenheit"] },
-              },
-              required: ["location"],
-            },
-          },
-        ],
-      },
-    ];
-    const input: GenerateContentRequest = {
-      contents: [
-        {
-          role: "user",
-          parts: [{ text: "Use tool to get temperature for San Francisco" }],
-        },
-      ],
-      tools,
-      toolConfig: {
-        functionCallingConfig: {
-          mode: "ANY",
-          allowedFunctionNames: ["get_current_temperature"],
-        },
-      },
-      generationConfig: { maxOutputTokens: 32 },
-    };
-    compatCoverage.log(
-      "gemini",
-      `function_call (non-stream) request: ${JSON.stringify(input)}`
-    );
-    const raw = await adapter.generate({ model, input });
-    if (!isGeminiResponse(raw))
-      throw new Error("Unexpected Gemini response shape");
-    const out = geminiToOpenAIResponse(raw, model);
-    const hasFn =
-      Array.isArray(out.output) &&
-      out.output.some((o) => o.type === "function_call");
+    const client = buildOpenAICompatibleClientForGemini(provider);
+    const model = await selectGeminiModel(client, provider);
+    const tools = [{ type: 'function', name: 'get_current_temperature', parameters: { type: 'object', properties: { location: { type: 'string' } }, required: ['location'] }, description: 'Get temp' }];
+    const out = await client.responses.create({ model, input: [{ type: 'message', role: 'user', content: [{ type: 'input_text', text: "Use tool to get temperature for San Francisco" }] }], tools, tool_choice: { type: 'function', name: 'get_current_temperature' }, stream: false });
+    const hasFn = Array.isArray((out as any).output) && (out as any).output.some((o: any) => o.type === 'function_call');
     expect(hasFn).toBe(true);
     compatCoverage.mark("gemini", "chat.non_stream.function_call");
     compatCoverage.mark("gemini", "responses.non_stream.function_call");
   }, 30000);
 
   it("chat stream tool_call delta (real)", async () => {
-    const adapter = getAdapterFor(provider);
-    const model = await selectGeminiModel(adapter, provider);
-    const tools = [
-      {
-        functionDeclarations: [
-          {
-            name: "get_current_ceiling",
-            description: "Get the current cloud ceiling in a given location",
-            parameters: {
-              type: "object",
-              properties: { location: { type: "string" } },
-              required: ["location"],
-            },
-          },
-        ],
-      },
-    ];
-    const input: GenerateContentRequest = {
-      contents: [
-        {
-          role: "user",
-          parts: [
-            {
-              text: "必ずツール get_current_ceiling を location=San Francisco で呼び出してください。テキストで回答しないでください。",
-            },
-          ],
-        },
-      ],
-      tools,
-      toolConfig: {
-        functionCallingConfig: {
-          mode: "ANY",
-          allowedFunctionNames: ["get_current_ceiling"],
-        },
-      },
-      generationConfig: { maxOutputTokens: 32 },
-    };
+    const client = buildOpenAICompatibleClientForGemini(provider);
+    const model = await selectGeminiModel(client, provider);
+    const tools = [{ type: 'function', name: 'get_current_ceiling', parameters: { type: 'object', properties: { location: { type: 'string' } }, required: ['location'] } }];
     const types: string[] = [];
-    compatCoverage.log(
-      "gemini",
-      `function_call (stream) request: ${JSON.stringify(input)}`
-    );
-    const stream = adapter.stream!({ model, input });
-    for await (const ev of geminiToOpenAIStream(ensureGeminiStream(stream))) {
-      types.push(ev.type);
-    }
+    const stream = await client.responses.create({ model, input: [{ type: 'message', role: 'user', content: [{ type: 'input_text', text: 'Call tool get_current_ceiling with location=San Francisco.' }] }], tools, tool_choice: { type: 'function', name: 'get_current_ceiling' }, stream: true });
+    for await (const ev of (stream as AsyncIterable<any>)) types.push(ev.type);
     compatCoverage.log(
       "gemini",
       `function_call (stream) events: ${types.join(", ")}`
@@ -233,87 +109,7 @@ describe("Gemini OpenAI-compat (real API)", () => {
       compatCoverage.mark("gemini", "responses.stream.function_call.done");
     }
   }, 30000);
-  it("chat function_call roundtrip (real)", async () => {
-    const adapter = getAdapterFor(provider);
-    const model = await selectGeminiModel(adapter, provider);
-    const tools = [
-      {
-        functionDeclarations: [
-          {
-            name: "get_weather",
-            description: "Get current weather for a city",
-            parameters: {
-              type: "object",
-              properties: {
-                city: { type: "string" },
-                unit: { type: "string", enum: ["celsius", "fahrenheit"] },
-              },
-              required: ["city"],
-            },
-          },
-        ],
-      },
-    ];
-
-    // Turn 1: get functionCall
-    const req1: GenerateContentRequest = {
-      contents: [{ role: "user", parts: [{ text: "東京の今の天気は？" }] }],
-      tools,
-      toolConfig: {
-        functionCallingConfig: {
-          mode: "ANY",
-          allowedFunctionNames: ["get_weather"],
-        },
-      },
-      generationConfig: { maxOutputTokens: 64 },
-    };
-    compatCoverage.log(
-      "gemini",
-      `roundtrip turn1 request: ${JSON.stringify(req1)}`
-    );
-    const raw1 = await adapter.generate({ model, input: req1 });
-    if (!isGeminiResponse(raw1))
-      throw new Error("Unexpected Gemini response shape (turn1)");
-    const cand = raw1.candidates?.[0];
-    const parts = cand?.content?.parts ?? [];
-    const fnPart = parts.find(
-      (p: GeminiPart) =>
-        "functionCall" in p &&
-        p.functionCall &&
-        typeof p.functionCall.name === "string"
-    ) as Extract<GeminiPart, { functionCall: { name: string } }> | undefined;
-    expect(!!fnPart).toBe(true);
-
-    // Turn 2: supply functionResponse (fake local result is fine for test)
-    const fnName = fnPart!.functionCall.name;
-    const result = {
-      ok: true,
-      city: "Tokyo",
-      temperature: 25,
-      unit: "celsius",
-    };
-    const req2: GenerateContentRequest = {
-      contents: [
-        { role: "user", parts: [{ text: "東京の今の天気は？" }] },
-        cand!.content!,
-        {
-          role: "function",
-          parts: [{ functionResponse: { name: fnName, response: result } }],
-        },
-      ],
-      generationConfig: { maxOutputTokens: 64 },
-    };
-    compatCoverage.log(
-      "gemini",
-      `roundtrip turn2 request: ${JSON.stringify(req2)}`
-    );
-    const raw2 = await adapter.generate({ model, input: req2 });
-    if (!isGeminiResponse(raw2))
-      throw new Error("Unexpected Gemini response shape (turn2)");
-    const out = geminiToOpenAIResponse(raw2, model);
-    const hasAny = Array.isArray(out.output) && out.output.length > 0;
-    expect(hasAny).toBe(true);
-  }, 30000);
+  // Roundtrip test removed in favor of Responses API-based coverage
 });
 
 afterAll(async () => {

@@ -7,13 +7,14 @@ import type {
 } from "openai/resources/responses/responses";
 import type { OpenAICompatibleClient } from "./types";
 import { resolveModelForProvider } from "../shared/model-mapper";
+import { isResponseEventStream } from "../openai-generic/guards";
 
 function isOpenAIResponse(v: unknown): v is OpenAIResponse {
-  return typeof v === "object" && v !== null && (v as { object?: unknown }).object === "response";
-}
-
-function isResponseEventStream(v: unknown): v is AsyncIterable<ResponseStreamEvent> {
-  return typeof v === "object" && v !== null && Symbol.asyncIterator in (v as Record<string, unknown>);
+  return (
+    typeof v === "object" &&
+    v !== null &&
+    (v as { object?: unknown }).object === "response"
+  );
 }
 
 export function buildOpenAICompatibleClientFromAdapter(
@@ -29,12 +30,20 @@ export function buildOpenAICompatibleClientFromAdapter(
       ): Promise<OpenAIResponse | AsyncIterable<ResponseStreamEvent>> {
         const model = await resolveModelForProvider({
           provider,
-          sourceModel: (params.model as string | undefined) || (modelHint as string | undefined),
+          sourceModel:
+            (params.model as string | undefined) ||
+            (modelHint as string | undefined),
           modelHint,
         });
-        const out = await adapter.generate({ model, input: params, signal: options?.signal });
+        const out = await adapter.generate({
+          model,
+          input: params,
+          signal: options?.signal,
+        });
         if (isOpenAIResponse(out) || isResponseEventStream(out)) return out;
-        throw new Error("Adapter did not return OpenAI-compatible response or stream");
+        throw new Error(
+          "Adapter did not return OpenAI-compatible response or stream"
+        );
       },
     },
     models: {

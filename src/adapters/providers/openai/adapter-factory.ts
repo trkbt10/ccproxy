@@ -7,6 +7,7 @@ import type {
 import type { Provider } from "../../../config/types";
 import type { ProviderAdapter } from "../adapter";
 import { selectApiKey } from "../shared/select-api-key";
+import { isResponseEventStream } from "../openai-generic/guards";
 
 // API key selection centralized in shared/select-api-key
 
@@ -23,9 +24,6 @@ export function buildOpenAIAdapter(
     defaultHeaders: provider.defaultHeaders,
   });
   type Req = Parameters<OpenAI["responses"]["create"]>[0];
-  function isResponseEventStream(v: unknown): v is AsyncIterable<ResponseStreamEvent> {
-    return typeof v === "object" && v !== null && Symbol.asyncIterator in (v as Record<string, unknown>);
-  }
   return {
     name: "openai",
     async generate(params) {

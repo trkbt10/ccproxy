@@ -20,14 +20,13 @@ export function buildGeminiAdapter(
     apiKey: resolvedKey,
     baseURL: provider.baseURL,
   });
-  const adapter: ProviderAdapter<GenerateContentRequest, GenerateContentResponse> = {
+  const adapter: ProviderAdapter<
+    GenerateContentRequest,
+    GenerateContentResponse
+  > = {
     name: "gemini",
     async generate(params) {
-      return client.generateContent(
-        params.model,
-        params.input,
-        params.signal
-      );
+      return client.generateContent(params.model, params.input, params.signal);
     },
     async *stream(params) {
       let seenFunctionCall = false;
@@ -43,9 +42,7 @@ export function buildGeminiAdapter(
           if (
             parts.some(
               (p) =>
-                p &&
-                p.functionCall &&
-                typeof p.functionCall.name === "string"
+                p && p.functionCall && typeof p.functionCall.name === "string"
             )
           ) {
             seenFunctionCall = true;
@@ -57,8 +54,13 @@ export function buildGeminiAdapter(
       }
       // Synthesize a functionCall at the end when tools are forced but Gemini didn't stream any
       try {
-        const { allowedFunctionName: fnName, mode } = extractFunctionCallingSpec(params.input);
-        if (!seenFunctionCall && fnName && (mode === "ANY" || mode === "AUTO")) {
+        const { allowedFunctionName: fnName, mode } =
+          extractFunctionCallingSpec(params.input);
+        if (
+          !seenFunctionCall &&
+          fnName &&
+          (mode === "ANY" || mode === "AUTO")
+        ) {
           const synthetic: GenerateContentResponse = {
             candidates: [
               {
@@ -114,11 +116,10 @@ function extractFunctionCallingSpec(input: GenerateContentRequest): {
   if (!isObject(tc)) return {};
   const fcc = (tc as Record<string, unknown>)["functionCallingConfig"];
   if (!isObject(fcc)) return {};
-  const allowed = (fcc as Record<string, unknown>)[
-    "allowedFunctionNames"
-  ];
+  const allowed = (fcc as Record<string, unknown>)["allowedFunctionNames"];
   const mode = (fcc as Record<string, unknown>)["mode"];
-  const first = Array.isArray(allowed) && allowed.length > 0 ? allowed[0] : undefined;
+  const first =
+    Array.isArray(allowed) && allowed.length > 0 ? allowed[0] : undefined;
   const name = typeof first === "string" ? first : undefined;
   return {
     allowedFunctionName: name,

@@ -4,13 +4,17 @@ import type { ProviderAdapter } from "../adapter";
 import { selectApiKey } from "../shared/select-api-key";
 import type {
   MessageCreateParams as ClaudeMessageCreateParams,
-  Message as ClaudeMessage,
 } from "@anthropic-ai/sdk/resources/messages";
+import type {
+  Response as OpenAIResponse,
+  ResponseStreamEvent,
+} from "openai/resources/responses/responses";
+import { claudeToOpenAIResponse, claudeToOpenAIStream } from "./openai-response-adapter";
 
 export function buildClaudeAdapter(
   provider: Provider,
   modelHint?: string
-): ProviderAdapter<ClaudeMessageCreateParams, ClaudeMessage> {
+): ProviderAdapter<ClaudeMessageCreateParams, OpenAIResponse | ResponseStreamEvent> {
   const apiKey = selectApiKey(provider, modelHint);
   if (!apiKey) throw new Error("Missing Anthropic API key (configure provider.apiKey or api.keyByModelPrefix)");
   const resolvedKey: string = apiKey;
@@ -20,16 +24,22 @@ export function buildClaudeAdapter(
     name: "claude",
     async generate(params) {
       const body: ClaudeMessageCreateParams = { ...(params.input as ClaudeMessageCreateParams), model: params.model };
-      return anthropic.messages.create(body, params.signal ? { signal: params.signal } : undefined) as unknown as ClaudeMessage;
+      const claudeResp = await anthropic.messages.create(
+        { ...body, stream: false },
+        params.signal ? { signal: params.signal } : undefined
+      );
+      // Map Claude JSON to OpenAI Responses JSON
+      return claudeToOpenAIResponse(claudeResp as any, body.model as string);
     },
     async *stream(params) {
       const body: ClaudeMessageCreateParams = { ...(params.input as ClaudeMessageCreateParams), model: params.model, stream: true };
       const streamAny = (await anthropic.messages.create(
         body,
         params.signal ? { signal: params.signal } : undefined
-      )) as unknown as AsyncIterable<unknown>;
-      for await (const ev of streamAny) {
-        yield ev as unknown as ClaudeMessage; // pass-through events; caller should adapt
+      )) as unknown as AsyncIterable<import("@anthropic-ai/sdk/resources/messages").MessageStreamEvent>;
+      // Re-yield as OpenAI Response stream events
+      for await (const ev of claudeToOpenAIStream(streamAny, body.model as string)) {
+        yield ev;
       }
     },
     async listModels() {

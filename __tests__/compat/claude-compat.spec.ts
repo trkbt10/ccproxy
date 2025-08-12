@@ -1,6 +1,6 @@
 import { compatCoverage, writeMarkdownReport } from "./compat-coverage";
 import type { Provider } from "../../src/config/types";
-import { buildProviderClient } from "../../src/execution/routing-config";
+import { buildProviderClient } from "../../src/adapters/providers/build-provider-client";
 import { getAdapterFor } from "../../src/adapters/providers/registry";
 import {
   claudeToOpenAIResponse,

@@ -1,5 +1,5 @@
 import type { Provider } from "../../../config/types";
-import { getAdapterFor } from "../registry";
+import { GeminiFetchClient } from "./fetch-client";
 import type {
   ResponseCreateParams,
   ResponseCreateParamsNonStreaming,
@@ -20,7 +20,8 @@ export function buildOpenAICompatibleClientForGemini(
   provider: Provider,
   modelHint?: string
 ): OpenAICompatibleClient {
-  const adapter = getAdapterFor(provider, modelHint);
+  const apiKey = provider.apiKey || process.env.GOOGLE_AI_STUDIO_API_KEY || process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY || process.env.GOOGLE_AI_API_KEY || "";
+  const client = new GeminiFetchClient({ apiKey, baseURL: provider.baseURL });
   let resolveToolName: ((callId: string) => string | undefined) | undefined;
   let boundConversationId: string | undefined;
   return {
@@ -36,20 +37,10 @@ export function buildOpenAICompatibleClientForGemini(
         });
         const body = responsesToGeminiRequest(params, resolveToolName);
         if ("stream" in params && params.stream === true) {
-          if (!adapter.stream)
-            throw new Error("Gemini adapter does not support streaming");
-          const stream = adapter.stream({
-            model,
-            input: body,
-            signal: options?.signal,
-          });
+          const stream = client.streamGenerateContent(model, body as GenerateContentRequest, options?.signal);
           return geminiToOpenAIStream(ensureGeminiStream(stream as AsyncIterable<unknown>));
         }
-        const raw = await adapter.generate({
-          model,
-          input: body,
-          signal: options?.signal,
-        });
+        const raw = await client.generateContent(model, body as GenerateContentRequest, options?.signal);
         if (!isGeminiResponse(raw))
           throw new Error("Unexpected Gemini response shape");
         return geminiToOpenAIResponse(raw, model);
@@ -57,8 +48,8 @@ export function buildOpenAICompatibleClientForGemini(
     },
     models: {
       async list() {
-        const res = await adapter.listModels();
-        return { data: res.data.map((m) => ({ id: m.id })) };
+        const res = await client.listModels();
+        return { data: res.models.map((m) => ({ id: m.name })) };
       },
     },
     setToolNameResolver(resolver: (callId: string) => string | undefined) {

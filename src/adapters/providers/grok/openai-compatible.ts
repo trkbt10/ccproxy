@@ -1,5 +1,6 @@
 import type { Provider } from "../../../config/types";
-import { getAdapterFor } from "../registry";
+import { selectApiKey } from "../shared/select-api-key";
+import { parseSSELine } from "../shared/sse";
 import type {
   Responses as OpenAIResponsesNS,
   ResponseCreateParams,
@@ -119,10 +120,12 @@ export function responsesToGrokRequest(params: ResponseCreateParams): { model?: 
 
 export function buildOpenAICompatibleClientForGrok(
   provider: Provider,
-  modelHint?: string,
-  adapterOverride?: ReturnType<typeof getAdapterFor>
+  modelHint?: string
 ): OpenAICompatibleClient {
-  const adapter = adapterOverride || getAdapterFor(provider, modelHint);
+  const baseURL = (provider.baseURL || "https://api.x.ai/v1").replace(/\/$/, "");
+  const apiKey = selectApiKey(provider, modelHint);
+  if (!apiKey) throw new Error("Missing Grok API key");
+  const auth = `Bearer ${apiKey}`;
   return {
     responses: {
       async create(params: ResponseCreateParams, options?: { signal?: AbortSignal }): Promise<any> {
@@ -133,19 +136,84 @@ export function buildOpenAICompatibleClientForGrok(
         });
         const body = responsesToGrokRequest(params);
         if ((params as { stream?: boolean }).stream === true) {
-          if (!adapter.stream) throw new Error("Grok adapter does not support streaming");
-          const stream = adapter.stream({ model, input: body, signal: options?.signal });
-          return grokToOpenAIStream(ensureGrokStream(stream as AsyncIterable<unknown>));
+          const url = new URL(baseURL + "/chat/completions");
+          const res = await fetch(url.toString(), {
+            method: "POST",
+            headers: {
+              "content-type": "application/json",
+              Authorization: auth,
+            },
+            body: JSON.stringify({ ...body, model, stream: true }),
+            signal: options?.signal,
+          });
+          if (!res.ok || !res.body) {
+            const text = await res.text().catch(() => "");
+            const { httpErrorFromResponse } = await import("../../errors/http-error");
+            throw httpErrorFromResponse(res as unknown as Response, text);
+          }
+          async function* chunks(): AsyncGenerator<unknown, void, unknown> {
+            const reader = (res.body as ReadableStream<Uint8Array>).getReader();
+            const decoder = new TextDecoder();
+            let buffer = "";
+            while (true) {
+              const { done, value } = await reader.read();
+              if (done) break;
+              buffer += decoder.decode(value, { stream: true });
+              let idx;
+              while ((idx = buffer.indexOf("\n\n")) >= 0) {
+                const raw = buffer.slice(0, idx).trim();
+                buffer = buffer.slice(idx + 2);
+                const payload = parseSSELine(raw);
+                if (payload) yield payload;
+              }
+              const lines = buffer.split("\n");
+              buffer = lines.pop() ?? "";
+              for (const line of lines) {
+                const payload = parseSSELine(line);
+                if (payload) yield payload;
+              }
+            }
+            if (buffer.trim()) {
+              const payload = parseSSELine(buffer.trim());
+              if (payload) yield payload;
+            }
+          }
+          return grokToOpenAIStream(ensureGrokStream(chunks()));
         }
-        const raw = await adapter.generate({ model, input: body, signal: options?.signal });
+        const url = new URL(baseURL + "/chat/completions");
+        const res = await fetch(url.toString(), {
+          method: "POST",
+          headers: {
+            "content-type": "application/json",
+            Authorization: auth,
+          },
+          body: JSON.stringify({ ...body, model, stream: false }),
+          signal: options?.signal,
+        });
+        if (!res.ok) {
+          const text = await res.text().catch(() => "");
+          const { httpErrorFromResponse } = await import("../../errors/http-error");
+          throw httpErrorFromResponse(res as unknown as Response, text);
+        }
+        const raw = (await res.json()) as unknown;
         if (!isGrokChatCompletion(raw)) throw new Error("Unexpected Grok response shape");
         return grokToOpenAIResponse(raw, model);
       },
     },
     models: {
       async list() {
-        const res = await adapter.listModels();
-        return { data: res.data.map((m) => ({ id: m.id })) };
+        const url = new URL(baseURL + "/models");
+        const res = await fetch(url.toString(), {
+          headers: { Authorization: auth },
+        });
+        if (!res.ok) {
+          const text = await res.text().catch(() => "");
+          const { httpErrorFromResponse } = await import("../../errors/http-error");
+          throw httpErrorFromResponse(res as unknown as Response, text);
+        }
+        const json = (await res.json()) as { data?: Array<{ id?: string }> };
+        const data = (json.data || []).map((m) => ({ id: m.id || "" })).filter((m) => m.id);
+        return { data } as { data: Array<{ id: string }> };
       },
     },
   };

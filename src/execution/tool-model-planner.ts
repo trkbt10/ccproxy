@@ -23,7 +23,9 @@ function hasContentArray(obj: unknown): obj is { content: unknown[] } {
 }
 
 // Type guard for action input
-function isActionInput(obj: unknown): obj is { action?: unknown; dryRun?: unknown } {
+function isActionInput(
+  obj: unknown
+): obj is { action?: unknown; dryRun?: unknown } {
   return typeof obj === "object" && obj !== null;
 }
 
@@ -34,26 +36,31 @@ export function selectProviderForRequest(
 ): { providerId: string; model: string } {
   // Model is determined by tool step or env/defaults; no header override
   const overrideModel = undefined;
-  
+
   // Check tool-specific provider settings
   const toolNames = extractToolNames(req);
   for (const name of toolNames) {
     const steps = planToolExecution(cfg, name, undefined);
     for (const s of steps) {
       if (s.kind === "responses_model") {
-        const providerId = s.providerId || cfg.defaults?.providerId || "default";
+        const providerId =
+          s.providerId || cfg.defaults?.providerId || "default";
         const model = s.model || cfg.defaults?.model || "gpt-4o-mini";
-        
+
         // Verify provider exists if not using default
-        if (providerId !== "default" && cfg.providers && !cfg.providers[providerId]) {
+        if (
+          providerId !== "default" &&
+          cfg.providers &&
+          !cfg.providers[providerId]
+        ) {
           throw new Error(`Provider '${providerId}' not found in providers`);
         }
-        
+
         return { providerId, model };
       }
     }
   }
-  
+
   // Use default provider
   // Determine providerId: explicit defaults -> 'default' -> only provider name if exactly one defined
   const providers = cfg.providers || {};
@@ -69,8 +76,14 @@ export function selectProviderForRequest(
 }
 
 // Create the execution plan (ordered steps) for a given tool and input
-export function planToolExecution(cfg: RoutingConfig, toolName: string, input: unknown): Step[] {
-  const rule = cfg.tools?.find((r) => r.enabled !== false && r.name === toolName);
+export function planToolExecution(
+  cfg: RoutingConfig,
+  toolName: string,
+  input: unknown
+): Step[] {
+  const rule = cfg.tools?.find(
+    (r) => r.enabled !== false && r.name === toolName
+  );
   if (!rule || !rule.steps) {
     return [];
   }
@@ -93,11 +106,11 @@ function matchesWhen(step: Step, input: unknown): boolean {
 
 function extractToolNames(req: ClaudeMessageCreateParams): string[] {
   const result: string[] = [];
-  
+
   if (!hasMessagesArray(req)) {
     return result;
   }
-  
+
   for (const m of req.messages) {
     if (hasContentArray(m)) {
       for (const b of m.content) {
@@ -118,19 +131,21 @@ function isToolUseBlock(b: unknown): b is ToolUseShape {
   return rec.type === "tool_use" && typeof rec.name === "string";
 }
 
-function extractAction(input: unknown): "preview" | "plan" | "apply" | undefined {
+function extractAction(
+  input: unknown
+): "preview" | "plan" | "apply" | undefined {
   if (!isActionInput(input)) {
     return undefined;
   }
-  
+
   const a = input.action;
   if (a === "preview" || a === "plan" || a === "apply") {
     return a;
   }
-  
+
   if (input.dryRun === true) {
     return "preview";
   }
-  
+
   return undefined;
 }

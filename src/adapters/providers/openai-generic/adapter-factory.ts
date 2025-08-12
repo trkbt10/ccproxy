@@ -1,6 +1,6 @@
 import OpenAI from "openai";
 import type { Provider } from "../../../config/types";
-import type { ProviderAdapter } from "../adapter";
+import type { OpenAICompatibleClient, ChatCompletionsCreateFn, ResponsesCreateFn } from "../openai-client-types";
 import type {
   Response as OpenAIResponse,
   ResponseCreateParams,
@@ -68,7 +68,7 @@ async function* streamViaShim(
 export function buildOpenAIGenericAdapter(
   provider: Provider,
   modelHint?: string
-): ProviderAdapter<ResponseCreateParams, unknown> {
+): OpenAICompatibleClient {
   const baseURL =
     provider.baseURL && provider.baseURL.trim().length > 0
       ? provider.baseURL
@@ -90,64 +90,53 @@ export function buildOpenAIGenericAdapter(
   });
   const shim = new ResponsesAPI({ apiKey, baseURL });
 
-  return {
-    name: `${provider.type}`,
-    async generate(params) {
-      const wantsStream = Boolean(
-        (params.input as { stream?: boolean }).stream
-      );
-      const body: ResponseCreateParams = {
-        ...params.input,
-        model: params.model,
-        stream: wantsStream,
-      };
-      if (wantsStream) {
-        try {
-          const out = await client.responses.create(
-            body,
-            params.signal ? { signal: params.signal } : undefined
-          );
-          if (!isResponseEventStream(out)) {
+  const openAIClient: OpenAICompatibleClient = {
+    chat: {
+      completions: {
+        create: client.chat.completions.create.bind(client.chat.completions) as ChatCompletionsCreateFn,
+      },
+    },
+    responses: {
+      create: (async (params: ResponseCreateParams, options?: { signal?: AbortSignal }) => {
+        const wantsStream = Boolean(params.stream);
+        
+        if (wantsStream) {
+          try {
+            const out = await client.responses.create(
+              params,
+              options?.signal ? { signal: options.signal } : undefined
+            );
+            if (!isResponseEventStream(out)) {
+              const streamReq: ResponseCreateParamsStreaming = {
+                ...params,
+                stream: true,
+              };
+              return shim.create(streamReq);
+            }
+            return out;
+          } catch {
             const streamReq: ResponseCreateParamsStreaming = {
-              ...body,
+              ...params,
               stream: true,
             };
             return shim.create(streamReq);
           }
-          return out;
-        } catch {
-          const streamReq: ResponseCreateParamsStreaming = {
-            ...body,
-            stream: true,
-          };
-          return shim.create(streamReq);
         }
-      }
-      try {
-        return await createViaResponsesAPI(client, body, params.signal);
-      } catch (e) {
-        return await createViaShim(shim, body);
-      }
+        
+        try {
+          return await createViaResponsesAPI(client, params, options?.signal);
+        } catch (e) {
+          return await createViaShim(shim, params);
+        }
+      }) as ResponsesCreateFn,
     },
-    async *stream(params) {
-      const body: ResponseCreateParams = {
-        ...params.input,
-        model: params.model,
-        stream: true,
-      };
-      try {
-        yield* streamViaResponsesAPI(client, body, params.signal);
-      } catch (e) {
-        yield* streamViaShim(shim, body);
-      }
-    },
-    async listModels() {
-      const res = await client.models.list();
-      const data = res.data.map((m) => ({
-        id: m.id,
-        object: "model" as const,
-      }));
-      return { object: "list" as const, data };
+    models: {
+      async list() {
+        const res = await client.models.list();
+        return { data: res.data.map((m) => ({ id: m.id })) };
+      },
     },
   };
+  
+  return openAIClient;
 }

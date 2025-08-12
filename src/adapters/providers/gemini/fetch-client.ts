@@ -3,6 +3,8 @@
  * Targets Generative Language API v1beta endpoints.
  * Docs: https://ai.google.dev/api/rest/v1beta/models
  */
+import { httpErrorFromResponse } from "../../errors/http-error";
+
 export type GeminiClientOptions = {
   apiKey: string;
   baseURL?: string; // default https://generativelanguage.googleapis.com
@@ -104,7 +106,6 @@ export class GeminiFetchClient {
     });
     if (!res.ok) {
       const text = await res.text().catch(() => "");
-      const { httpErrorFromResponse } = await import("../../errors/http-error");
       throw httpErrorFromResponse(res as unknown as Response, text);
     }
     return (await res.json()) as GenerateContentResponse;
@@ -121,7 +122,6 @@ export class GeminiFetchClient {
     });
     if (!res.ok || !res.body) {
       const text = await res.text().catch(() => "");
-      const { httpErrorFromResponse } = await import("../../errors/http-error");
       throw httpErrorFromResponse(res as unknown as Response, text);
     }
     const reader = (res.body as ReadableStream<Uint8Array>).getReader();
@@ -177,7 +177,6 @@ export class GeminiFetchClient {
     const res = await this.f(url.toString(), { method: "GET" });
     if (!res.ok) {
       const text = await res.text().catch(() => "");
-      const { httpErrorFromResponse } = await import("../../errors/http-error");
       throw httpErrorFromResponse(res as unknown as Response, text);
     }
     return (await res.json()) as ListModelsResponse;
@@ -189,7 +188,6 @@ export class GeminiFetchClient {
     const res = await this.f(url.toString(), { method: "GET" });
     if (!res.ok) {
       const text = await res.text().catch(() => "");
-      const { httpErrorFromResponse } = await import("../../errors/http-error");
       throw httpErrorFromResponse(res as unknown as Response, text);
     }
     return (await res.json()) as GeminiModel;
@@ -206,7 +204,6 @@ export class GeminiFetchClient {
     });
     if (!res.ok) {
       const text = await res.text().catch(() => "");
-      const { httpErrorFromResponse } = await import("../../errors/http-error");
       throw httpErrorFromResponse(res as unknown as Response, text);
     }
     const json = (await res.json()) as CountTokensResponse;
@@ -225,7 +222,6 @@ export class GeminiFetchClient {
     });
     if (!res.ok) {
       const text = await res.text().catch(() => "");
-      const { httpErrorFromResponse } = await import("../../errors/http-error");
       throw httpErrorFromResponse(res as unknown as Response, text);
     }
     return (await res.json()) as EmbedContentResponse;
@@ -242,7 +238,6 @@ export class GeminiFetchClient {
     });
     if (!res.ok) {
       const text = await res.text().catch(() => "");
-      const { httpErrorFromResponse } = await import("../../errors/http-error");
       throw httpErrorFromResponse(res as unknown as Response, text);
     }
     return (await res.json()) as BatchEmbedContentsResponse;

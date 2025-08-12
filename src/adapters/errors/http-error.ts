@@ -25,7 +25,7 @@ function normalizeErrorCode(status: number, fallback?: string): string | undefin
 }
 
 export function httpErrorFromResponse(res: Response, bodyText?: string, fallbackCode?: string): HttpError {
-  const retryAfterHeader = (res as any)?.headers?.get?.('retry-after');
+  const retryAfterHeader = res.headers?.get?.('retry-after');
   const retryAfterNum = retryAfterHeader ? parseInt(retryAfterHeader, 10) : undefined;
   const status = (res as unknown as { status?: number }).status ?? 500;
   const statusText = (res as unknown as { statusText?: string }).statusText || '';

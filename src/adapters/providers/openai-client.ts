@@ -5,7 +5,7 @@ import type {
   ResponseCreateParams,
   ResponseStreamEvent,
 } from "openai/resources/responses/responses";
-import type { OpenAICompatibleClient } from "./openai-client-types";
+import type { OpenAICompatibleClient, ChatCompletionsCreateFn, ResponsesCreateFn } from "./openai-client-types";
 import { isResponseEventStream } from "./openai-generic/guards";
 import { resolveModelForProvider } from "./shared/model-mapper";
 import { selectApiKey } from "./shared/select-api-key";
@@ -30,11 +30,19 @@ export function buildOpenAICompatibleClient(
   // Generic OpenAI-compatible path using OpenAI SDK
   const apiKey = selectApiKey(provider, modelHint) || "";
   const client = new OpenAI({ apiKey, baseURL: provider.baseURL, defaultHeaders: provider.defaultHeaders });
-  return {
-    responses: {
-      async create(params: ResponseCreateParams, options?: { signal?: AbortSignal }) {
-        return client.responses.create(params as any, options?.signal ? { signal: options.signal } : undefined);
+  
+  // The OpenAI SDK already provides proper overloads, so we just need to pass them through
+  // with the correct typing
+  const openAIClient: OpenAICompatibleClient = {
+    chat: {
+      completions: {
+        create: client.chat.completions.create.bind(client.chat.completions) as ChatCompletionsCreateFn,
       },
+    },
+    responses: {
+      create: ((params: ResponseCreateParams, options?: { signal?: AbortSignal }) => 
+        client.responses.create(params, options?.signal ? { signal: options.signal } : undefined)
+      ) as ResponsesCreateFn,
     },
     models: {
       async list() {
@@ -43,4 +51,6 @@ export function buildOpenAICompatibleClient(
       },
     },
   };
+  
+  return openAIClient;
 }

@@ -80,12 +80,7 @@ describe("Claude OpenAI-compat (real API)", () => {
     } as ResponseCreateParams;
     const res = await client.responses.create(params);
     function hasFunctionCall(output: any[]): boolean {
-      return (
-        Array.isArray(output) &&
-        output.some(
-          (i) => i?.type === "function_call" && typeof i?.name === "string"
-        )
-      );
+      return Array.isArray(output) && output.some((i) => i?.type === "function_call" && typeof i?.name === "string");
     }
     expect(hasFunctionCall((res as any).output)).toBe(true);
     compatCoverage.mark("claude", "responses.non_stream.function_call");
@@ -116,9 +111,7 @@ describe("Claude OpenAI-compat (real API)", () => {
       stream: true,
     } as ResponseCreateParams;
     const types: ResponseStreamEvent["type"][] = [];
-    const stream = (await client.responses.create(
-      params
-    )) as AsyncIterable<ResponseStreamEvent>;
+    const stream = (await client.responses.create(params)) as AsyncIterable<ResponseStreamEvent>;
     for await (const ev of stream) types.push(ev.type);
     expect(types).toContain("response.output_item.added");
     expect(types).toContain("response.function_call_arguments.delta");
@@ -155,7 +148,11 @@ describe("Claude OpenAI-compat (real API)", () => {
   maybe("chat non-stream basic", async () => {
     const client = buildOpenAICompatibleClientForClaude(provider);
     const model = await pickClaudeModel();
-    const out = await client.responses.create({ model, input: [{ type: 'message', role: 'user', content: [{ type: 'input_text', text: 'Hello from chat basic' }] }], stream: false });
+    const out = await client.responses.create({
+      model,
+      input: [{ type: "message", role: "user", content: [{ type: "input_text", text: "Hello from chat basic" }] }],
+      stream: false,
+    });
     expect((out as any).object).toBe("response");
     expect(Array.isArray((out as any).output)).toBe(true);
     compatCoverage.mark("claude", "responses.non_stream.basic");
@@ -166,8 +163,14 @@ describe("Claude OpenAI-compat (real API)", () => {
     const client = buildOpenAICompatibleClientForClaude(provider);
     const model = await pickClaudeModel();
     const types: string[] = [];
-    const s = await client.responses.create({ model, input: [{ type: 'message', role: 'user', content: [{ type: 'input_text', text: 'Please stream a short reply' }] }], stream: true });
-    for await (const ev of (s as AsyncIterable<any>)) types.push(ev.type);
+    const s = await client.responses.create({
+      model,
+      input: [
+        { type: "message", role: "user", content: [{ type: "input_text", text: "Please stream a short reply" }] },
+      ],
+      stream: true,
+    });
+    for await (const ev of s as AsyncIterable<any>) types.push(ev.type);
     expect(types[0]).toBe("response.created");
     expect(types).toContain("response.output_text.delta");
     expect(types).toContain("response.output_text.done");
@@ -183,9 +186,23 @@ describe("Claude OpenAI-compat (real API)", () => {
   maybe("chat non-stream function_call", async () => {
     const client = buildOpenAICompatibleClientForClaude(provider);
     const model = await pickClaudeModel();
-    const tools = [{ type: 'function', name: 'echo', parameters: { type: 'object', properties: { text: { type: 'string' } }, required: ['text'] } }];
-    const out = await client.responses.create({ model, input: [{ type: 'message', role: 'user', content: [{ type: 'input_text', text: "Call echo with text='hi'" }] }], tools, tool_choice: { type: 'function', name: 'echo' }, stream: false });
-    const hasFn = Array.isArray((out as any).output) && (out as any).output.some((o: any) => o.type === 'function_call');
+    const tools = [
+      {
+        type: "function" as const,
+        name: "echo",
+        parameters: { type: "object", properties: { text: { type: "string" } }, required: ["text"] },
+        strict: true,
+      },
+    ];
+    const out = await client.responses.create({
+      model,
+      input: [{ type: "message", role: "user", content: [{ type: "input_text", text: "Call echo with text='hi'" }] }],
+      tools,
+      tool_choice: { type: "function", name: "echo" },
+      stream: false,
+    });
+    const hasFn =
+      Array.isArray((out as any).output) && (out as any).output.some((o: any) => o.type === "function_call");
     expect(hasFn).toBe(true);
     compatCoverage.mark("claude", "chat.non_stream.function_call");
     compatCoverage.mark("claude", "responses.non_stream.function_call");
@@ -194,10 +211,25 @@ describe("Claude OpenAI-compat (real API)", () => {
   maybe("chat stream tool_call delta", async () => {
     const client = buildOpenAICompatibleClientForClaude(provider);
     const model = await pickClaudeModel();
-    const tools = [{ type: 'function', name: 'echo', parameters: { type: 'object', properties: { text: { type: 'string' } }, required: ['text'] } }];
+    const tools = [
+      {
+        type: "function" as const,
+        name: "echo",
+        parameters: { type: "object", properties: { text: { type: "string" } }, required: ["text"] },
+        strict: true,
+      },
+    ];
     const types: string[] = [];
-    const s = await client.responses.create({ model, input: [{ type: 'message', role: 'user', content: [{ type: 'input_text', text: "Call echo with text='hello'" }] }], tools, tool_choice: { type: 'function', name: 'echo' }, stream: true });
-    for await (const ev of (s as AsyncIterable<any>)) types.push(ev.type);
+    const s = await client.responses.create({
+      model,
+      input: [
+        { type: "message", role: "user", content: [{ type: "input_text", text: "Call echo with text='hello'" }] },
+      ],
+      tools,
+      tool_choice: { type: "function", name: "echo" },
+      stream: true,
+    });
+    for await (const ev of s as AsyncIterable<any>) types.push(ev.type);
     expect(types).toContain("response.output_item.added");
     expect(types).toContain("response.function_call_arguments.delta");
     expect(types).toContain("response.output_item.done");

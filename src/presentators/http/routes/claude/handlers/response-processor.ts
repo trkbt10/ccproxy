@@ -145,8 +145,9 @@ async function processStreamingResponse(
       logInfo("Streaming completed", { responseId }, context);
     } catch (error) {
       try {
-        const status = (error as any)?.status as number | undefined;
-        const code = (error as any)?.code as string | undefined;
+        const errorObj = error as { status?: number; code?: string };
+        const status = errorObj.status;
+        const code = errorObj.code;
         const type =
           code ||
           (status === 401
@@ -177,9 +178,7 @@ export function createResponseProcessor(config: ProcessorConfig) {
         {
           type: "message",
           role: req.messages?.[0]?.role || "user",
-          content: [
-            { type: "input_text", text: String((req.messages?.[0] as any)?.content || "") },
-          ],
+          content: [{ type: "input_text", text: String(req.messages?.[0]?.content || "") }],
         },
       ],
       stream: config.stream,

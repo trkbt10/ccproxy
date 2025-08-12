@@ -1,10 +1,13 @@
-import { describe, it, expect, afterAll } from "bun:test";
 import type { Provider } from "../../src/config/types";
 // getAdapterFor removed; use OpenAI-compatible client instead
 import { compatCoverage, writeMarkdownReport, writeCombinedMarkdownReport } from "./compat-coverage";
 import { buildOpenAICompatibleClientForGrok } from "../../src/adapters/providers/grok/openai-compatible";
 import type { Response as OpenAIResponse, ResponseStreamEvent } from "openai/resources/responses/responses";
-import { isOpenAIResponse, isResponseEventStream, responseHasFunctionCall } from "../../src/adapters/providers/openai-generic/guards";
+import {
+  isOpenAIResponse,
+  isResponseEventStream,
+  responseHasFunctionCall,
+} from "../../src/adapters/providers/openai-generic/guards";
 
 function env(key: string, dflt?: string): string | undefined {
   const v = process.env[key];
@@ -31,7 +34,11 @@ describe("Groq OpenAI-compat (real API)", () => {
       compatCoverage.log("groq", `models.list: ${ids.slice(0, 5).join(", ")}${ids.length > 5 ? ", ..." : ""}`);
       if (ids.length > 0) compatCoverage.mark("groq", "models.list.basic");
     } catch (e) {
-      compatCoverage.error("groq", "models.list.basic", `Failed to list models: ${e instanceof Error ? e.message : String(e)}`);
+      compatCoverage.error(
+        "groq",
+        "models.list.basic",
+        `Failed to list models: ${e instanceof Error ? e.message : String(e)}`
+      );
     }
 
     // Use OpenAI-compatible client
@@ -52,7 +59,11 @@ describe("Groq OpenAI-compat (real API)", () => {
       compatCoverage.mark("groq", "responses.non_stream.basic");
       compatCoverage.mark("groq", "chat.non_stream.basic");
     } catch (e) {
-      compatCoverage.error("groq", "responses.non_stream.basic", `Non-stream failed: ${e instanceof Error ? e.message : String(e)}`);
+      compatCoverage.error(
+        "groq",
+        "responses.non_stream.basic",
+        `Non-stream failed: ${e instanceof Error ? e.message : String(e)}`
+      );
     }
 
     // Stream
@@ -76,7 +87,11 @@ describe("Groq OpenAI-compat (real API)", () => {
       compatCoverage.mark("groq", "chat.stream.chunk");
       compatCoverage.mark("groq", "chat.stream.done");
     } catch (e) {
-      compatCoverage.error("groq", "responses.stream.created", `Stream failed: ${e instanceof Error ? e.message : String(e)}`);
+      compatCoverage.error(
+        "groq",
+        "responses.stream.created",
+        `Stream failed: ${e instanceof Error ? e.message : String(e)}`
+      );
     }
   }, 30000);
 
@@ -86,7 +101,7 @@ describe("Groq OpenAI-compat (real API)", () => {
     const model = env("GROQ_TEST_MODEL", "mixtral-8x7b-32768");
     const tools = [
       {
-        type: "function",
+        type: "function" as const,
         name: "get_current_temperature",
         description: "Get the current temperature in a given location",
         parameters: {
@@ -94,14 +109,13 @@ describe("Groq OpenAI-compat (real API)", () => {
           properties: { location: { type: "string" } },
           required: ["location"],
         },
+        strict: true,
       },
     ];
     try {
       const maybeResp = await client.responses.create({
         model,
-        input: [
-          { type: "message", role: "user", content: "What's the temperature in Tokyo?" },
-        ],
+        input: [{ type: "message", role: "user", content: "What's the temperature in Tokyo?" }],
         tools,
         tool_choice: { type: "function", name: "get_current_temperature" },
         stream: false,
@@ -112,7 +126,11 @@ describe("Groq OpenAI-compat (real API)", () => {
       compatCoverage.mark("groq", "responses.non_stream.function_call");
       compatCoverage.mark("groq", "chat.non_stream.function_call");
     } catch (e) {
-      compatCoverage.error("groq", "responses.non_stream.function_call", `Non-stream function_call failed: ${e instanceof Error ? e.message : String(e)}`);
+      compatCoverage.error(
+        "groq",
+        "responses.non_stream.function_call",
+        `Non-stream function_call failed: ${e instanceof Error ? e.message : String(e)}`
+      );
     }
   }, 30000);
 
@@ -122,7 +140,7 @@ describe("Groq OpenAI-compat (real API)", () => {
     const model = env("GROQ_TEST_MODEL", "mixtral-8x7b-32768");
     const tools = [
       {
-        type: "function",
+        type: "function" as const,
         name: "get_current_ceiling",
         description: "Get the current cloud ceiling",
         parameters: {
@@ -130,14 +148,13 @@ describe("Groq OpenAI-compat (real API)", () => {
           properties: { location: { type: "string" } },
           required: ["location"],
         },
+        strict: true,
       },
     ];
     try {
       const maybeStream = await client.responses.create({
         model,
-        input: [
-          { type: "message", role: "user", content: "Call tool to get ceiling for Tokyo" },
-        ],
+        input: [{ type: "message", role: "user", content: "Call tool to get ceiling for Tokyo" }],
         tools,
         tool_choice: { type: "function", name: "get_current_ceiling" },
         stream: true,
@@ -153,7 +170,11 @@ describe("Groq OpenAI-compat (real API)", () => {
       compatCoverage.mark("groq", "responses.stream.function_call.done");
       compatCoverage.mark("groq", "chat.stream.tool_call.delta");
     } catch (e) {
-      compatCoverage.error("groq", "responses.stream.function_call.added", `Stream function_call failed: ${e instanceof Error ? e.message : String(e)}`);
+      compatCoverage.error(
+        "groq",
+        "responses.stream.function_call.added",
+        `Stream function_call failed: ${e instanceof Error ? e.message : String(e)}`
+      );
     }
   }, 30000);
 });
@@ -171,7 +192,11 @@ afterAll(async () => {
     }
   }
   try {
-    const combined = providers.map((p) => ({ ...compatCoverage.report(p), generatedAt: new Date().toISOString(), provider: p }));
+    const combined = providers.map((p) => ({
+      ...compatCoverage.report(p),
+      generatedAt: new Date().toISOString(),
+      provider: p,
+    }));
     await writeCombinedMarkdownReport(combined);
     console.log(`Saved combined compatibility report: reports/openai-compat/summary.md`);
   } catch (e) {

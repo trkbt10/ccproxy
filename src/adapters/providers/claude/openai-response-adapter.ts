@@ -11,6 +11,12 @@ import type {
   MessageStreamEvent,
   ContentBlock,
 } from "@anthropic-ai/sdk/resources/messages";
+import type {
+  ChatCompletion,
+  ChatCompletionChunk,
+  ChatCompletionMessage,
+  ChatCompletionMessageToolCall,
+} from "openai/resources/chat/completions";
 import { isContentDelta, isContentStart, isContentStop, isInputJsonDelta, isMessageDeltaWithStop, isMessageStop, isTextBlock, isToolUseBlock, isTextDelta } from "./guards";
 import { toOpenAICallIdFromClaude } from "../../../utils/conversation/id-conversion";
 
@@ -23,6 +29,164 @@ export function claudeToOpenAIResponse(
 ): OpenAIResponse {
   const { text, items } = extractItemsFromClaude(claude);
   return buildResponse(items, requestModel, claude, text);
+}
+
+/**
+ * Claude -> OpenAI ChatCompletion (non-stream)
+ */
+export function claudeToChatCompletion(
+  claude: ClaudeMessage,
+  requestModel: string
+): ChatCompletion {
+  const { text, toolCalls } = extractChatContentFromClaude(claude);
+  const created = Math.floor(Date.now() / 1000);
+  const usage = (claude as unknown as { usage?: { input_tokens?: number; output_tokens?: number } }).usage || {};
+  
+  return {
+    id: `chatcmpl_${Date.now()}`,
+    object: 'chat.completion',
+    created,
+    model: requestModel,
+    choices: [{
+      index: 0,
+      message: {
+        role: 'assistant',
+        content: text || null,
+        tool_calls: toolCalls.length > 0 ? toolCalls : undefined,
+        refusal: null,
+      },
+      finish_reason: claude.stop_reason === 'tool_use' ? 'tool_calls' : 'stop',
+      logprobs: null,
+    }],
+    usage: {
+      prompt_tokens: usage.input_tokens ?? 0,
+      completion_tokens: usage.output_tokens ?? 0,
+      total_tokens: (usage.input_tokens ?? 0) + (usage.output_tokens ?? 0),
+    },
+  };
+}
+
+/**
+ * Claude SSE -> OpenAI ChatCompletion stream
+ */
+export async function* claudeToChatCompletionStream(
+  events: AsyncIterable<MessageStreamEvent>,
+  requestModel: string
+): AsyncGenerator<ChatCompletionChunk, void, unknown> {
+  const id = `chatcmpl_${Date.now()}`;
+  const created = Math.floor(Date.now() / 1000);
+  let chunkIndex = 0;
+  const toolCallsInProgress = new Map<number, { id: string; name: string; args: string }>();
+  
+  for await (const ev of events) {
+    if (isContentStart(ev)) {
+      const index = ev.index ?? 0;
+      const block = ev.content_block as ContentBlock;
+      if (isToolUseBlock(block)) {
+        const openaiId = toOpenAICallIdFromClaude(block.id);
+        toolCallsInProgress.set(index, { id: openaiId, name: block.name, args: "" });
+        
+        yield {
+          id,
+          object: 'chat.completion.chunk',
+          created,
+          model: requestModel,
+          choices: [{
+            index: 0,
+            delta: {
+              tool_calls: [{
+                index,
+                id: openaiId,
+                type: 'function',
+                function: {
+                  name: block.name,
+                  arguments: '',
+                },
+              }],
+            },
+            finish_reason: null,
+          }],
+        };
+      }
+    } else if (isContentDelta(ev)) {
+      const index = ev.index ?? 0;
+      const d = ev.delta;
+      if (isTextDelta(d) && d.text) {
+        yield {
+          id,
+          object: 'chat.completion.chunk',
+          created,
+          model: requestModel,
+          choices: [{
+            index: 0,
+            delta: {
+              content: d.text,
+            },
+            finish_reason: null,
+          }],
+        };
+      } else if (isInputJsonDelta(d)) {
+        const t = toolCallsInProgress.get(index);
+        if (t && d.partial_json) {
+          t.args += d.partial_json;
+          yield {
+            id,
+            object: 'chat.completion.chunk',
+            created,
+            model: requestModel,
+            choices: [{
+              index: 0,
+              delta: {
+                tool_calls: [{
+                  index,
+                  function: {
+                    arguments: d.partial_json,
+                  },
+                }],
+              },
+              finish_reason: null,
+            }],
+          };
+        }
+      }
+    } else if (isMessageStop(ev)) {
+      yield {
+        id,
+        object: 'chat.completion.chunk',
+        created,
+        model: requestModel,
+        choices: [{
+          index: 0,
+          delta: {},
+          finish_reason: 'stop',
+        }],
+      };
+    }
+  }
+}
+
+function extractChatContentFromClaude(msg: ClaudeMessage): { text: string; toolCalls: ChatCompletionMessageToolCall[] } {
+  const toolCalls: ChatCompletionMessageToolCall[] = [];
+  const textParts: string[] = [];
+  
+  for (const block of msg.content as ContentBlock[]) {
+    if (isTextBlock(block)) {
+      textParts.push(block.text);
+    } else if (isToolUseBlock(block)) {
+      const args = JSON.stringify((block as { input?: unknown }).input ?? {});
+      const openaiId = toOpenAICallIdFromClaude(block.id);
+      toolCalls.push({
+        id: openaiId,
+        type: 'function',
+        function: {
+          name: block.name,
+          arguments: args,
+        },
+      });
+    }
+  }
+  
+  return { text: textParts.join(""), toolCalls };
 }
 
 /**

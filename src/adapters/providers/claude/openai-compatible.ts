@@ -1,15 +1,29 @@
 import Anthropic from "@anthropic-ai/sdk";
-import type { Response as OpenAIResponse, ResponseCreateParams, ResponseStreamEvent, ResponseInput } from "openai/resources/responses/responses";
+import type { 
+  Response as OpenAIResponse, 
+  ResponseCreateParams, 
+  ResponseCreateParamsNonStreaming,
+  ResponseCreateParamsStreaming,
+  ResponseStreamEvent, 
+  ResponseInput 
+} from "openai/resources/responses/responses";
 import type { Provider } from "../../../config/types";
 import type { OpenAICompatibleClient } from "../openai-client-types";
 import { selectApiKey } from "../shared/select-api-key";
 import { convertResponseInputToMessagesLocal, convertToolsForChatLocal, convertToolChoiceForChatLocal } from "./input-converters";
-import type { ChatCompletionCreateParams } from "openai/resources/chat/completions";
-import { claudeToOpenAIResponse, claudeToOpenAIStream } from "./openai-response-adapter";
+import type { 
+  ChatCompletionCreateParams,
+  ChatCompletionCreateParamsNonStreaming,
+  ChatCompletionCreateParamsStreaming,
+  ChatCompletion,
+  ChatCompletionChunk
+} from "openai/resources/chat/completions";
+import { claudeToOpenAIResponse, claudeToOpenAIStream, claudeToChatCompletion, claudeToChatCompletionStream } from "./openai-response-adapter";
 import { chatCompletionToClaudeLocal } from "./request-converter";
 // Conversation state updates are handled by the HTTP response processor
 import type { Message as ClaudeMessage } from "@anthropic-ai/sdk/resources/messages";
 import { resolveModelForProvider } from "../shared/model-mapper";
+import type { ChatCompletionsCreateFn, ResponsesCreateFn } from "../openai-client-types";
 
 function buildChatParams(
   params: ResponseCreateParams
@@ -63,12 +77,45 @@ export function buildOpenAICompatibleClientForClaude(
   let boundConversationId: string | undefined;
   // No longer using per-conversation ID manager; conversions are deterministic
 
-  return {
-    responses: {
-      async create(
-        params: ResponseCreateParams,
-        options?: { signal?: AbortSignal }
-      ): Promise<OpenAIResponse | AsyncIterable<ResponseStreamEvent>> {
+  // chat.completions.create overloads
+  function chatCompletionsCreate(params: ChatCompletionCreateParamsNonStreaming, options?: { signal?: AbortSignal }): Promise<ChatCompletion>;
+  function chatCompletionsCreate(params: ChatCompletionCreateParamsStreaming, options?: { signal?: AbortSignal }): Promise<AsyncIterable<ChatCompletionChunk>>;
+  function chatCompletionsCreate(params: ChatCompletionCreateParams, options?: { signal?: AbortSignal }): Promise<ChatCompletion | AsyncIterable<ChatCompletionChunk>>;
+  async function chatCompletionsCreate(
+    params: ChatCompletionCreateParams,
+    options?: { signal?: AbortSignal }
+  ): Promise<ChatCompletion | AsyncIterable<ChatCompletionChunk>> {
+          // Resolve model using live models list (type-safe, provider-driven)
+          const resolvedModel = await resolveModelForProvider({
+            provider,
+            sourceModel: params.model as string,
+            modelHint,
+          });
+          const claudeReq = chatCompletionToClaudeLocal({ ...params, model: resolvedModel });
+
+          if (params.stream) {
+            const streamAny = (await anthropic.messages.create(
+              { ...claudeReq, stream: true },
+              { signal: options?.signal }
+            )) as unknown as AsyncIterable<import("@anthropic-ai/sdk/resources/messages").MessageStreamEvent>;
+            return claudeToChatCompletionStream(streamAny, resolvedModel as string);
+          }
+
+          const claudeResp = await anthropic.messages.create(
+            { ...claudeReq, stream: false },
+            { signal: options?.signal }
+          );
+          return claudeToChatCompletion(claudeResp as ClaudeMessage, resolvedModel as string);
+  }
+
+  // responses.create overloads
+  function responsesCreate(params: ResponseCreateParamsNonStreaming, options?: { signal?: AbortSignal }): Promise<OpenAIResponse>;
+  function responsesCreate(params: ResponseCreateParamsStreaming, options?: { signal?: AbortSignal }): Promise<AsyncIterable<ResponseStreamEvent>>;
+  function responsesCreate(params: ResponseCreateParams, options?: { signal?: AbortSignal }): Promise<OpenAIResponse | AsyncIterable<ResponseStreamEvent>>;
+  async function responsesCreate(
+    params: ResponseCreateParams,
+    options?: { signal?: AbortSignal }
+  ): Promise<OpenAIResponse | AsyncIterable<ResponseStreamEvent>> {
         const chatParams = buildChatParams(params);
         // Resolve model using live models list (type-safe, provider-driven)
         chatParams.model = await resolveModelForProvider({
@@ -92,7 +139,16 @@ export function buildOpenAICompatibleClientForClaude(
         );
         const response = claudeToOpenAIResponse(claudeResp as ClaudeMessage, chatParams.model as string);
         return response;
+  }
+
+  return {
+    chat: {
+      completions: {
+        create: chatCompletionsCreate as ChatCompletionsCreateFn,
       },
+    },
+    responses: {
+      create: responsesCreate as ResponsesCreateFn,
     },
     models: {
       async list() {

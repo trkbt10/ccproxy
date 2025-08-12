@@ -6,7 +6,7 @@ import type {
   ResponseCreateParamsStreaming,
   ResponseStreamEvent,
 } from "openai/resources/responses/responses";
-import type { OpenAICompatibleClient } from "../openai-compat/types";
+import type { OpenAICompatibleClient } from "../openai-client-types";
 import type { GenerateContentRequest } from "./fetch-client";
 import { ensureGeminiStream, isGeminiResponse } from "../gemini/guards";
 import { responsesToGeminiRequest } from "./request";

@@ -4,7 +4,7 @@ import type {
   Responses as OpenAIResponsesNS,
   ResponseCreateParams,
 } from "openai/resources/responses/responses";
-import type { OpenAICompatibleClient } from "../openai-compat/types";
+import type { OpenAICompatibleClient } from "../openai-client-types";
 import { ensureGrokStream, isGrokChatCompletion } from "../grok/guards";
 import { grokToOpenAIResponse, grokToOpenAIStream } from "./openai-response-adapter";
 import { resolveModelForProvider } from "../shared/model-mapper";

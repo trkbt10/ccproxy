@@ -9,7 +9,7 @@ import type {
   ResponseCreateParams,
   ResponseStreamEvent,
 } from "openai/resources/responses/responses";
-import { buildProviderClient } from "../../../../adapters/providers/build-provider-client";
+import { buildOpenAIClient } from "../../../../adapters/providers/openai-client";
 import {
   buildResponseInputFromChatMessages,
   mapChatToolsToResponses,
@@ -44,7 +44,7 @@ export async function planChatCompletions(
   if (!provider && providerId !== "default") {
     throw new Error(`Provider '${providerId}' not found`);
   }
-  const openai = buildProviderClient(provider, model);
+  const openai = buildOpenAIClient(provider, model);
 
   // Build OpenAI Responses request from Chat Completions request
   const openaiReq: ResponseCreateParams = mapChatToResponses(chatRequest);

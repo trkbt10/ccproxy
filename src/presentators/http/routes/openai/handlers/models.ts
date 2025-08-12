@@ -1,6 +1,6 @@
 import type { Context } from "hono";
 import type { RoutingConfig, Provider } from "../../../../../config/types";
-import { buildProviderClient } from "../../../../../adapters/providers/build-provider-client";
+import { buildOpenAIClient } from "../../../../../adapters/providers/openai-client";
 
 function pickDefaultProvider(cfg: RoutingConfig): Provider | undefined {
   const id = cfg.defaults?.providerId || "default";
@@ -17,7 +17,7 @@ export const createModelsHandler =
       return c.json({ object: "list", data: [] });
     }
     try {
-      const client = buildProviderClient(provider);
+      const client = buildOpenAIClient(provider);
       const list = await client.models.list();
       const data = (list?.data || []).map((m) => ({
         id: m.id,

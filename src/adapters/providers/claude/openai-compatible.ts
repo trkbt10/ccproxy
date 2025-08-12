@@ -1,7 +1,7 @@
 import Anthropic from "@anthropic-ai/sdk";
 import type { Response as OpenAIResponse, ResponseCreateParams, ResponseStreamEvent, ResponseInput } from "openai/resources/responses/responses";
 import type { Provider } from "../../../config/types";
-import type { OpenAICompatibleClient } from "../openai-compat/types";
+import type { OpenAICompatibleClient } from "../openai-client-types";
 import { selectApiKey } from "../shared/select-api-key";
 import { convertResponseInputToMessagesLocal, convertToolsForChatLocal, convertToolChoiceForChatLocal } from "./input-converters";
 import type { ChatCompletionCreateParams } from "openai/resources/chat/completions";

@@ -2,7 +2,7 @@
 import type {
   OpenAICompatResponse,
   OpenAICompatStreamEvent,
-} from "../openai-compat/compat";
+} from "../openai-responses/compat";
 import type { GrokChatCompletion, GrokToolCall } from "./guards";
 
 // Non-stream: map chat.completions-style response to OpenAI Responses

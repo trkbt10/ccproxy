@@ -1,4 +1,4 @@
-import { OpenAICompatResponse } from "../openai-compat/compat";
+import { OpenAICompatResponse } from "../openai-responses/compat";
 import { GeminiPart, GenerateContentResponse } from "./fetch-client";
 import { UnifiedIdManager, IdFormat } from "../../../utils/id-management/unified-id-manager";
 

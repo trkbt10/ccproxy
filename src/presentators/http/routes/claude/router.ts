@@ -3,7 +3,7 @@ import type { RoutingConfig } from "../../../../config/types";
 import type { MessageCreateParams as ClaudeMessageCreateParams } from "@anthropic-ai/sdk/resources/messages";
 import { countTokens } from "./handlers/token-counter";
 import { selectProviderForRequest } from "../../../../execution/tool-model-planner";
-import { buildProviderClient } from "../../../../adapters/providers/build-provider-client";
+import { buildOpenAIClient } from "../../../../adapters/providers/openai-client";
 import { createResponseProcessor } from "./handlers/response-processor";
 
 export function createClaudeRouter(routingConfig: RoutingConfig) {
@@ -22,7 +22,10 @@ export function createClaudeRouter(routingConfig: RoutingConfig) {
 
     const claudeReq = (await c.req.json()) as ClaudeMessageCreateParams;
     const conversationId = c.req.header("x-conversation-id") || c.req.header("x-session-id") || requestId;
-    console.log(`[Request ${requestId}] Incoming Claude Request (conversation: ${conversationId}):`, JSON.stringify(claudeReq, null, 2));
+    console.log(
+      `[Request ${requestId}] Incoming Claude Request (conversation: ${conversationId}):`,
+      JSON.stringify(claudeReq, null, 2)
+    );
 
     const providerSelection = selectProviderForRequest(routingConfig, claudeReq);
     const provider = routingConfig.providers?.[providerSelection.providerId];
@@ -30,7 +33,7 @@ export function createClaudeRouter(routingConfig: RoutingConfig) {
       throw new Error(`Provider '${providerSelection.providerId}' not found`);
     }
 
-    const openai = buildProviderClient(provider, providerSelection.model);
+    const openai = buildOpenAIClient(provider, providerSelection.model);
     const processor = createResponseProcessor({
       requestId,
       conversationId,
@@ -68,12 +71,16 @@ export function createClaudeRouter(routingConfig: RoutingConfig) {
     if (!defaultProvider) {
       return c.json({ status: "error", message: "No default provider configured" }, 400);
     }
-    const openai = buildProviderClient(defaultProvider);
+    const openai = buildOpenAIClient(defaultProvider);
     const response = await openai.responses.create({
       model: "gpt-4o-mini",
       input: [{ role: "user", content: "Hello" }],
     });
-    return c.json({ status: "ok", openai_connected: true, test_response: response });
+    return c.json({
+      status: "ok",
+      openai_connected: true,
+      test_response: response,
+    });
   });
 
   return router;

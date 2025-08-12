@@ -1,4 +1,4 @@
-import type { OpenAICompatibleClient } from "../../../../../adapters/providers/openai-compat/types";
+import type { OpenAICompatibleClient } from "../../../../../adapters/providers/openai-client-types";
 import type {
   Response as OpenAIResponse,
   ResponseCreateParams,
@@ -58,7 +58,10 @@ function handleError(
     if (conversationId) {
       const manager = conversationStore.getIdManager(conversationId);
       const debugReport = manager.generateDebugReport();
-      logError("Tool output not found - ID mapping debug report", new Error(debugReport), { ...context, conversationId });
+      logError("Tool output not found - ID mapping debug report", new Error(debugReport), {
+        ...context,
+        conversationId,
+      });
     }
 
     logUnexpected(
@@ -82,9 +85,17 @@ async function processNonStreamingResponse(
 
   try {
     logDebug("Starting non-streaming response", { openaiReq }, context);
-    const respOrStream = await config.openai.responses.create({ ...openaiReq, stream: false }, config.signal ? { signal: config.signal } : undefined);
+    const respOrStream = await config.openai.responses.create(
+      { ...openaiReq, stream: false },
+      config.signal ? { signal: config.signal } : undefined
+    );
     function isOpenAIResponse(v: unknown): v is OpenAIResponse {
-      return typeof v === "object" && v !== null && "object" in (v as Record<string, unknown>) && (v as { object?: unknown }).object === "response";
+      return (
+        typeof v === "object" &&
+        v !== null &&
+        "object" in (v as Record<string, unknown>) &&
+        (v as { object?: unknown }).object === "response"
+      );
     }
     if (!isOpenAIResponse(respOrStream)) throw new Error("Expected non-streaming OpenAI response shape");
     const response = respOrStream;
@@ -92,7 +103,11 @@ async function processNonStreamingResponse(
     const manager = conversationStore.getIdManager(config.conversationId);
     const { message: claudeResponse } = convertOpenAIResponseToClaude(response, manager);
 
-    conversationStore.updateConversationState({ conversationId: config.conversationId, requestId: config.requestId, responseId: response.id });
+    conversationStore.updateConversationState({
+      conversationId: config.conversationId,
+      requestId: config.requestId,
+      responseId: response.id,
+    });
 
     const duration = Date.now() - startTime;
     logRequestResponse(openaiReq, response, duration, context);
@@ -135,13 +150,27 @@ async function processStreamingResponse(
       }
 
       const { responseId } = sse.getResult();
-      conversationStore.updateConversationState({ conversationId: config.conversationId, requestId: config.requestId, responseId });
+      conversationStore.updateConversationState({
+        conversationId: config.conversationId,
+        requestId: config.requestId,
+        responseId,
+      });
       logInfo("Streaming completed", { responseId }, context);
     } catch (error) {
       try {
         const status = (error as any)?.status as number | undefined;
         const code = (error as any)?.code as string | undefined;
-        const type = code || (status === 401 ? 'unauthorized' : status === 429 ? 'rate_limited' : status && status >= 500 ? 'upstream_error' : status && status >= 400 ? 'bad_request' : 'api_error');
+        const type =
+          code ||
+          (status === 401
+            ? "unauthorized"
+            : status === 429
+            ? "rate_limited"
+            : status && status >= 500
+            ? "upstream_error"
+            : status && status >= 400
+            ? "bad_request"
+            : "api_error");
         await sse.error(type, String(error));
       } catch {}
       handleError(config.requestId, openaiReq, error, config.conversationId);
@@ -154,7 +183,7 @@ async function processStreamingResponse(
 
 export function createResponseProcessor(config: ProcessorConfig) {
   // Bind conversation to the OpenAI-compatible client if supported (for ID management)
-  if (typeof config.openai.setConversationId === 'function') {
+  if (typeof config.openai.setConversationId === "function") {
     config.openai.setConversationId(config.conversationId);
   }
   async function buildOpenAIRequest(req: ClaudeMessageCreateParams): Promise<ResponseCreateParams> {
@@ -175,7 +204,9 @@ export function createResponseProcessor(config: ProcessorConfig) {
   async function process(c: Context): Promise<Response> {
     const openaiReq = await buildOpenAIRequest(config.claudeReq);
     logDebug("OpenAI Request Params", openaiReq, { requestId: config.requestId });
-    return config.stream ? processStreamingResponse(config, openaiReq, c) : processNonStreamingResponse(config, openaiReq, c);
+    return config.stream
+      ? processStreamingResponse(config, openaiReq, c)
+      : processNonStreamingResponse(config, openaiReq, c);
   }
 
   return { process };

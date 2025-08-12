@@ -39,4 +39,3 @@ declare module "hono" {
     abortController: AbortController;
   }
 }
-

@@ -82,7 +82,7 @@ export function isFunctionTool(t: unknown): t is OpenAITool & { type: "function"
 }
 
 export function isFunctionToolChoice(
-  tc: ChatCompletionToolChoiceOption | undefined
+  tc: unknown
 ): tc is Extract<ChatCompletionToolChoiceOption, { type: "function" }> {
   return isObject(tc) && ("type" in tc) && (tc as { type?: unknown }).type === "function";
 }

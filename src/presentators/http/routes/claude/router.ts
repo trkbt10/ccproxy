@@ -75,9 +75,15 @@ export function createClaudeRouter(routingConfig: RoutingConfig) {
     if (!defaultProvider) {
       return c.json({ status: "error", message: "No default provider configured" }, 400);
     }
-    const openai = buildOpenAICompatibleClientForClaude(defaultProvider);
+    
+    // Use the default model from routing config, or fall back to a reasonable default
+    const defaultModel = routingConfig.defaults?.model || "gpt-4o-mini";
+    
+    // Build the client with the model hint for proper model resolution
+    const openai = buildOpenAICompatibleClientForClaude(defaultProvider, defaultModel);
+    
     const response = await openai.responses.create({
-      model: "gpt-4o-mini",
+      model: defaultModel,
       input: [{ role: "user", content: "Hello" }],
     });
     return c.json({ status: "ok", openai_connected: true, test_response: response });

@@ -6,26 +6,8 @@ import type {
   ChatCompletionToolChoiceOption,
 } from "openai/resources/chat/completions";
 import type { ChatCompletionMessage, ChatCompletionMessageToolCall } from "openai/resources/chat/completions";
-
-function textFromMessages(messages: ChatCompletionMessageParam[]): string {
-  const u = [...messages].reverse().find((m) => m.role === "user");
-  const t = typeof u?.content === "string" ? u.content : "";
-  return t || "Hello";
-}
-
-function id(prefix: string): string {
-  return `${prefix}_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
-}
-
-function isObject(v: unknown): v is Record<string, unknown> {
-  return typeof v === "object" && v !== null;
-}
-
-function isFunctionToolChoice(
-  tc: ChatCompletionToolChoiceOption | undefined
-): tc is Extract<ChatCompletionToolChoiceOption, { type: "function" }> {
-  return isObject(tc) && ("type" in tc) && (tc as { type?: unknown }).type === "function";
-}
+import { isFunctionToolChoice } from "./guards";
+import { textFromMessages, generateId as id } from "./utils";
 
 export function grokToChatCompletion(params: ChatCompletionCreateParams): ChatCompletion {
   const rid = id("chatcmpl");

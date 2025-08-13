@@ -29,7 +29,7 @@ describe("chat-to-response-converter (unit)", () => {
       ],
       usage: { prompt_tokens: 0, completion_tokens: 0, total_tokens: 0 },
     };
-    const out = convertChatCompletionToResponse(completion, new Map());
+    const out = convertChatCompletionToResponse(completion);
     expect(out.output?.some((o) => o.type === "function_call")).toBe(true);
   });
 });

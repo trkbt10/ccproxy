@@ -52,7 +52,16 @@ export function convertToolsForChatLocal(tools: Tool[] | undefined): ChatComplet
         name: t.name,
         description: (t as { description?: string }).description ?? "",
       };
-      // Do not set parameters/strict if unknown shape
+      
+      // Add parameters if they exist
+      const toolWithParams = t as any;
+      if (toolWithParams.parameters) {
+        fn.parameters = toolWithParams.parameters;
+      }
+      if (toolWithParams.strict !== undefined) {
+        fn.strict = toolWithParams.strict;
+      }
+      
       out.push({ type: "function", function: fn });
     }
   }

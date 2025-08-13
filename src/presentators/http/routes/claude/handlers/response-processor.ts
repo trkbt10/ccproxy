@@ -3,6 +3,7 @@ import type {
   Response as OpenAIResponse,
   ResponseCreateParams,
   ResponseStreamEvent,
+  Tool,
 } from "openai/resources/responses/responses";
 import { streamSSE } from "hono/streaming";
 import type { Context } from "hono";
@@ -170,19 +171,64 @@ async function processStreamingResponse(
 }
 
 export function createResponseProcessor(config: ProcessorConfig) {
-  // Build minimal Responses request from Claude request (text-only)
+  // Build complete Responses request from Claude request including tools
   async function buildOpenAIRequest(req: ClaudeMessageCreateParams): Promise<ResponseCreateParams> {
-    return {
+    const openaiReq: ResponseCreateParams = {
       model: config.model,
-      input: [
-        {
-          type: "message",
-          role: req.messages?.[0]?.role || "user",
-          content: [{ type: "input_text", text: String(req.messages?.[0]?.content || "") }],
-        },
-      ],
+      input: req.messages?.map(msg => ({
+        type: "message" as const,
+        role: msg.role,
+        content: [{ type: "input_text", text: String(msg.content || "") }],
+      })) || [],
       stream: config.stream,
-    } as ResponseCreateParams;
+    };
+
+    // Add system message if present
+    if (req.system) {
+      openaiReq.instructions = typeof req.system === 'string' ? req.system : null;
+    }
+
+    // Convert and add tools if present
+    if (req.tools && req.tools.length > 0) {
+      openaiReq.tools = req.tools.map(tool => {
+        // Handle both legacy tools (with description/input_schema) and new tools
+        const toolAny = tool as any;
+        return {
+          type: "function" as const,
+          name: tool.name,
+          description: toolAny.description || "",
+          parameters: toolAny.input_schema || {},
+          strict: false,
+        } satisfies Tool;
+      });
+    }
+
+    // Convert tool choice if present
+    if (req.tool_choice) {
+      if (req.tool_choice.type === "none") {
+        openaiReq.tool_choice = "none";
+      } else if (req.tool_choice.type === "any") {
+        openaiReq.tool_choice = "auto";
+      } else if (req.tool_choice.type === "tool" && 'name' in req.tool_choice) {
+        openaiReq.tool_choice = {
+          type: "function",
+          name: req.tool_choice.name,
+        };
+      }
+    }
+
+    // Add other parameters
+    if (req.max_tokens) {
+      openaiReq.max_output_tokens = req.max_tokens;
+    }
+    if (req.temperature != null) {
+      openaiReq.temperature = req.temperature;
+    }
+    if (req.top_p != null) {
+      openaiReq.top_p = req.top_p;
+    }
+
+    return openaiReq;
   }
 
   async function process(c: Context): Promise<Response> {

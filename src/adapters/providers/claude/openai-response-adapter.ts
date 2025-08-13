@@ -5,6 +5,7 @@ import type {
   ResponseOutputMessage,
   ResponseOutputText,
   ResponseFunctionToolCall,
+  Tool,
 } from "openai/resources/responses/responses";
 import type {
   Message as ClaudeMessage,
@@ -194,22 +195,26 @@ function extractChatContentFromClaude(msg: ClaudeMessage): { text: string; toolC
  */
 export async function* claudeToOpenAIStream(
   events: AsyncIterable<MessageStreamEvent>,
-  requestModel: string
+  requestModel: string,
+  requestTools?: Tool[]
 ): AsyncGenerator<ResponseStreamEvent, void, unknown> {
   const id = `resp_${Date.now()}`;
   let createdEmitted = false;
   let sawText = false;
-  const tools = new Map<number, { id: string; name: string; args: string }>();
+  const toolsMap = new Map<number, { id: string; name: string; args: string }>();
   let sequence = 0;
   let textItemId: string | null = null;
   let contentIndex = 0;
   let accumulatedText = '';
+  let completedEmitted = false;
+  const outputItems: ResponseOutputItem[] = [];
   for await (const ev of events) {
+    
     if (!createdEmitted) {
       createdEmitted = true;
       const created: ResponseStreamEvent = {
         type: 'response.created',
-        response: buildEmptyResponse(id, requestModel),
+        response: buildEmptyResponse(id, requestModel, requestTools),
         sequence_number: ++sequence,
       } as const;
       yield created;
@@ -219,8 +224,9 @@ export async function* claudeToOpenAIStream(
       const block = ev.content_block as ContentBlock;
       if (isToolUseBlock(block)) {
         const openaiId = toOpenAICallIdFromClaude(block.id);
-        tools.set(index, { id: openaiId, name: block.name, args: "" });
+        toolsMap.set(index, { id: openaiId, name: block.name, args: "" });
         const item: ResponseOutputItem = buildFunctionCallItem(openaiId, block.name, undefined);
+        outputItems.push(item);
         const added: ResponseStreamEvent = {
           type: 'response.output_item.added',
           item,
@@ -235,7 +241,15 @@ export async function* claudeToOpenAIStream(
       if (isTextDelta(d)) {
         if (d.text) {
           sawText = true;
-          if (!textItemId) textItemId = genId('msg');
+          if (!textItemId) {
+            textItemId = genId('msg');
+            // Add text item to output
+            const textItem: ResponseOutputText = {
+              type: 'text',
+              text: '',
+            };
+            outputItems.push(textItem);
+          }
           const deltaEv: ResponseStreamEvent = {
             type: 'response.output_text.delta',
             delta: d.text,
@@ -249,7 +263,7 @@ export async function* claudeToOpenAIStream(
           accumulatedText += d.text;
         }
       } else if (isInputJsonDelta(d)) {
-        const t = tools.get(index);
+        const t = toolsMap.get(index);
         if (t && d.partial_json) {
           t.args += d.partial_json;
           const argsDelta: ResponseStreamEvent = {
@@ -264,9 +278,14 @@ export async function* claudeToOpenAIStream(
       }
     } else if (isContentStop(ev)) {
       const index = ev.index ?? 0;
-      const t = tools.get(index);
+      const t = toolsMap.get(index);
       if (t) {
         const item = buildFunctionCallItem(t.id, t.name, t.args ?? '');
+        // Update the item in outputItems
+        const itemIndex = outputItems.findIndex(i => i.type === 'function_call' && i.id === t.id);
+        if (itemIndex >= 0) {
+          outputItems[itemIndex] = item;
+        }
         const done: ResponseStreamEvent = {
           type: 'response.output_item.done',
           item,
@@ -275,8 +294,16 @@ export async function* claudeToOpenAIStream(
         } as const;
         yield done;
       }
-    } else if (isMessageDeltaWithStop(ev) || isMessageStop(ev)) {
+    } else if (isMessageDeltaWithStop(ev)) {
+      // Handle stop_reason in delta - don't emit text done here
+    } else if (isMessageStop(ev)) {
+      // Handle final message stop - emit text done first, then completed
       if (sawText && textItemId) {
+        // Update text in outputItems
+        const textItemIndex = outputItems.findIndex(i => i.type === 'text');
+        if (textItemIndex >= 0) {
+          (outputItems[textItemIndex] as ResponseOutputText).text = accumulatedText;
+        }
         const done: ResponseStreamEvent = {
           type: 'response.output_text.done',
           item_id: textItemId,
@@ -288,13 +315,17 @@ export async function* claudeToOpenAIStream(
         } as const;
         yield done;
       }
-      const completed: ResponseStreamEvent = {
-        type: 'response.completed',
-        response: buildCompletedResponse(id, requestModel),
-        sequence_number: ++sequence,
-      } as const;
-      yield completed;
     }
+  }
+  
+  // Ensure completed event is always emitted at the end
+  if (!completedEmitted) {
+    const completed: ResponseStreamEvent = {
+      type: 'response.completed',
+      response: buildCompletedResponse(id, requestModel, outputItems, requestTools),
+      sequence_number: ++sequence,
+    } as const;
+    yield completed;
   }
 }
 
@@ -368,7 +399,7 @@ function buildFunctionCallItem(id: string, name: string, args?: string): Respons
   };
 }
 
-function buildEmptyResponse(id: string, model: string): OpenAIResponse {
+function buildEmptyResponse(id: string, model: string, tools?: Tool[]): OpenAIResponse {
   return {
     id,
     object: 'response',
@@ -384,28 +415,34 @@ function buildEmptyResponse(id: string, model: string): OpenAIResponse {
     parallel_tool_calls: true,
     temperature: null,
     tool_choice: 'auto',
-    tools: [],
+    tools: tools || [],
     top_p: null,
   } as OpenAIResponse;
 }
 
-function buildCompletedResponse(id: string, model: string): OpenAIResponse {
+function buildCompletedResponse(id: string, model: string, outputItems?: ResponseOutputItem[], tools?: Tool[]): OpenAIResponse {
+  // Calculate output_text from text items
+  const outputText = outputItems
+    ?.filter(item => item.type === 'text')
+    .map(item => (item as ResponseOutputText).text)
+    .join('') || '';
+    
   return {
     id,
     object: 'response',
     created_at: Math.floor(Date.now() / 1000),
     model: model as unknown as OpenAIResponse['model'],
     status: 'completed',
-    output_text: '',
+    output_text: outputText,
     error: null,
     incomplete_details: null,
     instructions: null,
     metadata: null,
-    output: [],
+    output: outputItems || [],
     parallel_tool_calls: true,
     temperature: null,
     tool_choice: 'auto',
-    tools: [],
+    tools: tools || [],
     top_p: null,
   } as OpenAIResponse;
 }

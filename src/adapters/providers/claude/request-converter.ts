@@ -13,12 +13,27 @@ function convertTools(tools?: ChatCompletionTool[]): ClaudeTool[] | undefined {
   for (const t of tools) {
     if (t.type === "function") {
       const params = t.function.parameters;
-      const inputSchema: ClaudeTool["input_schema"] = isInputSchema(params)
-        ? params
-        : { type: "object", properties: {} };
+      // Convert function parameters to Claude's input_schema format
+      let inputSchema: ClaudeTool["input_schema"];
+      if (params && typeof params === 'object') {
+        // If it already has the correct structure, use it
+        if ('type' in params && params.type === 'object') {
+          inputSchema = params as ClaudeTool["input_schema"];
+        } else {
+          // Wrap in object schema format
+          inputSchema = {
+            type: "object",
+            properties: params.properties || params,
+            required: params.required
+          };
+        }
+      } else {
+        inputSchema = { type: "object", properties: {} };
+      }
+      
       out.push({
         name: t.function.name,
-        description: t.function.description,
+        description: t.function.description || "",
         input_schema: inputSchema,
       });
     }
@@ -78,6 +93,8 @@ export function chatCompletionToClaudeLocal(request: ChatCompletionCreateParams)
     const stop = request.stop;
     claudeReq.stop_sequences = Array.isArray(stop) ? stop : [String(stop)];
   }
+  
+  
   return claudeReq;
 }
 

@@ -21,7 +21,7 @@ import type {
 import { claudeToOpenAIResponse, claudeToOpenAIStream, claudeToChatCompletion, claudeToChatCompletionStream } from "./openai-response-adapter";
 import { chatCompletionToClaudeLocal } from "./request-converter";
 // Conversation state updates are handled by the HTTP response processor
-import type { Message as ClaudeMessage } from "@anthropic-ai/sdk/resources/messages";
+import type { Message as ClaudeMessage, MessageStreamEvent } from "@anthropic-ai/sdk/resources/messages";
 import { resolveModelForProvider } from "../shared/model-mapper";
 import type { ChatCompletionsCreateFn, ResponsesCreateFn } from "../openai-client-types";
 
@@ -97,7 +97,7 @@ export function buildOpenAICompatibleClientForClaude(
             const streamAny = (await anthropic.messages.create(
               { ...claudeReq, stream: true },
               { signal: options?.signal }
-            )) as unknown as AsyncIterable<import("@anthropic-ai/sdk/resources/messages").MessageStreamEvent>;
+            )) as AsyncIterable<MessageStreamEvent>;
             return claudeToChatCompletionStream(streamAny, resolvedModel as string);
           }
 
@@ -129,8 +129,8 @@ export function buildOpenAICompatibleClientForClaude(
           const streamAny = (await anthropic.messages.create(
             { ...claudeReq, stream: true },
             { signal: options?.signal }
-          )) as unknown as AsyncIterable<import("@anthropic-ai/sdk/resources/messages").MessageStreamEvent>;
-          return claudeToOpenAIStream(streamAny, chatParams.model as string) as AsyncIterable<ResponseStreamEvent>;
+          )) as AsyncIterable<MessageStreamEvent>;
+          return claudeToOpenAIStream(streamAny, chatParams.model as string, chatParams.tools) as AsyncIterable<ResponseStreamEvent>;
         }
 
         const claudeResp = await anthropic.messages.create(

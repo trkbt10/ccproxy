@@ -112,7 +112,10 @@ describe("Gemini stream integration (diagnostics)", () => {
         ],
       } as const;
       const body = {
-        ...input,
+        contents: input.contents.map(content => ({
+          role: content.role,
+          parts: [...content.parts]
+        })),
         tools,
         toolConfig: {
           functionCallingConfig: {

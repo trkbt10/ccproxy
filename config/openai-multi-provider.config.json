@@ -5,6 +5,9 @@
       "apiKey": "${OPENAI_API_KEY}",
       "defaultHeaders": {
         "OpenAI-Beta": "responses-2025-06-21"
+      },
+      "tools": {
+        "defaultStrategy": "passthrough"
       }
     },
     "openai-gpt4": {
@@ -12,6 +15,9 @@
       "apiKey": "${OPENAI_API_KEY_GPT4:-${OPENAI_API_KEY}}",
       "defaultHeaders": {
         "OpenAI-Beta": "responses-2025-06-21"
+      },
+      "tools": {
+        "defaultStrategy": "passthrough"
       }
     },
     "openai-mini": {
@@ -19,6 +25,9 @@
       "apiKey": "${OPENAI_API_KEY}",
       "defaultHeaders": {
         "OpenAI-Beta": "responses-2025-06-21"
+      },
+      "tools": {
+        "defaultStrategy": "passthrough"
       }
     },
     "openai-custom": {
@@ -37,6 +46,9 @@
       },
       "defaultHeaders": {
         "OpenAI-Beta": "responses-2025-06-21"
+      },
+      "tools": {
+        "defaultStrategy": "passthrough"
       }
     }
   },
@@ -44,20 +56,36 @@
     {
       "name": "text_editor",
       "steps": [
-        { "kind": "internal", "handler": "text_editor", "when": { "actionIn": ["preview", "plan"] } },
-        { "kind": "responses_model", "providerId": "openai-gpt4", "model": "gpt-4.1" }
+        {
+          "kind": "internal",
+          "handler": "text_editor",
+          "when": { "actionIn": ["preview", "plan"] }
+        },
+        {
+          "kind": "responses_model",
+          "providerId": "openai-gpt4",
+          "model": "gpt-4.1"
+        }
       ]
     },
     {
       "name": "bash",
       "steps": [
-        { "kind": "responses_model", "providerId": "openai-gpt4", "model": "gpt-4.1" }
+        {
+          "kind": "responses_model",
+          "providerId": "openai-gpt4",
+          "model": "gpt-4.1"
+        }
       ]
     },
     {
       "name": "web_search",
       "steps": [
-        { "kind": "responses_model", "providerId": "openai-mini", "model": "gpt-4o-mini" }
+        {
+          "kind": "responses_model",
+          "providerId": "openai-mini",
+          "model": "gpt-4o-mini"
+        }
       ]
     }
   ]

@@ -1,0 +1,33 @@
+{
+  "toolRouting": {
+    "comment": "Tool routing configuration for Claude endpoints",
+    "strategies": {
+      "exit_plan_mode": "builtin-only",
+      "task": "builtin-only",
+      "echo": "builtin-first",
+      "glob": "builtin-first",
+      "grep": "builtin-first", 
+      "ls": "builtin-first",
+      "search": "dtg-first",
+      "calculate": "dtg-only",
+      "*": "llm-passthrough"
+    },
+    "enableBuiltin": true,
+    "enableDTG": true,
+    "dtgNamespaces": ["user-tools", "claude-extensions"]
+  },
+  "description": {
+    "strategies": {
+      "builtin-only": "Use only builtin Claude-specific tools",
+      "dtg-only": "Use only dynamically generated tools",
+      "builtin-first": "Try builtin first, fallback to DTG",
+      "dtg-first": "Try DTG first, fallback to builtin", 
+      "llm-passthrough": "Don't intercept, let LLM handle it"
+    },
+    "notes": [
+      "exit_plan_mode and task are ClaudeCode-specific and should always use builtin",
+      "File system tools (glob, grep, ls) can be overridden by DTG versions if needed",
+      "Use '*' to set default behavior for unlisted tools"
+    ]
+  }
+}

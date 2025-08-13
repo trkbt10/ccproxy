@@ -1,0 +1,47 @@
+{
+  "providers": {
+    "claude-default": {
+      "type": "claude",
+      "apiKey": "sk-ant-...",
+      "tools": {
+        "defaultStrategy": "dynamic-first",
+        "routing": {
+          "exit_plan_mode": "builtin-only",
+          "task": "builtin-only",
+          "echo": "builtin-first",
+          "glob": "builtin-first", 
+          "grep": "builtin-first",
+          "ls": "builtin-first",
+          "custom_tool": "dynamic-only"
+        },
+        "enabled": ["exit_plan_mode", "task", "echo", "glob", "grep", "ls"]
+      }
+    },
+    "openai-custom": {
+      "type": "openai",
+      "apiKey": "sk-...",
+      "tools": {
+        "defaultStrategy": "dynamic-first",
+        "routing": {
+          "code_interpreter": "passthrough",
+          "web_search": "passthrough",
+          "custom_tool": "dynamic-only"
+        }
+      }
+    },
+    "claude-minimal": {
+      "type": "claude",
+      "apiKey": "sk-ant-...",
+      "tools": {
+        "defaultStrategy": "passthrough",
+        "disabled": ["*"]
+      }
+    }
+  },
+  "dynamicTools": {
+    "storage": "filesystem",
+    "storageRoot": "./generated-tools",
+    "provider": "claude-default",
+    "model": "claude-3-sonnet-20240229"
+  }
+}

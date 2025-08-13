@@ -22,7 +22,8 @@ export const createModelsHandler =
       const data = (list?.data || []).map((m) => ({
         id: m.id,
         object: "model",
-        created: Date.now(),
+        // OpenAI returns epoch seconds; align our synthetic timestamp
+        created: Math.floor(Date.now() / 1000),
         owned_by: provider.type,
       }));
       return c.json({ object: "list", data });

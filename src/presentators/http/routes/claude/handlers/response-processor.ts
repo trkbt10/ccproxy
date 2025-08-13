@@ -181,7 +181,10 @@ export function createResponseProcessor(config: ProcessorConfig) {
       config.claudeReq,
       config.model as ResponsesModel
     );
+    
     logDebug("OpenAI Request Params", openaiReq, { requestId: config.requestId });
+    
+    // Tool interception is now handled at the OpenAI client level
     return config.stream
       ? processStreamingResponse(config, openaiReq, c)
       : processNonStreamingResponse(config, openaiReq, c);

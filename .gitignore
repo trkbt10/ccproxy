@@ -4,3 +4,4 @@ dist/
 *.log
 logs/
 *.jsonl
+.tmp

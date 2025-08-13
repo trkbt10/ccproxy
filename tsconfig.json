@@ -14,8 +14,15 @@
     "noEmit": true,
     "jsx": "preserve",
     "lib": ["ES2022", "DOM"],
-    "types": ["node", "bun-types"]
+    "types": ["node", "bun-types", "vitest/globals"]
   },
-  "include": ["**/*.ts", "**/*.tsx"],
-  "exclude": ["node_modules", "dist"]
+  "include": [
+    "src/**/*.ts",
+    "src/**/*.tsx",
+    "__tests__/**/*.ts",
+    "__tests__/**/*.spec.ts",
+    "__tests__/**/*.tsx",
+    "scripts/**/*.ts"
+  ],
+  "exclude": ["node_modules", "dist", "reports", "docs"]
 }

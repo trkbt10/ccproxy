@@ -1,0 +1,124 @@
+{
+  "providers": {
+    "default": {
+      "type": "openai",
+      "apiKey": "${OPENAI_API_KEY}",
+      "modelMapping": {
+        "byGrade": {
+          "high": "gpt-4-turbo",
+          "mid": "gpt-4",
+          "low": "gpt-3.5-turbo"
+        }
+      },
+      "defaultHeaders": {
+        "OpenAI-Beta": "responses-2025-06-21"
+      }
+    },
+    "tool-generator": {
+      "type": "openai",
+      "apiKey": "${OPENAI_API_KEY}",
+      "model": "gpt-4-turbo",
+      "defaultHeaders": {
+        "OpenAI-Beta": "responses-2025-06-21"
+      }
+    }
+  },
+  "dynamicTools": {
+    "enabled": true,
+    "storage": "filesystem",
+    "storageRoot": "./generated-tools",
+    "defaultProvider": "tool-generator",
+    "defaultModel": "gpt-4-turbo"
+  },
+  "tools": [
+    {
+      "name": "json_validator",
+      "enabled": true,
+      "dynamic": {
+        "enabled": true,
+        "storage": "filesystem",
+        "namespace": ["validators", "json"],
+        "generation": {
+          "instruction": "Create a JSON validation tool that validates JSON against a schema",
+          "inputSchema": {
+            "type": "object",
+            "properties": {
+              "json": { "type": "string", "description": "JSON string to validate" },
+              "schema": { "type": "object", "description": "JSON schema to validate against" }
+            },
+            "required": ["json", "schema"]
+          },
+          "outputSchema": {
+            "type": "object",
+            "properties": {
+              "valid": { "type": "boolean" },
+              "errors": { "type": "array", "items": { "type": "string" } }
+            }
+          }
+        }
+      },
+      "steps": [
+        {
+          "kind": "dynamic",
+          "scenarioId": "json-validator-v1",
+          "namespace": ["validators", "json"],
+          "storage": "filesystem",
+          "stopOn": "handled"
+        },
+        {
+          "kind": "responses_model",
+          "providerId": "default",
+          "model": "gpt-4"
+        }
+      ]
+    },
+    {
+      "name": "code_formatter",
+      "enabled": true,
+      "dynamic": {
+        "enabled": true,
+        "storage": "memory",
+        "namespace": ["formatters"],
+        "generation": {
+          "instruction": "Create a code formatting tool that formats TypeScript/JavaScript code using prettier",
+          "inputSchema": {
+            "type": "object",
+            "properties": {
+              "code": { "type": "string", "description": "Code to format" },
+              "language": { "type": "string", "enum": ["typescript", "javascript"], "description": "Programming language" }
+            },
+            "required": ["code"]
+          }
+        }
+      },
+      "steps": [
+        {
+          "kind": "dynamic",
+          "scenarioId": "code-formatter-v1",
+          "namespace": ["formatters"],
+          "storage": "memory",
+          "when": { "actionIn": ["preview", "plan"] }
+        },
+        {
+          "kind": "internal",
+          "handler": "fallback_formatter",
+          "stopOn": "handled"
+        }
+      ]
+    },
+    {
+      "name": "text_editor",
+      "steps": [
+        {
+          "kind": "internal",
+          "handler": "text_editor",
+          "when": { "actionIn": ["preview", "plan"] }
+        },
+        {
+          "kind": "responses_model",
+          "providerId": "default"
+        }
+      ]
+    }
+  ]
+}

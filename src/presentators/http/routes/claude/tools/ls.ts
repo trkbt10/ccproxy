@@ -1,4 +1,4 @@
-import type { InternalToolHandler } from "../registry";
+import type { ToolRuntime } from "../../../../../tools/runtime/types";
 import { readdirSync } from "node:fs";
 import { resolve } from "node:path";
 
@@ -6,6 +6,7 @@ interface LSInput {
   path: string;
   ignore?: string[];
 }
+
 function isLSInput(v: unknown): v is LSInput {
   if (!v || typeof v !== "object") {
     return false;
@@ -20,10 +21,10 @@ function isLSInput(v: unknown): v is LSInput {
   return true;
 }
 
-export const lsHandler: InternalToolHandler = {
+export const lsTool: ToolRuntime = {
   name: "LS",
-  canHandle: (toolName) => toolName === "LS",
-  execute(_toolName, input) {
+  description: "List files and directories in a given path",
+  execute: async (input: unknown) => {
     if (!isLSInput(input)) {
       return { error: "invalid_input" };
     }
@@ -44,5 +45,11 @@ export const lsHandler: InternalToolHandler = {
       entries = entries.filter((e) => !patterns.some((r) => r.test(e.name)));
     }
     return { entries };
+  },
+  validateInput: isLSInput,
+  metadata: {
+    version: "1.0.0",
+    tags: ["filesystem", "directory"],
+    source: "builtin",
   },
 };

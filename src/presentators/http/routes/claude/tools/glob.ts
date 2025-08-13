@@ -1,11 +1,12 @@
-import type { InternalToolHandler } from "../registry";
-import { listAllFiles, matchGlob } from "./fsUtils";
+import type { ToolRuntime } from "../../../../../tools/runtime/types";
+import { listAllFiles, matchGlob } from "./utils/fs-utils";
 import { resolve } from "node:path";
 
 interface GlobInput {
   pattern: string;
   path?: string;
 }
+
 function isGlobInput(v: unknown): v is GlobInput {
   if (!v || typeof v !== "object") {
     return false;
@@ -17,10 +18,10 @@ function isGlobInput(v: unknown): v is GlobInput {
   );
 }
 
-export const globHandler: InternalToolHandler = {
+export const globTool: ToolRuntime = {
   name: "Glob",
-  canHandle: (toolName) => toolName === "Glob",
-  async execute(_toolName, input) {
+  description: "Search for files using glob patterns",
+  execute: async (input: unknown) => {
     if (!isGlobInput(input)) {
       return { error: "invalid_input" };
     }
@@ -32,5 +33,11 @@ export const globHandler: InternalToolHandler = {
     const files = await listAllFiles(root);
     const matched = matchGlob(files, root, pattern).sort();
     return { files: matched, count: matched.length };
+  },
+  validateInput: isGlobInput,
+  metadata: {
+    version: "1.0.0",
+    tags: ["filesystem", "search"],
+    source: "builtin",
   },
 };

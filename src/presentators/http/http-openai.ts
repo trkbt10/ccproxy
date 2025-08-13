@@ -6,9 +6,11 @@ import { corsMiddleware } from "./middleware/cors";
 import { createOpenAIRouter } from "./routes/openai/router";
 import type { RoutingConfig } from "../../config/types";
 import { createGlobalErrorHandler } from "./utils/global-error-handler";
+import type { ServerOptions } from "./server";
+import { createConfigLoader } from "../../execution/routing-config-with-overrides";
 
 // OpenAI-compat focused Hono app
-export function createOpenAIApp(): Hono {
+export function createOpenAIApp(opts?: Pick<ServerOptions, "configPath" | "configOverrides">): Hono {
   const app = new Hono();
 
   // Global middlewares
@@ -24,7 +26,9 @@ export function createOpenAIApp(): Hono {
     return c.json({ status: "ok", timestamp: new Date().toISOString() });
   });
 
-  const routingConfigPromise = loadRoutingConfigOnce();
+  const routingConfigPromise = opts?.configPath || opts?.configOverrides
+    ? createConfigLoader(opts.configPath, opts.configOverrides)()
+    : loadRoutingConfigOnce();
   routingConfigPromise.then((routingConfig: RoutingConfig) => {
     // OpenAI compatibility router mounted under /v1
     const openaiRouter = createOpenAIRouter(routingConfig);

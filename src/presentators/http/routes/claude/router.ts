@@ -1,14 +1,11 @@
-import { Hono } from "hono";
-import type { RoutingConfig } from "../../../../config/types";
 import type { MessageCreateParams as ClaudeMessageCreateParams } from "@anthropic-ai/sdk/resources/messages";
-import { countTokens } from "./handlers/token-counter";
+import { Hono } from "hono";
+import { buildOpenAICompatibleClientWithTools } from "../../../../adapters/providers/openai-client-with-tools";
+import type { RoutingConfig } from "../../../../config/types";
 import { selectProviderForRequest } from "../../../../execution/tool-model-planner";
-import { buildOpenAICompatibleClientForClaude } from "../../../../adapters/providers/claude/openai-compatible";
-import { createResponseProcessor } from "./handlers/response-processor";
 import { ConversationStore } from "../../../../utils/conversation/conversation-store";
-import { selectApiKey } from "../../../../adapters/providers/shared/select-api-key";
-import { resolveModelForProvider } from "../../../../adapters/providers/shared/model-mapper";
-import { buildOpenAICompatibleClient } from "../../../../adapters/providers/openai-client";
+import { createResponseProcessor } from "./handlers/response-processor";
+import { countTokens } from "./handlers/token-counter";
 
 export function createClaudeRouter(routingConfig: RoutingConfig) {
   const router = new Hono();
@@ -38,7 +35,11 @@ export function createClaudeRouter(routingConfig: RoutingConfig) {
     if (!provider) {
       throw new Error(`Provider '${providerSelection.providerId}' not found`);
     }
-    const openai = buildOpenAICompatibleClient(provider, providerSelection.model);
+    const openai = buildOpenAICompatibleClientWithTools(provider, providerSelection.model, {
+      routingConfig,
+      requestId,
+      conversationId,
+    });
     const processor = createResponseProcessor({
       requestId,
       conversationId,

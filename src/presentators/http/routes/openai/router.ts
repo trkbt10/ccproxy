@@ -2,6 +2,7 @@ import { Hono } from "hono";
 import type { RoutingConfig } from "../../../../config/types";
 import { createChatCompletionsHandler } from "./handlers/chat-completions";
 import { createModelsHandler } from "./handlers/models";
+import { createResponsesHandler } from "./handlers/responses";
 import { isErrorWithStatus } from "../../utils/error-helpers";
 import { toErrorBody } from "../../../../adapters/errors/error-converter";
 
@@ -30,6 +31,7 @@ export const createOpenAIRouter = (routingConfig: RoutingConfig) => {
   });
 
   openaiRouter.post("/chat/completions", createChatCompletionsHandler(routingConfig));
+  openaiRouter.post("/responses", createResponsesHandler(routingConfig));
   openaiRouter.get("/models", createModelsHandler(routingConfig));
   return openaiRouter;
 };

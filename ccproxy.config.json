@@ -4,6 +4,15 @@
     "eventsEnabled": false,
     "dir": "./logs"
   },
-  "providers": {},
+  "providers": {
+    "default": {
+      "type": "openai",
+      "apiKey": "${OPENAI_API_KEY}",
+      "model": "gpt-5-mini",
+      "defaultHeaders": {
+        "OpenAI-Beta": "responses-2025-06-21"
+      }
+    }
+  },
   "tools": []
 }

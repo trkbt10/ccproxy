@@ -1,0 +1,10 @@
+# Codex CLI configuration for ccproxy testing
+# Usage: codex --config ./config/codex.config.toml "your question"
+
+model = "claude-3-5-sonnet-20241022"
+model_provider = "ccproxy"
+
+[model_providers.ccproxy]
+name = "CCProxy"
+base_url = "http://localhost:8082/v1"
+env_key = "ANTHROPIC_AUTH_TOKEN"

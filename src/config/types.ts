@@ -9,13 +9,38 @@ export type InternalStep = {
   stopOn?: "handled" | "always" | "never";
 };
 
+export type DynamicToolStep = {
+  kind: "dynamic";
+  when?: WhenClause;
+  stopOn?: "handled" | "always" | "never";
+};
+
 export type ResponsesModelStep = {
   kind: "responses_model";
   providerId?: string;
   model?: string;
 };
 
-export type Step = InternalStep | ResponsesModelStep;
+export type Step = InternalStep | ResponsesModelStep | DynamicToolStep;
+
+// Tool routing strategy
+export type ToolStrategy = 
+  | "builtin-only"      // Use only provider-specific builtin tools
+  | "dynamic-only"      // Use only dynamically generated tools  
+  | "builtin-first"     // Try builtin first, fallback to dynamic
+  | "dynamic-first"     // Try dynamic first, fallback to builtin
+  | "passthrough";      // Don't intercept, let LLM handle it
+
+// Tool configuration for providers
+export type ToolConfig = {
+  // Default routing strategy for all tools
+  defaultStrategy?: ToolStrategy;
+  // Tool-specific routing overrides
+  routing?: Record<string, ToolStrategy>;
+  // Tools to always enable/disable
+  enabled?: string[];
+  disabled?: string[];
+};
 
 export type ToolRule = {
   name: string;
@@ -43,6 +68,7 @@ export type Provider = {
   };
   defaultHeaders?: Record<string, string>;
   instruction?: InstructionConfig;
+  tools?: ToolConfig; // Provider-specific tool configuration
 };
 
 export type PatternReplacement = {
@@ -70,4 +96,11 @@ export type RoutingConfig = {
   providers?: Record<string, Provider>;
   tools?: ToolRule[];
   instruction?: InstructionConfig;
+  // Dynamic tool generation settings
+  dynamicTools?: {
+    storage?: "memory" | "filesystem"; // Default storage type
+    storageRoot?: string; // Root directory for filesystem storage
+    provider?: string; // Provider to use for tool generation
+    model?: string; // Model to use for tool generation
+  };
 };

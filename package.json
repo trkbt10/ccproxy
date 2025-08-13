@@ -5,13 +5,20 @@
   "main": "index.js",
   "scripts": {
     "serve": "bun run ./src/server.ts",
+    "serve:openai": "bun run ./src/server-openai.ts",
+    "serve:openai:env": "bun --env-file=.env run ./src/server-openai.ts",
+    "serve:openai:roundtrip": "ROUTING_CONFIG_PATH=./config/openai-roundtrip.config.json bun --env-file=.env run ./src/server-openai.ts",
+    "serve:gemini": "bun run ./src/server-gemini.ts",
     "dev": "bun run --watch ./src/server.ts",
     "cli": "bun run src/cli.ts",
     "typecheck": "tsc --noEmit",
     "build": "bun build --target=bun src/index.ts src/cli.ts --outdir dist",
     "build:cli": "bun build --target=bun src/cli.ts --outdir dist",
     "test": "bun test",
-    "test:watch": "bun test --watch"
+    "test:watch": "bun test --watch",
+    "gen:mocks": "bun run __mocks__/generate-llm-mocks.ts",
+    "demo:dtg": "bun run scripts/dtg-demo.ts",
+    "demo:openai-rt": "BASE_URL=http://localhost:${PORT:-8082} bun --env-file=.env run scripts/openai-roundtrip-demo.ts"
   },
   "keywords": [],
   "author": "",
@@ -25,10 +32,13 @@
   },
   "devDependencies": {
     "@anthropic-ai/sdk": "^0.59.0",
+    "@types/jest": "^30.0.0",
     "@types/node": "^24.2.1",
     "bun-types": "^1.2.19",
     "tsx": "^4.20.3",
-    "typescript": "^5.9.2"
+    "typescript": "^5.9.2",
+    "vite": "^7.1.1",
+    "vitest": "^3.2.4"
   },
   "type": "module"
 }

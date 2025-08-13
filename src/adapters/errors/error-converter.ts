@@ -1,4 +1,4 @@
-export type ErrorEnvelope = "claude" | "openai";
+export type ErrorEnvelope = "claude" | "openai" | "gemini";
 
 export type ClaudeErrorBody = {
   type: "error";

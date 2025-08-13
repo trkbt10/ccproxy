@@ -16,7 +16,7 @@ function usage(): void {
 ccproxy CLI
 
 Usage:
-  ${base} serve [--port 8082|8085] [--api claude|openai] [--config ./ccproxy.config.json]
+  ${base} serve [claude|openai|gemini] [--port <number>] [--config <path>]
   ${base} config init [--config ./ccproxy.config.json] [--force]
   ${base} config show [--config ./ccproxy.config.json] [--expanded]
   ${base} config list [--config ./ccproxy.config.json]
@@ -24,17 +24,16 @@ Usage:
   ${base} config set <path> <value> [--config ./ccproxy.config.json]
 
 Options:
-  --port <number>     Port to listen on (default: 8082 for claude, 8085 for openai)
-  --api <mode>        API mode: "claude" (default) or "openai"
-  --openai            Shorthand for "--api openai"
+  --port <number>     Port to listen on (default: 8082 for claude, 8085 for openai, 8086 for gemini)
   --config <path>     Path to ccproxy config JSON (auto-detected if omitted)
   --expanded          Expand env vars in config output (for "config show")
   --force             Overwrite existing config (for "config init")
 
 Examples:
-  ${base} serve --port 8082
-  ${base} serve --api openai --port 8085
-  ${base} serve --api openai
+  ${base} serve                              # Default: Claude API on port 8082
+  ${base} serve claude --port 9000
+  ${base} serve openai --port 9000 --config custom.json
+  ${base} serve gemini --port 9000
   ${base} config init
   ${base} config show --expanded
   ${base} config list
@@ -48,7 +47,12 @@ export async function runCli(argv: string[]): Promise<void> {
   const [, , cmd, subcmd, ...rest] = argv;
   switch (cmd) {
     case "serve": {
-      const options = parseServeOptions();
+      // Handle new format: ccproxy serve <api> [options]
+      let apiMode: "claude" | "openai" | "gemini" = "claude";
+      if (subcmd && ["claude", "openai", "gemini"].includes(subcmd)) {
+        apiMode = subcmd as "claude" | "openai" | "gemini";
+      }
+      const options = parseServeOptions(apiMode);
       await cmdServe(options);
       return;
     }

@@ -2,9 +2,8 @@ import { getArgFlag, hasFlag } from "./commands/utils";
 import { resolveConfigPath } from "../../config/paths";
 import type { ServeOptions, ConfigOptions } from "./types";
 
-export function parseServeOptions(): ServeOptions {
+export function parseServeOptions(defaultApi?: "claude" | "openai" | "gemini"): ServeOptions {
   const portStr = getArgFlag("port");
-  const apiMode = getArgFlag("api") || (hasFlag("openai") ? "openai" : undefined);
   const configArg = getArgFlag("config");
   
   // Parse config overrides (-c or --config-override)
@@ -22,7 +21,7 @@ export function parseServeOptions(): ServeOptions {
 
   return {
     port: portStr,
-    api: (apiMode?.toLowerCase() as "claude" | "openai") || "claude",
+    api: defaultApi || "claude",
     config: configArg || resolveConfigPath(),
     configOverrides: configOverrides.length > 0 ? configOverrides : undefined,
   };

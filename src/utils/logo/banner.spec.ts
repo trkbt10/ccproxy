@@ -40,13 +40,14 @@ describe("getBanner", () => {
     expect(result).toContain("\x1b[0m");  // reset code
   });
 
-  it("should fall back to plain text for unsupported characters", () => {
+  it("should handle unsupported characters by using spaces", () => {
     const result = getBanner("A+B");
     console.log("A+B banner (with unsupported '+'):\n", result);
     
-    // Should fall back to plain text
-    expect(result).not.toContain("█");
-    expect(result).toContain("A+B");
+    // Should still render A and B, with space for unsupported '+'
+    expect(result).toContain("█");
+    // Should have 3 lines
+    expect(result.split("\n").length).toBe(3);
   });
 
   it("should handle lowercase letters", () => {

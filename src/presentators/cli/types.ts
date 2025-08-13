@@ -2,7 +2,7 @@
 
 export interface ServeOptions {
   port?: string | number;
-  api?: "claude" | "openai";
+  api?: "claude" | "openai" | "gemini";
   config: string;  // Always resolved to a path
   configOverrides?: Array<{ key: string; value: string }>;
 }

@@ -1,5 +1,5 @@
 import OpenAI from "openai";
-import type { 
+import type {
   Response as OpenAIResponse,
   ResponseCreateParams,
   ResponseCreateParamsNonStreaming,
@@ -10,7 +10,7 @@ import type {
   Tool,
   ToolChoiceOptions,
   ToolChoiceTypes,
-  ToolChoiceFunction
+  ToolChoiceFunction,
 } from "openai/resources/responses/responses";
 import type { Stream } from "openai/streaming";
 import type { Metadata } from "openai/resources/shared";
@@ -19,46 +19,22 @@ import { StreamHandler } from "./stream-handler";
 import { convertResponseInputToMessages } from "./input-converter";
 import { convertToolsForChat, convertToolChoiceForChat } from "./tool-converter";
 
-export type ResponsesAPIOptions = {
-  apiKey: string;
-  baseURL?: string;
-  maxRetries?: number;
-  timeout?: number;
-};
-
 /**
- * ResponsesAPI class that mimics OpenAI's Responses API
- * but internally uses Chat Completions API
+ * ResponsesAPI class that converts between Responses API and Chat Completions API
  */
 export class ResponsesAPI {
-  private openai: OpenAI;
-
-  constructor(options: ResponsesAPIOptions) {
-    this.openai = new OpenAI({
-      apiKey: options.apiKey,
-      baseURL: options.baseURL,
-      maxRetries: options.maxRetries ?? 3,
-      timeout: options.timeout ?? 60000,
-    });
-  }
+  constructor(private openai: OpenAI) {}
 
   /**
    * Creates a response using OpenAI's chat completions API
    * while mimicking the Responses API interface
    */
-  async create(
-    params: ResponseCreateParamsNonStreaming
-  ): Promise<OpenAIResponse>;
-  async create(
-    params: ResponseCreateParamsStreaming
-  ): Promise<AsyncIterable<ResponseStreamEvent>>;
-  async create(
-    params: ResponseCreateParams
-  ): Promise<OpenAIResponse | AsyncIterable<ResponseStreamEvent>> {
-    
+  async create(params: ResponseCreateParamsNonStreaming): Promise<OpenAIResponse>;
+  async create(params: ResponseCreateParamsStreaming): Promise<AsyncIterable<ResponseStreamEvent>>;
+  async create(params: ResponseCreateParams): Promise<OpenAIResponse | AsyncIterable<ResponseStreamEvent>> {
     // Convert ResponseInput to chat messages
     const messages = this.convertInputToMessages(params);
-    
+
     // Build chat completion parameters
     const chatParams = this.buildChatParams(params, messages);
 
@@ -71,12 +47,12 @@ export class ResponsesAPI {
 
   private convertInputToMessages(params: ResponseCreateParams): OpenAI.Chat.ChatCompletionMessageParam[] {
     const messages: OpenAI.Chat.ChatCompletionMessageParam[] = [];
-    
+
     // Add system/developer instructions if provided
     if (params.instructions) {
       messages.push({
         role: "system",
-        content: params.instructions
+        content: params.instructions,
       });
     }
 
@@ -85,7 +61,7 @@ export class ResponsesAPI {
       if (typeof params.input === "string") {
         messages.push({
           role: "user",
-          content: params.input
+          content: params.input,
         });
       } else {
         // Convert ResponseInput to messages
@@ -162,6 +138,4 @@ export class ResponsesAPI {
     // Return the async generator that yields ResponseStreamEvent objects
     return handler.handleStream(stream);
   }
-
-  // Legacy ID manager APIs removed: deterministic conversion makes them unnecessary
 }

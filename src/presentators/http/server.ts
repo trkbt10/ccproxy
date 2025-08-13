@@ -34,10 +34,10 @@ export interface ServerOptions {
  */
 export async function startHonoServer(app: Hono, opts?: ServerOptions): Promise<void> {
   const port = resolvePort(opts?.port ?? undefined);
-  
+
   // TODO: Apply configPath and configOverrides to routing config loading
   // For now, we'll implement this in a follow-up
-  
+
   serve({ fetch: app.fetch, port }, async (info) => {
     await printBannerWithProvider();
     const cfg = await loadRoutingConfigOnce();

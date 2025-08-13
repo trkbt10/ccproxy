@@ -1,4 +1,4 @@
-import { createClaudeApp } from "./presentators/http/app";
+import { createClaudeApp } from "./presentators/http/http-claude";
 
 const app = createClaudeApp();
 export default app;

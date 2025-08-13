@@ -6,12 +6,9 @@ import { corsMiddleware } from "./middleware/cors";
 import { createClaudeRouter } from "./routes/claude/router";
 import { createGlobalErrorHandler } from "./utils/global-error-handler";
 import type { RoutingConfig } from "../../config/types";
-import { isErrorWithStatus } from "./utils/error-helpers";
 
 // Claude app (Anthropic-compatible)
 export function createClaudeApp(): Hono {
-  // Note: environment validation is handled in routing-config dynamic synthesis
-
   const app = new Hono();
 
   // Global middlewares

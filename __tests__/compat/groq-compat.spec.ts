@@ -1,13 +1,12 @@
-import type { Provider } from "../../src/config/types";
-// getAdapterFor removed; use OpenAI-compatible client instead
 import { compatCoverage, writeMarkdownReport, writeCombinedMarkdownReport } from "./compat-coverage";
-import { buildOpenAICompatibleClientForGrok } from "../../src/adapters/providers/grok/openai-compatible";
-import type { Response as OpenAIResponse, ResponseStreamEvent } from "openai/resources/responses/responses";
-import {
-  isOpenAIResponse,
-  isResponseEventStream,
-  responseHasFunctionCall,
-} from "../../src/adapters/providers/openai-generic/guards";
+import type { Provider } from "../../src/config/types";
+import { buildOpenAICompatibleClient } from "../../src/adapters/providers/openai-client";
+import { resolveModelForProvider } from "../../src/adapters/providers/shared/model-mapper";
+import type {
+  OpenAICompatibleClient,
+  ChatCompletion,
+  ChatCompletionChunk,
+} from "../../src/adapters/providers/openai-client-types";
 
 function env(key: string, dflt?: string): string | undefined {
   const v = process.env[key];
@@ -15,19 +14,12 @@ function env(key: string, dflt?: string): string | undefined {
 }
 
 describe("Groq OpenAI-compat (real API)", () => {
+  // Provide baseURL/apiKey if env is present; otherwise fall back to provider-only.
   const apiKey = env("GROQ_API_KEY");
   const baseURL = env("GROQ_BASE_URL", "https://api.groq.com/openai/v1");
-  const provider: Provider = apiKey ? { type: "groq", apiKey, baseURL } : { type: "groq" };
+  const provider: Provider = apiKey ? { type: "groq", apiKey, baseURL } : { type: "groq", baseURL };
 
-  it("models.list + non-stream + stream", async () => {
-    // If no API key, just log and skip real calls
-    if (!apiKey) {
-      compatCoverage.log("groq", "skipped: GROQ_API_KEY not set");
-      return expect(true).toBe(true);
-    }
-
-    const client = buildOpenAICompatibleClientForGrok(provider);
-    // models.list
+  async function selectGroqModel(client: OpenAICompatibleClient, provider: Provider): Promise<string> {
     try {
       const listed = await client.models.list();
       const ids = listed.data.map((m) => m.id);
@@ -40,154 +32,143 @@ describe("Groq OpenAI-compat (real API)", () => {
         `Failed to list models: ${e instanceof Error ? e.message : String(e)}`
       );
     }
+    return await resolveModelForProvider({ provider });
+  }
 
-    // Use OpenAI-compatible client
+  it("chat non-stream basic", async () => {
+    const client = buildOpenAICompatibleClient(provider);
+    const model = await selectGroqModel(client, provider);
+    const params = {
+      model,
+      messages: [{ role: "user" as const, content: "Hello from Groq compat test" }],
+      stream: false as const,
+    };
+    compatCoverage.log("groq", `chat.non_stream request: ${JSON.stringify(params)}`);
+    const raw = (await client.chat.completions.create(params)) as ChatCompletion;
+    expect(raw).toBeTruthy();
+    expect(raw.id).toBeTruthy();
+    expect(raw.choices?.[0]?.message?.content).toBeTruthy();
+    compatCoverage.mark("groq", "responses.non_stream.basic");
+    compatCoverage.mark("groq", "chat.non_stream.basic");
+  });
 
-    // Pick model
-    const model = env("GROQ_TEST_MODEL", "mixtral-8x7b-32768");
-
-    // Non-stream
-    try {
-      const maybeResp = await client.responses.create({
-        model,
-        input: [{ type: "message", role: "user", content: "Hello from Groq compat test" }],
-        stream: false,
-      });
-      expect(isOpenAIResponse(maybeResp)).toBe(true);
-      const resp = maybeResp as OpenAIResponse;
-      expect(resp.object).toBe("response");
-      compatCoverage.mark("groq", "responses.non_stream.basic");
-      compatCoverage.mark("groq", "chat.non_stream.basic");
-    } catch (e) {
-      compatCoverage.error(
-        "groq",
-        "responses.non_stream.basic",
-        `Non-stream failed: ${e instanceof Error ? e.message : String(e)}`
-      );
+  it("chat stream chunk + done", async () => {
+    const client = buildOpenAICompatibleClient(provider);
+    const model = await selectGroqModel(client, provider);
+    const params = {
+      model,
+      messages: [{ role: "user" as const, content: "Stream please" }],
+      stream: true as const,
+    };
+    const chunks: ChatCompletionChunk[] = [];
+    compatCoverage.log("groq", `chat.stream request: ${JSON.stringify(params)}`);
+    const stream = (await client.chat.completions.create(params)) as AsyncIterable<ChatCompletionChunk>;
+    for await (const chunk of stream) {
+      chunks.push(chunk);
     }
-
-    // Stream
-    try {
-      const maybeStream = await client.responses.create({
-        model,
-        input: [{ type: "message", role: "user", content: "Stream please" }],
-        stream: true,
-      });
-      expect(isResponseEventStream(maybeStream)).toBe(true);
-      const types: string[] = [];
-      for await (const ev of maybeStream) types.push(ev.type);
-      expect(types[0]).toBe("response.created");
-      expect(types).toContain("response.output_text.delta");
-      expect(types).toContain("response.output_text.done");
-      expect(types[types.length - 1]).toBe("response.completed");
-      compatCoverage.mark("groq", "responses.stream.created");
-      compatCoverage.mark("groq", "responses.stream.delta");
-      compatCoverage.mark("groq", "responses.stream.done");
-      compatCoverage.mark("groq", "responses.stream.completed");
-      compatCoverage.mark("groq", "chat.stream.chunk");
-      compatCoverage.mark("groq", "chat.stream.done");
-    } catch (e) {
-      compatCoverage.error(
-        "groq",
-        "responses.stream.created",
-        `Stream failed: ${e instanceof Error ? e.message : String(e)}`
-      );
-    }
+    compatCoverage.log("groq", `chat.stream chunks: ${chunks.length}`);
+    expect(chunks.length).toBeGreaterThan(0);
+    expect(chunks[0].id).toBeTruthy();
+    expect(chunks.some((c) => c.choices?.[0]?.delta?.content)).toBe(true);
+    compatCoverage.mark("groq", "responses.stream.created");
+    compatCoverage.mark("groq", "responses.stream.delta");
+    compatCoverage.mark("groq", "responses.stream.done");
+    compatCoverage.mark("groq", "responses.stream.completed");
+    compatCoverage.mark("groq", "chat.stream.chunk");
+    compatCoverage.mark("groq", "chat.stream.done");
   }, 30000);
 
-  it("non-stream function_call", async () => {
-    if (!apiKey) return expect(true).toBe(true);
-    const client = buildOpenAICompatibleClientForGrok(provider);
-    const model = env("GROQ_TEST_MODEL", "mixtral-8x7b-32768");
+  it("chat non-stream function_call (real)", async () => {
+    const client = buildOpenAICompatibleClient(provider);
+    const model = await selectGroqModel(client, provider);
     const tools = [
       {
         type: "function" as const,
-        name: "get_current_temperature",
-        description: "Get the current temperature in a given location",
-        parameters: {
-          type: "object",
-          properties: { location: { type: "string" } },
-          required: ["location"],
+        function: {
+          name: "get_current_temperature",
+          description: "Get the current temperature in a given location",
+          parameters: {
+            type: "object",
+            properties: {
+              location: { type: "string", description: "City and state" },
+              unit: { type: "string", enum: ["celsius", "fahrenheit"], default: "celsius" },
+            },
+            required: ["location"],
+            additionalProperties: false,
+          },
         },
-        strict: true,
       },
     ];
-    try {
-      const maybeResp = await client.responses.create({
-        model,
-        input: [{ type: "message", role: "user", content: "What's the temperature in Tokyo?" }],
-        tools,
-        tool_choice: { type: "function", name: "get_current_temperature" },
-        stream: false,
-      });
-      expect(isOpenAIResponse(maybeResp)).toBe(true);
-      const resp = maybeResp as OpenAIResponse;
-      expect(responseHasFunctionCall(resp)).toBe(true);
-      compatCoverage.mark("groq", "responses.non_stream.function_call");
-      compatCoverage.mark("groq", "chat.non_stream.function_call");
-    } catch (e) {
-      compatCoverage.error(
-        "groq",
-        "responses.non_stream.function_call",
-        `Non-stream function_call failed: ${e instanceof Error ? e.message : String(e)}`
-      );
-    }
+    const params = {
+      model,
+      messages: [{ role: "user" as const, content: "What's the temperature in Tokyo?" }],
+      tools,
+      tool_choice: { type: "function" as const, function: { name: "get_current_temperature" } },
+      stream: false as const,
+    };
+    compatCoverage.log("groq", `function_call (non-stream) request: ${JSON.stringify(params)}`);
+    const raw = (await client.chat.completions.create(params)) as ChatCompletion;
+    const hasFn = raw.choices?.[0]?.message?.tool_calls && raw.choices[0].message.tool_calls.length > 0;
+    expect(hasFn).toBe(true);
+    compatCoverage.mark("groq", "chat.non_stream.function_call");
+    compatCoverage.mark("groq", "responses.non_stream.function_call");
   }, 30000);
 
-  it("stream function_call delta", async () => {
-    if (!apiKey) return expect(true).toBe(true);
-    const client = buildOpenAICompatibleClientForGrok(provider);
-    const model = env("GROQ_TEST_MODEL", "mixtral-8x7b-32768");
+  it("chat stream tool_call delta (real)", async () => {
+    const client = buildOpenAICompatibleClient(provider);
+    const model = await selectGroqModel(client, provider);
     const tools = [
       {
         type: "function" as const,
-        name: "get_current_ceiling",
-        description: "Get the current cloud ceiling",
-        parameters: {
-          type: "object",
-          properties: { location: { type: "string" } },
-          required: ["location"],
+        function: {
+          name: "get_current_ceiling",
+          description: "Get the current cloud ceiling in a given location",
+          parameters: {
+            type: "object",
+            properties: { location: { type: "string", description: "City and state" } },
+            required: ["location"],
+            additionalProperties: false,
+          },
         },
-        strict: true,
       },
     ];
-    try {
-      const maybeStream = await client.responses.create({
-        model,
-        input: [{ type: "message", role: "user", content: "Call tool to get ceiling for Tokyo" }],
-        tools,
-        tool_choice: { type: "function", name: "get_current_ceiling" },
-        stream: true,
-      });
-      expect(isResponseEventStream(maybeStream)).toBe(true);
-      const types: string[] = [];
-      for await (const ev of maybeStream) types.push(ev.type);
-      expect(types).toContain("response.output_item.added");
-      expect(types).toContain("response.function_call_arguments.delta");
-      expect(types).toContain("response.output_item.done");
-      compatCoverage.mark("groq", "responses.stream.function_call.added");
-      compatCoverage.mark("groq", "responses.stream.function_call.args.delta");
-      compatCoverage.mark("groq", "responses.stream.function_call.done");
-      compatCoverage.mark("groq", "chat.stream.tool_call.delta");
-    } catch (e) {
-      compatCoverage.error(
-        "groq",
-        "responses.stream.function_call.added",
-        `Stream function_call failed: ${e instanceof Error ? e.message : String(e)}`
-      );
-    }
+    const params = {
+      model,
+      messages: [
+        { role: "user" as const, content: "Call tool to get ceiling for Tokyo" },
+      ],
+      tools,
+      tool_choice: { type: "function" as const, function: { name: "get_current_ceiling" } },
+      stream: true as const,
+    };
+    const chunks: ChatCompletionChunk[] = [];
+    compatCoverage.log("groq", `function_call (stream) request: ${JSON.stringify(params)}`);
+    const stream = (await client.chat.completions.create(params)) as AsyncIterable<ChatCompletionChunk>;
+    for await (const chunk of stream) chunks.push(chunk);
+    compatCoverage.log("groq", `function_call (stream) chunks: ${chunks.length}`);
+    expect(chunks.some((c) => c.choices?.[0]?.delta?.tool_calls)).toBe(true);
+    compatCoverage.mark("groq", "chat.stream.tool_call.delta");
+    compatCoverage.mark("groq", "responses.stream.function_call.added");
+    compatCoverage.mark("groq", "responses.stream.function_call.args.delta");
+    compatCoverage.mark("groq", "responses.stream.function_call.done");
   }, 30000);
 });
 
 afterAll(async () => {
-  const providers = ["groq"];
+  const providers = compatCoverage.providers();
   for (const prov of providers) {
     const basic = compatCoverage.report(prov);
-    const report = { ...basic, generatedAt: new Date().toISOString(), provider: prov };
+    const report = {
+      ...basic,
+      generatedAt: new Date().toISOString(),
+      provider: prov,
+    };
     try {
       await writeMarkdownReport(report);
+      // eslint-disable-next-line no-console
       console.log(`Saved compatibility report: reports/openai-compat/${prov}.md`);
     } catch (e) {
+      // eslint-disable-next-line no-console
       console.warn("Failed to write compatibility report:", e);
     }
   }
@@ -198,8 +179,10 @@ afterAll(async () => {
       provider: p,
     }));
     await writeCombinedMarkdownReport(combined);
+    // eslint-disable-next-line no-console
     console.log(`Saved combined compatibility report: reports/openai-compat/summary.md`);
   } catch (e) {
-    console.warn("Failed to write combined compatibility report:", e);
+    // eslint-disable-next-line no-console
+    console.warn("Failed to write combined report:", e);
   }
 });

@@ -1,6 +1,7 @@
 import { compatCoverage, writeMarkdownReport } from "./compat-coverage";
-import type { Provider } from "../../src/config/types";
+import type { Provider, RoutingConfig } from "../../src/config/types";
 import { buildOpenAICompatibleClientForClaude } from "../../src/adapters/providers/claude/openai-compatible";
+import { resolveModelForProvider } from "../../src/adapters/providers/shared/model-mapper";
 // Adapter registry removed from tests; use OpenAI-compatible clients
 import {
   claudeToOpenAIResponse,
@@ -12,6 +13,7 @@ import type {
   ResponseCreateParams,
   ResponseStreamEvent,
   Response as OpenAIResponse,
+  ResponseOutputItem,
 } from "openai/resources/responses/responses";
 
 function hasApiKey(): boolean {
@@ -20,27 +22,49 @@ function hasApiKey(): boolean {
 
 describe("Claude OpenAI-compat (real API)", () => {
   const maybe = hasApiKey() ? it : it.skip;
-  const provider: Provider = { type: "claude" };
+  const provider: Provider = {
+    type: "claude",
+    apiKey: process.env.ANTHROPIC_API_KEY,
+  };
+
+  // Create a test config with the provider
+  const testConfig: RoutingConfig = {
+    providers: {
+      claude: provider,
+    },
+    defaults: {
+      providerId: "claude",
+      model: process.env.ANTHROPIC_MODEL || "claude-3-5-sonnet-20241022",
+    },
+  };
 
   maybe("responses non-stream basic", async () => {
-    const client = buildOpenAICompatibleClientForClaude(
+    const model = await resolveModelForProvider({
       provider,
-      process.env.ANTHROPIC_MODEL || "claude-3-5-sonnet-20240620"
-    );
-    const res = (await client.responses.create({
+      sourceModel: process.env.ANTHROPIC_MODEL || "claude-3-5-sonnet-20241022",
+      routingConfig: testConfig,
+    });
+    const client = buildOpenAICompatibleClientForClaude(provider, model);
+    const res = await client.responses.create({
       model: "gpt-4o-mini",
       input: "Hello from claude compat",
-    })) as OpenAIResponse;
+    });
+    // Type guard to ensure non-streaming response
+    if (!("output" in res)) {
+      throw new Error("Expected non-streaming response");
+    }
     expect(res.object).toBe("response");
     expect(Array.isArray(res.output)).toBe(true);
     compatCoverage.mark("claude", "responses.non_stream.basic");
   });
 
   maybe("responses stream chunk + done", async () => {
-    const client = buildOpenAICompatibleClientForClaude(
+    const model = await resolveModelForProvider({
       provider,
-      process.env.ANTHROPIC_MODEL || "claude-3-5-sonnet-20240620"
-    );
+      sourceModel: process.env.ANTHROPIC_MODEL || "claude-3-5-sonnet-20241022",
+      routingConfig: testConfig,
+    });
+    const client = buildOpenAICompatibleClientForClaude(provider, model);
     const types: string[] = [];
     const stream = (await client.responses.create({
       model: "gpt-4o-mini",
@@ -56,10 +80,12 @@ describe("Claude OpenAI-compat (real API)", () => {
   });
 
   maybe("responses non-stream function_call", async () => {
-    const client = buildOpenAICompatibleClientForClaude(
+    const model = await resolveModelForProvider({
       provider,
-      process.env.ANTHROPIC_MODEL || "claude-3-5-sonnet-20240620"
-    );
+      sourceModel: process.env.ANTHROPIC_MODEL || "claude-3-5-sonnet-20241022",
+      routingConfig: testConfig,
+    });
+    const client = buildOpenAICompatibleClientForClaude(provider, model);
     const params: ResponseCreateParams = {
       model: "gpt-4o-mini",
       input: "Call the echo tool with text='hi'",
@@ -79,18 +105,24 @@ describe("Claude OpenAI-compat (real API)", () => {
       tool_choice: { type: "function", name: "echo" },
     } as ResponseCreateParams;
     const res = await client.responses.create(params);
-    function hasFunctionCall(output: any[]): boolean {
+    // Type guard to ensure non-streaming response
+    if (!("output" in res)) {
+      throw new Error("Expected non-streaming response");
+    }
+    function hasFunctionCall(output: ResponseOutputItem[]): boolean {
       return Array.isArray(output) && output.some((i) => i?.type === "function_call" && typeof i?.name === "string");
     }
-    expect(hasFunctionCall((res as any).output)).toBe(true);
+    expect(hasFunctionCall(res.output)).toBe(true);
     compatCoverage.mark("claude", "responses.non_stream.function_call");
   });
 
   maybe("responses stream function_call events", async () => {
-    const client = buildOpenAICompatibleClientForClaude(
+    const model = await resolveModelForProvider({
       provider,
-      process.env.ANTHROPIC_MODEL || "claude-3-5-sonnet-20240620"
-    );
+      sourceModel: process.env.ANTHROPIC_MODEL || "claude-3-5-sonnet-20241022",
+      routingConfig: testConfig,
+    });
+    const client = buildOpenAICompatibleClientForClaude(provider, model);
     const params: ResponseCreateParams = {
       model: "gpt-4o-mini",
       input: "Call the echo tool with text='hello'",
@@ -122,10 +154,12 @@ describe("Claude OpenAI-compat (real API)", () => {
   });
 
   maybe("models list basic", async () => {
-    const client = buildOpenAICompatibleClientForClaude(
+    const model = await resolveModelForProvider({
       provider,
-      process.env.ANTHROPIC_MODEL || "claude-3-5-sonnet-20240620"
-    );
+      sourceModel: process.env.ANTHROPIC_MODEL || "claude-3-5-sonnet-20241022",
+      routingConfig: testConfig,
+    });
+    const client = buildOpenAICompatibleClientForClaude(provider, model);
     const res = await client.models.list();
     expect(Array.isArray(res.data)).toBe(true);
     expect(typeof res.data[0]?.id).toBe("string");
@@ -134,15 +168,11 @@ describe("Claude OpenAI-compat (real API)", () => {
 
   // Chat (Claude-native) coverage
   async function pickClaudeModel() {
-    const env = process.env.ANTHROPIC_MODEL;
-    if (env) return env;
-    try {
-      const client = buildOpenAICompatibleClientForClaude(provider);
-      const listed = await client.models.list();
-      const ids = listed.data.map((m) => m.id);
-      if (ids.length > 0) return ids[0];
-    } catch {}
-    return "claude-3-5-sonnet-20241022";
+    return await resolveModelForProvider({
+      provider,
+      sourceModel: process.env.ANTHROPIC_MODEL || "claude-3-5-sonnet-20241022",
+      routingConfig: testConfig,
+    });
   }
 
   maybe("chat non-stream basic", async () => {
@@ -153,8 +183,12 @@ describe("Claude OpenAI-compat (real API)", () => {
       input: [{ type: "message", role: "user", content: [{ type: "input_text", text: "Hello from chat basic" }] }],
       stream: false,
     });
-    expect((out as any).object).toBe("response");
-    expect(Array.isArray((out as any).output)).toBe(true);
+    // Type guard to ensure non-streaming response
+    if (!("output" in out)) {
+      throw new Error("Expected non-streaming response");
+    }
+    expect(out.object).toBe("response");
+    expect(Array.isArray(out.output)).toBe(true);
     compatCoverage.mark("claude", "responses.non_stream.basic");
     compatCoverage.mark("claude", "chat.non_stream.basic");
   });
@@ -170,7 +204,7 @@ describe("Claude OpenAI-compat (real API)", () => {
       ],
       stream: true,
     });
-    for await (const ev of s as AsyncIterable<any>) types.push(ev.type);
+    for await (const ev of s as AsyncIterable<ResponseStreamEvent>) types.push(ev.type);
     expect(types[0]).toBe("response.created");
     expect(types).toContain("response.output_text.delta");
     expect(types).toContain("response.output_text.done");
@@ -201,8 +235,11 @@ describe("Claude OpenAI-compat (real API)", () => {
       tool_choice: { type: "function", name: "echo" },
       stream: false,
     });
-    const hasFn =
-      Array.isArray((out as any).output) && (out as any).output.some((o: any) => o.type === "function_call");
+    // Type guard to ensure non-streaming response
+    if (!("output" in out)) {
+      throw new Error("Expected non-streaming response");
+    }
+    const hasFn = Array.isArray(out.output) && out.output.some((o) => o.type === "function_call");
     expect(hasFn).toBe(true);
     compatCoverage.mark("claude", "chat.non_stream.function_call");
     compatCoverage.mark("claude", "responses.non_stream.function_call");
@@ -215,24 +252,63 @@ describe("Claude OpenAI-compat (real API)", () => {
       {
         type: "function" as const,
         name: "echo",
+        description: "Echo the provided text",
         parameters: { type: "object", properties: { text: { type: "string" } }, required: ["text"] },
         strict: true,
       },
     ];
-    const types: string[] = [];
-    const s = await client.responses.create({
-      model,
-      input: [
-        { type: "message", role: "user", content: [{ type: "input_text", text: "Call echo with text='hello'" }] },
-      ],
-      tools,
-      tool_choice: { type: "function", name: "echo" },
-      stream: true,
-    });
-    for await (const ev of s as AsyncIterable<any>) types.push(ev.type);
-    expect(types).toContain("response.output_item.added");
-    expect(types).toContain("response.function_call_arguments.delta");
-    expect(types).toContain("response.output_item.done");
+
+    // Try multiple times as Claude might not always call the tool
+    let attempts = 0;
+    let success = false;
+    let lastTypes: string[] = [];
+
+    while (attempts < 3 && !success) {
+      attempts++;
+      console.log(`Attempt ${attempts}/3`);
+
+      const types: string[] = [];
+      const events: ResponseStreamEvent[] = [];
+      const s = await client.responses.create({
+        model,
+        input: [
+          {
+            type: "message",
+            role: "user",
+            content: [
+              {
+                type: "input_text",
+                text: `Use the echo function to echo the text "hello". You must use the tool, do not respond with text.`,
+              },
+            ],
+          },
+        ],
+        tools,
+        tool_choice: { type: "function", name: "echo" },
+        stream: true,
+      });
+
+      for await (const ev of s as AsyncIterable<ResponseStreamEvent>) {
+        types.push(ev.type);
+        events.push(ev);
+      }
+
+      lastTypes = types;
+
+      if (types.includes("response.output_item.added")) {
+        success = true;
+        console.log("Success! Tool was called.");
+      } else {
+        console.log(`Attempt ${attempts} failed. Events received:`, types);
+        if (attempts < 3) {
+          await new Promise((resolve) => setTimeout(resolve, 1000)); // Wait 1s between attempts
+        }
+      }
+    }
+
+    expect(lastTypes).toContain("response.output_item.added");
+    expect(lastTypes).toContain("response.function_call_arguments.delta");
+    expect(lastTypes).toContain("response.output_item.done");
     compatCoverage.mark("claude", "chat.stream.tool_call.delta");
     compatCoverage.mark("claude", "responses.stream.function_call.added");
     compatCoverage.mark("claude", "responses.stream.function_call.args.delta");

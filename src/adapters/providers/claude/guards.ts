@@ -8,6 +8,12 @@ import type {
   MessageDeltaEvent,
   MessageStopEvent,
   Tool as ClaudeTool,
+  ImageBlockParam,
+  ToolResultBlockParam,
+  TextBlock,
+  ToolUseBlock,
+  Usage,
+  MessageDeltaUsage,
 } from "@anthropic-ai/sdk/resources/messages";
 import type {
   ChatCompletionMessageParam,
@@ -15,12 +21,16 @@ import type {
   ChatCompletionToolChoiceOption,
   ChatCompletionContentPart,
   ChatCompletionContentPartText,
+  ChatCompletionFunctionTool,
 } from "openai/resources/chat/completions";
 import type {
   ResponseInput,
   EasyInputMessage,
   ResponseOutputMessage,
   Tool,
+  ResponseOutputText,
+  ResponseOutputItem,
+  FunctionTool,
 } from "openai/resources/responses/responses";
 
 // Claude content block guards
@@ -105,4 +115,89 @@ export function contentToPlainText(content: ChatCompletionMessageParam["content"
 // Tool helpers
 export function isFunctionTool(t: Tool | ChatCompletionTool): t is ChatCompletionTool & { type: 'function' } {
   return typeof t === 'object' && t !== null && (t as { type?: unknown }).type === 'function' && typeof (t as { function?: { name?: unknown } }).function?.name === 'string';
+}
+
+export function isChatCompletionFunctionTool(t: ChatCompletionTool): t is ChatCompletionFunctionTool {
+  return t.type === 'function';
+}
+
+export function isOpenAIFunctionTool(t: Tool): t is FunctionTool {
+  return t.type === 'function';
+}
+
+// Response output type guards
+export function isResponseOutputText(item: ResponseOutputItem): item is ResponseOutputText {
+  return item.type === 'output_text';
+}
+
+export function isResponseOutputMessage(item: ResponseOutputItem): item is ResponseOutputMessage {
+  return item.type === 'message';
+}
+
+// Claude block type guards with proper typing
+export function isImageBlockParam(block: unknown): block is ImageBlockParam {
+  return (
+    typeof block === 'object' &&
+    block !== null &&
+    'type' in block &&
+    (block as any).type === 'image' &&
+    'source' in block
+  );
+}
+
+export function isToolResultBlockParam(block: unknown): block is ToolResultBlockParam {
+  return (
+    typeof block === 'object' &&
+    block !== null &&
+    'type' in block &&
+    (block as any).type === 'tool_result' &&
+    'tool_use_id' in block
+  );
+}
+
+// Usage type guards
+export function hasUsage(obj: unknown): obj is { usage: Usage } {
+  return (
+    typeof obj === 'object' &&
+    obj !== null &&
+    'usage' in obj &&
+    typeof (obj as any).usage === 'object' &&
+    (obj as any).usage !== null &&
+    'input_tokens' in (obj as any).usage &&
+    'output_tokens' in (obj as any).usage
+  );
+}
+
+export function hasDeltaUsage(obj: unknown): obj is { delta: { usage?: MessageDeltaUsage } } {
+  return (
+    typeof obj === 'object' &&
+    obj !== null &&
+    'delta' in obj &&
+    typeof (obj as any).delta === 'object' &&
+    (obj as any).delta !== null &&
+    'usage' in (obj as any).delta
+  );
+}
+
+// Content array type guard
+export function hasContentArray(msg: unknown): msg is { content: ContentBlock[] } {
+  return (
+    typeof msg === 'object' &&
+    msg !== null &&
+    'content' in msg &&
+    Array.isArray((msg as any).content)
+  );
+}
+
+// Tool conversion helpers
+export function convertChatCompletionToolToTool(chatTool: ChatCompletionTool): Tool | null {
+  if (!isChatCompletionFunctionTool(chatTool)) return null;
+  
+  return {
+    type: 'function',
+    name: chatTool.function.name,
+    description: chatTool.function.description || undefined,
+    parameters: chatTool.function.parameters || {},
+    strict: chatTool.function.strict !== false,
+  };
 }

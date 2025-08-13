@@ -13,6 +13,7 @@ import type {
   ResponseFunctionToolCallOutputItem,
 } from "openai/resources/responses/responses";
 import { toOpenAICallIdFromClaude } from "../../../utils/conversation/id-conversion";
+import { isImageBlockParam, isToolResultBlockParam } from "./guards";
 
 function isBase64Source(src: unknown): src is Base64ImageSource {
   return (
@@ -73,15 +74,13 @@ export function convertClaudeMessage(
       }
     };
     for (const b of blocks) {
-      if ((b as { type: string }).type === 'text' && typeof (b as { text?: unknown }).text === 'string') {
-        textBuffer += (b as { text: string }).text;
-      } else if ((b as { type: string }).type === 'tool_use') {
+      if (b.type === 'text' && typeof b.text === 'string') {
+        textBuffer += b.text;
+      } else if (b.type === 'tool_use' && 'id' in b && 'name' in b) {
         flushText();
-        const id = (b as { id: string }).id;
-        const name = (b as { name: string }).name;
-        const args = JSON.stringify((b as { input?: unknown }).input ?? {});
-        const callId = toOpenAICallIdFromClaude(id);
-        out.push({ type: 'function_call', call_id: callId, name, arguments: args });
+        const args = JSON.stringify(b.input ?? {});
+        const callId = toOpenAICallIdFromClaude(b.id);
+        out.push({ type: 'function_call', call_id: callId, name: b.name, arguments: args });
       }
     }
     flushText();
@@ -98,16 +97,15 @@ export function convertClaudeMessage(
       }
     };
     for (const b of blocks) {
-      const t = (b as { type: string }).type;
-      if (t === 'text' && typeof (b as { text?: unknown }).text === 'string') {
-        textParts.push({ type: 'input_text', text: (b as { text: string }).text });
-      } else if (t === 'image') {
+      if (b.type === 'text' && typeof b.text === 'string') {
+        textParts.push({ type: 'input_text', text: b.text });
+      } else if (isImageBlockParam(b)) {
         flushTextParts();
-        const img = convertClaudeImageToOpenAI(b as ImageBlockParam);
+        const img = convertClaudeImageToOpenAI(b);
         out.push({ role: 'user', content: [img] });
-      } else if (t === 'tool_result') {
+      } else if (isToolResultBlockParam(b)) {
         flushTextParts();
-        out.push(convertToolResult(b as ToolResultBlockParam));
+        out.push(convertToolResult(b));
       }
     }
     // final flush: if single part remaining, emit as plain string to match expected shape

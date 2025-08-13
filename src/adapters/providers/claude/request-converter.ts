@@ -1,7 +1,8 @@
 import type { ChatCompletionCreateParams, ChatCompletionMessageParam, ChatCompletionTool } from "openai/resources/chat/completions";
 import type { MessageCreateParams as ClaudeMessageCreateParams, Tool as ClaudeTool } from "@anthropic-ai/sdk/resources/messages";
-import { contentToPlainText } from "./guards";
+import { contentToPlainText, isChatCompletionFunctionTool } from "./guards";
 import { mapModelToProvider } from "../shared/model-mapper";
+import { normalizeJSONSchemaForOpenAI } from "./schema-normalizer";
 
 function mapModel(model: string): string {
   return mapModelToProvider({ targetProviderType: "claude", sourceModel: model });
@@ -11,24 +12,26 @@ function convertTools(tools?: ChatCompletionTool[]): ClaudeTool[] | undefined {
   if (!tools) return undefined;
   const out: ClaudeTool[] = [];
   for (const t of tools) {
-    if (t.type === "function") {
+    if (isChatCompletionFunctionTool(t)) {
       const params = t.function.parameters;
       // Convert function parameters to Claude's input_schema format
       let inputSchema: ClaudeTool["input_schema"];
       if (params && typeof params === 'object') {
+        // Normalize the schema to ensure compatibility
+        const normalized = normalizeJSONSchemaForOpenAI(params);
         // If it already has the correct structure, use it
-        if ('type' in params && params.type === 'object') {
-          inputSchema = params as ClaudeTool["input_schema"];
+        if ('type' in normalized && normalized.type === 'object') {
+          inputSchema = normalized;
         } else {
           // Wrap in object schema format
-          inputSchema = {
+          inputSchema = normalizeJSONSchemaForOpenAI({
             type: "object",
-            properties: params.properties || params,
-            required: params.required
-          };
+            properties: normalized.properties || normalized,
+            required: normalized.required
+          });
         }
       } else {
-        inputSchema = { type: "object", properties: {} };
+        inputSchema = normalizeJSONSchemaForOpenAI({ type: "object", properties: {} });
       }
       
       out.push({

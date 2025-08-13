@@ -18,7 +18,21 @@ import type {
   ChatCompletionMessage,
   ChatCompletionMessageToolCall,
 } from "openai/resources/chat/completions";
-import { isContentDelta, isContentStart, isContentStop, isInputJsonDelta, isMessageDeltaWithStop, isMessageStop, isTextBlock, isToolUseBlock, isTextDelta } from "./guards";
+import { 
+  isContentDelta, 
+  isContentStart, 
+  isContentStop, 
+  isInputJsonDelta, 
+  isMessageDeltaWithStop, 
+  isMessageStop, 
+  isTextBlock, 
+  isToolUseBlock, 
+  isTextDelta,
+  hasUsage,
+  hasContentArray,
+  isResponseOutputText,
+  isResponseOutputMessage
+} from "./guards";
 import { toOpenAICallIdFromClaude } from "../../../utils/conversation/id-conversion";
 
 /**
@@ -41,7 +55,7 @@ export function claudeToChatCompletion(
 ): ChatCompletion {
   const { text, toolCalls } = extractChatContentFromClaude(claude);
   const created = Math.floor(Date.now() / 1000);
-  const usage = (claude as unknown as { usage?: { input_tokens?: number; output_tokens?: number } }).usage || {};
+  const usage = hasUsage(claude) ? claude.usage : { input_tokens: 0, output_tokens: 0 };
   
   return {
     id: `chatcmpl_${Date.now()}`,
@@ -82,7 +96,7 @@ export async function* claudeToChatCompletionStream(
   for await (const ev of events) {
     if (isContentStart(ev)) {
       const index = ev.index ?? 0;
-      const block = ev.content_block as ContentBlock;
+      const block = ev.content_block;
       if (isToolUseBlock(block)) {
         const openaiId = toOpenAICallIdFromClaude(block.id);
         toolCallsInProgress.set(index, { id: openaiId, name: block.name, args: "" });
@@ -170,11 +184,15 @@ function extractChatContentFromClaude(msg: ClaudeMessage): { text: string; toolC
   const toolCalls: ChatCompletionMessageToolCall[] = [];
   const textParts: string[] = [];
   
-  for (const block of msg.content as ContentBlock[]) {
+  if (!hasContentArray(msg)) {
+    return { text: '', toolCalls };
+  }
+  
+  for (const block of msg.content) {
     if (isTextBlock(block)) {
       textParts.push(block.text);
     } else if (isToolUseBlock(block)) {
-      const args = JSON.stringify((block as { input?: unknown }).input ?? {});
+      const args = JSON.stringify(block.input ?? {});
       const openaiId = toOpenAICallIdFromClaude(block.id);
       toolCalls.push({
         id: openaiId,
@@ -221,7 +239,7 @@ export async function* claudeToOpenAIStream(
     }
     if (isContentStart(ev)) {
       const index = ev.index ?? 0;
-      const block = ev.content_block as ContentBlock;
+      const block = ev.content_block;
       if (isToolUseBlock(block)) {
         const openaiId = toOpenAICallIdFromClaude(block.id);
         toolsMap.set(index, { id: openaiId, name: block.name, args: "" });
@@ -243,12 +261,20 @@ export async function* claudeToOpenAIStream(
           sawText = true;
           if (!textItemId) {
             textItemId = genId('msg');
-            // Add text item to output
-            const textItem: ResponseOutputText = {
-              type: 'text',
+            // Add message item with text content to output
+            const textContent: ResponseOutputText = {
+              type: 'output_text',
               text: '',
+              annotations: [],
             };
-            outputItems.push(textItem);
+            const messageItem: ResponseOutputMessage = {
+              id: textItemId,
+              type: 'message',
+              role: 'assistant',
+              status: 'completed',
+              content: [textContent],
+            };
+            outputItems.push(messageItem);
           }
           const deltaEv: ResponseStreamEvent = {
             type: 'response.output_text.delta',
@@ -300,9 +326,15 @@ export async function* claudeToOpenAIStream(
       // Handle final message stop - emit text done first, then completed
       if (sawText && textItemId) {
         // Update text in outputItems
-        const textItemIndex = outputItems.findIndex(i => i.type === 'text');
-        if (textItemIndex >= 0) {
-          (outputItems[textItemIndex] as ResponseOutputText).text = accumulatedText;
+        const messageItemIndex = outputItems.findIndex(i => isResponseOutputMessage(i));
+        if (messageItemIndex >= 0) {
+          const messageItem = outputItems[messageItemIndex];
+          if (isResponseOutputMessage(messageItem) && messageItem.content.length > 0) {
+            const textContent = messageItem.content[0];
+            if (isResponseOutputText(textContent)) {
+              textContent.text = accumulatedText;
+            }
+          }
         }
         const done: ResponseStreamEvent = {
           type: 'response.output_text.done',
@@ -332,11 +364,14 @@ export async function* claudeToOpenAIStream(
 function extractItemsFromClaude(msg: ClaudeMessage): { text: string; items: ResponseOutputItem[] } {
   const items: ResponseOutputItem[] = [];
   const textParts: string[] = [];
-  for (const block of msg.content as ContentBlock[]) {
+  if (!hasContentArray(msg)) {
+    return { text: '', items };
+  }
+  for (const block of msg.content) {
     if (isTextBlock(block)) {
       textParts.push(block.text);
     } else if (isToolUseBlock(block)) {
-      const args = JSON.stringify((block as { input?: unknown }).input ?? {});
+      const args = JSON.stringify(block.input ?? {});
       const openaiId = toOpenAICallIdFromClaude(block.id);
       items.push(buildFunctionCallItem(openaiId, block.name, args));
     }
@@ -349,12 +384,12 @@ function extractItemsFromClaude(msg: ClaudeMessage): { text: string; items: Resp
 
 function buildResponse(items: ResponseOutputItem[], model: string, msg: ClaudeMessage | undefined, text: string): OpenAIResponse {
   const created = Math.floor(Date.now() / 1000);
-  const usage: { input_tokens?: number; output_tokens?: number } = (msg && (msg as unknown as { usage?: { input_tokens?: number; output_tokens?: number } }).usage) || {};
+  const usage = (msg && hasUsage(msg)) ? msg.usage : { input_tokens: 0, output_tokens: 0 };
   const res: OpenAIResponse = {
     id: `resp_${Date.now()}`,
     object: 'response',
     created_at: created,
-    model: model as unknown as OpenAIResponse['model'],
+    model: model,
     status: 'completed',
     output_text: text,
     error: null,
@@ -417,21 +452,23 @@ function buildEmptyResponse(id: string, model: string, tools?: Tool[]): OpenAIRe
     tool_choice: 'auto',
     tools: tools || [],
     top_p: null,
-  } as OpenAIResponse;
+  };
 }
 
 function buildCompletedResponse(id: string, model: string, outputItems?: ResponseOutputItem[], tools?: Tool[]): OpenAIResponse {
-  // Calculate output_text from text items
+  // Calculate output_text from message items with text content
   const outputText = outputItems
-    ?.filter(item => item.type === 'text')
-    .map(item => (item as ResponseOutputText).text)
+    ?.filter(isResponseOutputMessage)
+    .flatMap(msg => msg.content)
+    .filter(isResponseOutputText)
+    .map(item => item.text)
     .join('') || '';
     
   return {
     id,
     object: 'response',
     created_at: Math.floor(Date.now() / 1000),
-    model: model as unknown as OpenAIResponse['model'],
+    model: model,
     status: 'completed',
     output_text: outputText,
     error: null,
@@ -444,7 +481,7 @@ function buildCompletedResponse(id: string, model: string, outputItems?: Respons
     tool_choice: 'auto',
     tools: tools || [],
     top_p: null,
-  } as OpenAIResponse;
+  };
 }
 
 function genId(prefix: string): string {

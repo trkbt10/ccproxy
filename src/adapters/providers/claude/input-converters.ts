@@ -1,5 +1,5 @@
 import type { ResponseInput, Tool, ToolChoiceOptions, ToolChoiceFunction } from "openai/resources/responses/responses";
-import { isEasyInputMessage } from "./guards";
+import { isEasyInputMessage, isOpenAIFunctionTool } from "./guards";
 import type { ChatCompletionMessageParam, ChatCompletionTool, ChatCompletionToolChoiceOption } from "openai/resources/chat/completions";
 import type { FunctionDefinition } from "openai/resources/shared";
 
@@ -47,19 +47,18 @@ export function convertToolsForChatLocal(tools: Tool[] | undefined): ChatComplet
   if (!Array.isArray(tools) || tools.length === 0) return undefined;
   const out: ChatCompletionTool[] = [];
   for (const t of tools) {
-    if (t.type === "function") {
+    if (isOpenAIFunctionTool(t)) {
       const fn: FunctionDefinition = {
         name: t.name,
-        description: (t as { description?: string }).description ?? "",
+        description: t.description ?? "",
       };
       
       // Add parameters if they exist
-      const toolWithParams = t as any;
-      if (toolWithParams.parameters) {
-        fn.parameters = toolWithParams.parameters;
+      if (t.parameters) {
+        fn.parameters = t.parameters;
       }
-      if (toolWithParams.strict !== undefined) {
-        fn.strict = toolWithParams.strict;
+      if (t.strict !== undefined) {
+        fn.strict = t.strict;
       }
       
       out.push({ type: "function", function: fn });
@@ -74,9 +73,11 @@ export function convertToolChoiceForChatLocal(toolChoice: unknown): ChatCompleti
     if (toolChoice === "auto" || toolChoice === "none" || toolChoice === "required") return toolChoice;
     return "auto";
   }
-  const obj = toolChoice as ToolChoiceFunction | ToolChoiceOptions | Record<string, unknown>;
-  if (obj && typeof obj === "object" && (obj as { type?: unknown }).type === "function" && typeof (obj as { name?: unknown }).name === 'string') {
-    return { type: "function", function: { name: (obj as { name: string }).name } };
+  if (typeof toolChoice === "object" && toolChoice !== null) {
+    const obj = toolChoice as Record<string, unknown>;
+    if (obj.type === "function" && typeof obj.name === 'string') {
+      return { type: "function", function: { name: obj.name } };
+    }
   }
   return "auto";
 }

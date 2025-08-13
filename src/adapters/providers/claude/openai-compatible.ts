@@ -5,7 +5,8 @@ import type {
   ResponseCreateParamsNonStreaming,
   ResponseCreateParamsStreaming,
   ResponseStreamEvent, 
-  ResponseInput 
+  ResponseInput,
+  Tool
 } from "openai/resources/responses/responses";
 import type { Provider } from "../../../config/types";
 import type { OpenAICompatibleClient } from "../openai-client-types";
@@ -24,6 +25,7 @@ import { chatCompletionToClaudeLocal } from "./request-converter";
 import type { Message as ClaudeMessage, MessageStreamEvent } from "@anthropic-ai/sdk/resources/messages";
 import { resolveModelForProvider } from "../shared/model-mapper";
 import type { ChatCompletionsCreateFn, ResponsesCreateFn } from "../openai-client-types";
+import { convertChatCompletionToolToTool } from "./guards";
 
 function buildChatParams(
   params: ResponseCreateParams
@@ -37,13 +39,17 @@ function buildChatParams(
     if (typeof params.input === "string") {
       messages.push({ role: "user", content: params.input });
     } else {
-      const converted = convertResponseInputToMessagesLocal(params.input as ResponseInput);
-      messages.push(...converted);
+      if (!params.input) {
+        messages.push({ role: "user", content: "" });
+      } else {
+        const converted = convertResponseInputToMessagesLocal(params.input);
+        messages.push(...converted);
+      }
     }
   }
 
   const chatParams: ChatCompletionCreateParams = {
-    model: (params.model as string) || (process.env.ANTHROPIC_MODEL as string | undefined) || "",
+    model: params.model || process.env.ANTHROPIC_MODEL || "",
     messages,
     stream: !!params.stream,
   };
@@ -51,8 +57,8 @@ function buildChatParams(
   if (params.max_output_tokens != null)
     chatParams.max_tokens = params.max_output_tokens;
   if (params.temperature != null)
-    chatParams.temperature = params.temperature as number;
-  if (params.top_p != null) chatParams.top_p = params.top_p as number;
+    chatParams.temperature = params.temperature;
+  if (params.top_p != null) chatParams.top_p = params.top_p;
   if (params.tools) {
     const mapped = convertToolsForChatLocal(params.tools);
     if (mapped) chatParams.tools = mapped;
@@ -88,7 +94,7 @@ export function buildOpenAICompatibleClientForClaude(
           // Resolve model using live models list (type-safe, provider-driven)
           const resolvedModel = await resolveModelForProvider({
             provider,
-            sourceModel: params.model as string,
+            sourceModel: params.model,
             modelHint,
           });
           const claudeReq = chatCompletionToClaudeLocal({ ...params, model: resolvedModel });
@@ -97,15 +103,15 @@ export function buildOpenAICompatibleClientForClaude(
             const streamAny = (await anthropic.messages.create(
               { ...claudeReq, stream: true },
               { signal: options?.signal }
-            )) as AsyncIterable<MessageStreamEvent>;
-            return claudeToChatCompletionStream(streamAny, resolvedModel as string);
+            ));
+            return claudeToChatCompletionStream(streamAny, resolvedModel);
           }
 
           const claudeResp = await anthropic.messages.create(
             { ...claudeReq, stream: false },
             { signal: options?.signal }
           );
-          return claudeToChatCompletion(claudeResp as ClaudeMessage, resolvedModel as string);
+          return claudeToChatCompletion(claudeResp, resolvedModel);
   }
 
   // responses.create overloads
@@ -120,7 +126,7 @@ export function buildOpenAICompatibleClientForClaude(
         // Resolve model using live models list (type-safe, provider-driven)
         chatParams.model = await resolveModelForProvider({
           provider,
-          sourceModel: chatParams.model as string,
+          sourceModel: chatParams.model,
           modelHint,
         });
         const claudeReq = chatCompletionToClaudeLocal(chatParams);
@@ -129,26 +135,27 @@ export function buildOpenAICompatibleClientForClaude(
           const streamAny = (await anthropic.messages.create(
             { ...claudeReq, stream: true },
             { signal: options?.signal }
-          )) as AsyncIterable<MessageStreamEvent>;
-          return claudeToOpenAIStream(streamAny, chatParams.model as string, chatParams.tools) as AsyncIterable<ResponseStreamEvent>;
+          ));
+          const openaiTools = chatParams.tools?.map(convertChatCompletionToolToTool).filter((t): t is Tool => t !== null);
+          return claudeToOpenAIStream(streamAny, chatParams.model, openaiTools);
         }
 
         const claudeResp = await anthropic.messages.create(
           { ...claudeReq, stream: false },
           { signal: options?.signal }
         );
-        const response = claudeToOpenAIResponse(claudeResp as ClaudeMessage, chatParams.model as string);
+        const response = claudeToOpenAIResponse(claudeResp, chatParams.model);
         return response;
   }
 
   return {
     chat: {
       completions: {
-        create: chatCompletionsCreate as ChatCompletionsCreateFn,
+        create: chatCompletionsCreate,
       },
     },
     responses: {
-      create: responsesCreate as ResponsesCreateFn,
+      create: responsesCreate,
     },
     models: {
       async list() {

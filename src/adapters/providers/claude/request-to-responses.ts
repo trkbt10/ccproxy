@@ -49,7 +49,7 @@ function mapClaudeToolsToResponses(tools?: ClaudeTool[]): OpenAITool[] | undefin
   if (!Array.isArray(tools) || tools.length === 0) return undefined;
   const out: OpenAITool[] = [];
   for (const t of tools) {
-    const params: Record<string, unknown> = t.input_schema as unknown as Record<string, unknown>;
+    const params = t.input_schema || {};
     const fn: FunctionTool = {
       type: 'function',
       name: t.name,

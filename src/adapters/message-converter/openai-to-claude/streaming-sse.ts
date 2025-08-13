@@ -44,6 +44,7 @@ export class OpenAIToClaudeSSEStream {
   }
 
   async start(messageId: string): Promise<void> {
+    logInfo(`Starting SSE stream with messageId: ${messageId}`, {}, { requestId: this.requestId });
     await this.send("message_start", {
       type: "message_start",
       message: {
@@ -70,6 +71,9 @@ export class OpenAIToClaudeSSEStream {
 
   // Sink helpers
   private async send(event: string, payload: unknown): Promise<void> {
+    if (this.logEnabled) {
+      logDebug(`Sending SSE event: ${event}`, { event, payload }, { requestId: this.requestId });
+    }
     await this.sink.write(event, payload);
   }
   private async textStart(index: number) {
@@ -119,8 +123,18 @@ export class OpenAIToClaudeSSEStream {
       case "response.output_text.delta": {
         const currentBlockResult = this.currentTextBlockId ? this.contentManager.getBlock(this.currentTextBlockId) : this.contentManager.getCurrentTextBlock();
         if (currentBlockResult) {
-          await this.deltaText(currentBlockResult.metadata.index, ev.delta);
-          this.contentManager.updateTextContent(currentBlockResult.metadata.id, ev.delta);
+          const delta = (ev as any).delta || (ev as any).text;
+          await this.deltaText(currentBlockResult.metadata.index, delta);
+          this.contentManager.updateTextContent(currentBlockResult.metadata.id, delta);
+        } else {
+          // Create a new text block if none exists
+          const { metadata } = this.contentManager.addTextBlock();
+          await this.textStart(metadata.index);
+          this.contentManager.markStarted(metadata.id);
+          this.currentTextBlockId = metadata.id;
+          const delta = (ev as any).delta || (ev as any).text;
+          await this.deltaText(metadata.index, delta);
+          this.contentManager.updateTextContent(metadata.id, delta);
         }
         break;
       }
@@ -214,7 +228,7 @@ export class OpenAIToClaudeSSEStream {
         break;
       }
       default:
-        logUnexpected("Unhandled event type", ev.type, {}, { requestId: this.requestId });
+        logUnexpected("Unhandled event type", ev.type, { event: ev }, { requestId: this.requestId });
     }
   }
 

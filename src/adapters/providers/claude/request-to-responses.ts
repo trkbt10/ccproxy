@@ -3,6 +3,7 @@ import type { ResponseCreateParams, Tool as OpenAITool, FunctionTool, ResponseIn
 import type { ToolChoice as ClaudeToolChoice } from "@anthropic-ai/sdk/resources/messages";
 import type { ResponsesModel as OpenAIResponseModel } from "openai/resources/shared";
 import { convertClaudeMessage } from "./message-converters";
+import { normalizeJSONSchemaForOpenAI } from "./schema-normalizer";
 
 export function claudeToResponsesLocal(
   req: ClaudeMessageCreateParams,
@@ -46,11 +47,13 @@ function mapClaudeToolsToResponses(tools?: ClaudeTool[]): OpenAITool[] | undefin
   const out: OpenAITool[] = [];
   for (const t of tools) {
     const params = t.input_schema || {};
+    // Normalize the schema to ensure it meets OpenAI's requirements
+    const normalizedParams = normalizeJSONSchemaForOpenAI(params);
     const fn: FunctionTool = {
       type: 'function',
       name: t.name,
       description: t.description ?? null,
-      parameters: params,
+      parameters: normalizedParams,
       strict: true,
     };
     out.push(fn);

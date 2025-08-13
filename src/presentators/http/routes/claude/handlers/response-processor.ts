@@ -133,10 +133,14 @@ async function processStreamingResponse(
         config.signal ? { signal: config.signal } : undefined
       );
 
+      let eventCount = 0;
       for await (const event of iterable as AsyncIterable<ResponseStreamEvent>) {
         if (config.signal?.aborted) break;
+        eventCount++;
+        logDebug(`Received OpenAI event #${eventCount}`, { eventType: event.type, event }, context);
         await sse.processEvent(event);
       }
+      logInfo(`Processed ${eventCount} events from OpenAI`, {}, context);
 
       const { responseId } = sse.getResult();
       config.store.updateConversationState({

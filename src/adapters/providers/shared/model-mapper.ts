@@ -1,10 +1,7 @@
 import type { Provider, RoutingConfig } from "../../../config/types";
 import { getRoutingConfigCache } from "../../../execution/routing-config";
 import { detectModelGrade } from "../../../tools/model/model-grade-detector";
-import {
-  getProviderAliases,
-  getProviderByGrade,
-} from "../../../config/model-mapping";
+import { getProviderAliases, getProviderByGrade } from "../../../config/model-mapping";
 import { getCachedModelIds } from "./model-list-cache";
 // API key resolution happens inside adapters; no env fallback here
 
@@ -92,6 +89,10 @@ export async function resolveModelForProvider(params: {
   routingConfig?: RoutingConfig | null;
   listAvailableModels?: () => Promise<string[]>; // optional override for tests
 }): Promise<string> {
+  if (params.provider.model) {
+    // If provider has a model, use it directly
+    return params.provider.model;
+  }
   const providerType = params.provider.type as ProviderType;
   const cfg = params.routingConfig ?? getRoutingConfigCache();
   const sourceModel = normalizeModelName(params.sourceModel);
@@ -106,12 +107,8 @@ export async function resolveModelForProvider(params: {
   // Load provider models and pick by grade
   try {
     const lister =
-      params.listAvailableModels ||
-      (async () =>
-        await listModelsForProvider(params.provider, params.modelHint));
-    const ids = (await lister())
-      .map(normalizeModelName)
-      .filter(Boolean) as string[];
+      params.listAvailableModels || (async () => await listModelsForProvider(params.provider, params.modelHint));
+    const ids = (await lister()).map(normalizeModelName).filter(Boolean) as string[];
     if (ids.length > 0) {
       const grade = detectModelGrade(sourceModel || cfg?.defaults?.model || "");
       const graded = ids.filter((id) => detectModelGrade(id) === grade);
@@ -140,10 +137,7 @@ function sortByRecency(ids: string[]): string[] {
   // Heuristic: extract largest numeric token (e.g., dates like 20241022 or version numbers), desc
   const score = (id: string): number => {
     const numbers = id.match(/\d{6,}|\d+/g) || [];
-    const max = numbers.reduce(
-      (acc, n) => Math.max(acc, parseInt(n, 10) || 0),
-      0
-    );
+    const max = numbers.reduce((acc, n) => Math.max(acc, parseInt(n, 10) || 0), 0);
     // Small bonus for contains 'pro' or 'sonnet' vs 'mini'/'lite'
     const bonus = /pro|opus|sonnet|ultra/i.test(id) ? 100 : 0;
     const malus = /mini|lite|nano|tiny|fast/i.test(id) ? -50 : 0;
@@ -154,9 +148,6 @@ function sortByRecency(ids: string[]): string[] {
 
 // No provider-prefix hardcoding; mapping always flows through grade/aliases and live list.
 
-async function listModelsForProvider(
-  provider: Provider,
-  modelHint?: string
-): Promise<string[]> {
+async function listModelsForProvider(provider: Provider, modelHint?: string): Promise<string[]> {
   return await getCachedModelIds(provider, modelHint);
 }

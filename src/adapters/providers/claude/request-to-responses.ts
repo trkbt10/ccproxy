@@ -6,12 +6,8 @@ import { convertClaudeMessage } from "./message-converters";
 
 export function claudeToResponsesLocal(
   req: ClaudeMessageCreateParams,
-  modelResolver: () => OpenAIResponseModel,
-  _lastResponseId?: string | undefined,
-  _routingConfig?: unknown,
-  _providerId?: string
+  model: OpenAIResponseModel
 ): ResponseCreateParams {
-  const model = modelResolver();
   const inputItems: ResponseInputItem[] = [];
 
   for (const m of req.messages) {

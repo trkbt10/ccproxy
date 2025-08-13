@@ -25,6 +25,7 @@ export type ToolRule = {
 
 export type Provider = {
   type: "openai" | "claude" | "gemini" | "grok" | "groq" | (string & {});
+  model?: string; // Default model for this provider
   baseURL?: string;
   apiKey?: string;
   api?: {
@@ -57,7 +58,9 @@ export type RoutingConfig = {
     byProviderType?: Record<
       Provider["type"],
       {
-        byGrade?: Partial<Record<import("../tools/model/model-grade-detector").ModelGrade, string>>;
+        byGrade?: Partial<{
+          [grade in "high" | "mid" | "low"]: string;
+        }>;
         aliases?: Record<string, string>;
       }
     >;

@@ -3,8 +3,8 @@ import type {
   Response as OpenAIResponse,
   ResponseCreateParams,
   ResponseStreamEvent,
-  Tool,
 } from "openai/resources/responses/responses";
+import type { ResponsesModel } from "openai/resources/shared";
 import { streamSSE } from "hono/streaming";
 import type { Context } from "hono";
 import type { MessageCreateParams as ClaudeMessageCreateParams } from "@anthropic-ai/sdk/resources/messages";
@@ -22,6 +22,7 @@ import {
   logPerformance,
 } from "../../../../../utils/logging/migrate-logger";
 import type { RoutingConfig } from "../../../../../config/types";
+import { claudeToResponsesLocal } from "../../../../../adapters/providers/claude/request-to-responses";
 // ID manager no longer required; conversions are deterministic
 
 export type ProcessorConfig = {
@@ -171,68 +172,11 @@ async function processStreamingResponse(
 }
 
 export function createResponseProcessor(config: ProcessorConfig) {
-  // Build complete Responses request from Claude request including tools
-  async function buildOpenAIRequest(req: ClaudeMessageCreateParams): Promise<ResponseCreateParams> {
-    const openaiReq: ResponseCreateParams = {
-      model: config.model,
-      input: req.messages?.map(msg => ({
-        type: "message" as const,
-        role: msg.role,
-        content: [{ type: "input_text", text: String(msg.content || "") }],
-      })) || [],
-      stream: config.stream,
-    };
-
-    // Add system message if present
-    if (req.system) {
-      openaiReq.instructions = typeof req.system === 'string' ? req.system : null;
-    }
-
-    // Convert and add tools if present
-    if (req.tools && req.tools.length > 0) {
-      openaiReq.tools = req.tools.map(tool => {
-        // Handle both legacy tools (with description/input_schema) and new tools
-        const toolAny = tool as any;
-        return {
-          type: "function" as const,
-          name: tool.name,
-          description: toolAny.description || "",
-          parameters: toolAny.input_schema || {},
-          strict: false,
-        } satisfies Tool;
-      });
-    }
-
-    // Convert tool choice if present
-    if (req.tool_choice) {
-      if (req.tool_choice.type === "none") {
-        openaiReq.tool_choice = "none";
-      } else if (req.tool_choice.type === "any") {
-        openaiReq.tool_choice = "auto";
-      } else if (req.tool_choice.type === "tool" && 'name' in req.tool_choice) {
-        openaiReq.tool_choice = {
-          type: "function",
-          name: req.tool_choice.name,
-        };
-      }
-    }
-
-    // Add other parameters
-    if (req.max_tokens) {
-      openaiReq.max_output_tokens = req.max_tokens;
-    }
-    if (req.temperature != null) {
-      openaiReq.temperature = req.temperature;
-    }
-    if (req.top_p != null) {
-      openaiReq.top_p = req.top_p;
-    }
-
-    return openaiReq;
-  }
-
   async function process(c: Context): Promise<Response> {
-    const openaiReq = await buildOpenAIRequest(config.claudeReq);
+    const openaiReq = claudeToResponsesLocal(
+      config.claudeReq,
+      config.model as ResponsesModel
+    );
     logDebug("OpenAI Request Params", openaiReq, { requestId: config.requestId });
     return config.stream
       ? processStreamingResponse(config, openaiReq, c)
@@ -241,3 +185,4 @@ export function createResponseProcessor(config: ProcessorConfig) {
 
   return { process };
 }
+

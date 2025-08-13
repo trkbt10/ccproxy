@@ -1,4 +1,4 @@
-import { ContentBlockManager } from "../../../utils/streaming/content-block-manager";
+import { ContentBlockManager } from "./content-block-manager";
 import { toClaudeToolUseIdFromOpenAI } from "../../../utils/conversation/id-conversion";
 import { logDebug, logInfo, logUnexpected, logWarn } from "../../../utils/logging/migrate-logger";
 import type {
@@ -21,14 +21,31 @@ export interface ClaudeSSESink {
 
 // Type guards reused locally
 function isFunctionCallItem(item: any): item is ResponseFunctionToolCall & { id: string } {
-  return item?.type === "function_call" && typeof item?.id === "string" && typeof item?.call_id === "string" && typeof item?.name === "string";
+  return (
+    item?.type === "function_call" &&
+    typeof item?.id === "string" &&
+    typeof item?.call_id === "string" &&
+    typeof item?.name === "string"
+  );
 }
-function isResponseCompletedEvent(ev: OpenAIResponseStreamEvent): ev is ResponseCompletedEvent { return ev.type === "response.completed"; }
-function isResponseOutputItemAddedEvent(ev: OpenAIResponseStreamEvent): ev is ResponseOutputItemAddedEvent { return ev.type === "response.output_item.added"; }
-function isResponseOutputItemDoneEvent(ev: OpenAIResponseStreamEvent): ev is ResponseOutputItemDoneEvent { return ev.type === "response.output_item.done"; }
-function isWebSearchInProgressEvent(ev: OpenAIResponseStreamEvent): ev is ResponseWebSearchCallInProgressEvent { return ev.type === "response.web_search_call.in_progress"; }
-function isWebSearchSearchingEvent(ev: OpenAIResponseStreamEvent): ev is ResponseWebSearchCallSearchingEvent { return ev.type === "response.web_search_call.searching"; }
-function isWebSearchCompletedEvent(ev: OpenAIResponseStreamEvent): ev is ResponseWebSearchCallCompletedEvent { return ev.type === "response.web_search_call.completed"; }
+function isResponseCompletedEvent(ev: OpenAIResponseStreamEvent): ev is ResponseCompletedEvent {
+  return ev.type === "response.completed";
+}
+function isResponseOutputItemAddedEvent(ev: OpenAIResponseStreamEvent): ev is ResponseOutputItemAddedEvent {
+  return ev.type === "response.output_item.added";
+}
+function isResponseOutputItemDoneEvent(ev: OpenAIResponseStreamEvent): ev is ResponseOutputItemDoneEvent {
+  return ev.type === "response.output_item.done";
+}
+function isWebSearchInProgressEvent(ev: OpenAIResponseStreamEvent): ev is ResponseWebSearchCallInProgressEvent {
+  return ev.type === "response.web_search_call.in_progress";
+}
+function isWebSearchSearchingEvent(ev: OpenAIResponseStreamEvent): ev is ResponseWebSearchCallSearchingEvent {
+  return ev.type === "response.web_search_call.searching";
+}
+function isWebSearchCompletedEvent(ev: OpenAIResponseStreamEvent): ev is ResponseWebSearchCallCompletedEvent {
+  return ev.type === "response.web_search_call.completed";
+}
 
 export class OpenAIToClaudeSSEStream {
   private sink: ClaudeSSESink;
@@ -39,7 +56,12 @@ export class OpenAIToClaudeSSEStream {
   private currentTextBlockId?: string;
   private usage = { input_tokens: 0, output_tokens: 0 };
 
-  constructor(sink: ClaudeSSESink, private conversationId: string, private requestId?: string, private logEnabled: boolean = false) {
+  constructor(
+    sink: ClaudeSSESink,
+    private conversationId: string,
+    private requestId?: string,
+    private logEnabled: boolean = false
+  ) {
     this.sink = sink;
   }
 
@@ -66,7 +88,9 @@ export class OpenAIToClaudeSSEStream {
       },
     });
     await this.ping();
-    this.pingTimer = setInterval(() => { this.ping(); }, 15000);
+    this.pingTimer = setInterval(() => {
+      this.ping();
+    }, 15000);
   }
 
   // Sink helpers
@@ -77,19 +101,35 @@ export class OpenAIToClaudeSSEStream {
     await this.sink.write(event, payload);
   }
   private async textStart(index: number) {
-    await this.send("content_block_start", { type: "content_block_start", index, content_block: { type: "text", text: "", citations: [] } });
+    await this.send("content_block_start", {
+      type: "content_block_start",
+      index,
+      content_block: { type: "text", text: "", citations: [] },
+    });
   }
   private async deltaText(index: number, delta: string) {
-    await this.send("content_block_delta", { type: "content_block_delta", index, delta: { type: "text_delta", text: delta } });
+    await this.send("content_block_delta", {
+      type: "content_block_delta",
+      index,
+      delta: { type: "text_delta", text: delta },
+    });
   }
   private async textStop(index: number) {
     await this.send("content_block_stop", { type: "content_block_stop", index });
   }
   private async toolStart(index: number, item: { id: string; name: string; input?: unknown }) {
-    await this.send("content_block_start", { type: "content_block_start", index, content_block: { type: "tool_use", id: item.id, name: item.name, input: item.input ?? {} } });
+    await this.send("content_block_start", {
+      type: "content_block_start",
+      index,
+      content_block: { type: "tool_use", id: item.id, name: item.name, input: item.input ?? {} },
+    });
   }
   private async toolArgsDelta(index: number, partialJson: string) {
-    await this.send("content_block_delta", { type: "content_block_delta", index, delta: { type: "input_json_delta", partial_json: partialJson } });
+    await this.send("content_block_delta", {
+      type: "content_block_delta",
+      index,
+      delta: { type: "input_json_delta", partial_json: partialJson },
+    });
   }
   private async toolStop(index: number) {
     await this.send("content_block_stop", { type: "content_block_stop", index });
@@ -121,7 +161,9 @@ export class OpenAIToClaudeSSEStream {
         return;
       }
       case "response.output_text.delta": {
-        const currentBlockResult = this.currentTextBlockId ? this.contentManager.getBlock(this.currentTextBlockId) : this.contentManager.getCurrentTextBlock();
+        const currentBlockResult = this.currentTextBlockId
+          ? this.contentManager.getBlock(this.currentTextBlockId)
+          : this.contentManager.getCurrentTextBlock();
         if (currentBlockResult) {
           const delta = (ev as any).delta || (ev as any).text;
           await this.deltaText(currentBlockResult.metadata.index, delta);
@@ -139,7 +181,9 @@ export class OpenAIToClaudeSSEStream {
         break;
       }
       case "response.output_text.done": {
-        const doneBlockResult = this.currentTextBlockId ? this.contentManager.getBlock(this.currentTextBlockId) : this.contentManager.getCurrentTextBlock();
+        const doneBlockResult = this.currentTextBlockId
+          ? this.contentManager.getBlock(this.currentTextBlockId)
+          : this.contentManager.getCurrentTextBlock();
         if (doneBlockResult) {
           await this.textStop(doneBlockResult.metadata.index);
           this.contentManager.markCompleted(doneBlockResult.metadata.id);
@@ -150,7 +194,11 @@ export class OpenAIToClaudeSSEStream {
       case "response.output_item.added": {
         if (isResponseOutputItemAddedEvent(ev) && isFunctionCallItem(ev.item)) {
           const item = ev.item;
-          logDebug("function_call event", { id: item.id, call_id: item.call_id, name: item.name, type: item.type }, { requestId: this.requestId });
+          logDebug(
+            "function_call event",
+            { id: item.id, call_id: item.call_id, name: item.name, type: item.type },
+            { requestId: this.requestId }
+          );
           // Derive a Claude tool_use_id deterministically from the OpenAI call_id
           const claudeToolUseId = toClaudeToolUseIdFromOpenAI(item.call_id);
           const { metadata: toolMeta } = this.contentManager.addToolBlock(claudeToolUseId, item.name, item.call_id);
@@ -182,8 +230,11 @@ export class OpenAIToClaudeSSEStream {
       }
       case "response.content_part.added": {
         const contentAddedEvent = ev as ResponseContentPartAddedEvent;
-        logDebug(`content_part.added: type=${contentAddedEvent.part.type}, item_id=${contentAddedEvent.item_id}, content_index=${contentAddedEvent.content_index}`,
-          contentAddedEvent, { requestId: this.requestId });
+        logDebug(
+          `content_part.added: type=${contentAddedEvent.part.type}, item_id=${contentAddedEvent.item_id}, content_index=${contentAddedEvent.content_index}`,
+          contentAddedEvent,
+          { requestId: this.requestId }
+        );
         if (contentAddedEvent.item_id) {
           this.responseId = contentAddedEvent.item_id;
           logInfo(`Captured response ID: ${this.responseId}`, undefined, { requestId: this.requestId });
@@ -192,7 +243,11 @@ export class OpenAIToClaudeSSEStream {
       }
       case "response.content_part.done": {
         const contentDoneEvent = ev as ResponseContentPartDoneEvent;
-        logDebug(`content_part.done: type=${contentDoneEvent.part.type}, item_id=${contentDoneEvent.item_id}`, contentDoneEvent, { requestId: this.requestId });
+        logDebug(
+          `content_part.done: type=${contentDoneEvent.part.type}, item_id=${contentDoneEvent.item_id}`,
+          contentDoneEvent,
+          { requestId: this.requestId }
+        );
         break;
       }
       case "response.completed": {
@@ -223,7 +278,11 @@ export class OpenAIToClaudeSSEStream {
       case "response.web_search_call.completed": {
         if (isWebSearchCompletedEvent(ev)) {
           const extendedEv = ev as ResponseWebSearchCallCompletedEvent & { query?: string; result_count?: number };
-          logDebug("web_search_call.completed", { query: extendedEv.query, result_count: extendedEv.result_count }, { requestId: this.requestId });
+          logDebug(
+            "web_search_call.completed",
+            { query: extendedEv.query, result_count: extendedEv.result_count },
+            { requestId: this.requestId }
+          );
         }
         break;
       }

@@ -3,4 +3,4 @@
 import app from "./index.js";
 import { startHonoServer } from "./presentators/http/server";
 
-await startHonoServer(app);
+await startHonoServer(app, { apiMode: "claude" });

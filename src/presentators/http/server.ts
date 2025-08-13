@@ -1,12 +1,30 @@
 import { serve } from "@hono/node-server";
 import type { Hono } from "hono";
 import { loadRoutingConfigOnce } from "../../execution/routing-config";
+import { createConfigLoader } from "../../execution/routing-config-with-overrides";
 import { printStartupInfo } from "./utils/startup-info";
 import { extractEndpoints } from "./utils/hono-endpoints";
 import { printBanner, printProviderInfoLine } from "../cli/banner";
 
-async function printBannerWithProvider(): Promise<void> {
-  printBanner("CCPROXY", "cyan");
+async function printBannerWithProvider(apiMode?: "claude" | "openai" | "gemini"): Promise<void> {
+  // API-specific banner configurations
+  const configs = {
+    claude: {
+      text: "CLAUDE",
+      color: "cyan" as const,      // Anthropic's cyan/blue
+    },
+    openai: {
+      text: "OPENAI", 
+      color: "green" as const,     // OpenAI's green
+    },
+    gemini: {
+      text: "GEMINI",
+      color: "blue" as const,      // Google's blue (changed from magenta)
+    }
+  };
+  
+  const config = configs[apiMode || "claude"];
+  printBanner(config.text, config.color);
   console.log();
   await printProviderInfoLine();
   console.log();
@@ -26,6 +44,7 @@ export interface ServerOptions {
   port?: number | string;
   configPath?: string;
   configOverrides?: Array<{ key: string; value: string }>;
+  apiMode?: "claude" | "openai" | "gemini";
 }
 
 /**
@@ -35,12 +54,14 @@ export interface ServerOptions {
 export async function startHonoServer(app: Hono, opts?: ServerOptions): Promise<void> {
   const port = resolvePort(opts?.port ?? undefined);
 
-  // TODO: Apply configPath and configOverrides to routing config loading
-  // For now, we'll implement this in a follow-up
+  // Create config loader with overrides if provided
+  const loadConfig = opts?.configPath || opts?.configOverrides
+    ? createConfigLoader(opts.configPath, opts.configOverrides)
+    : loadRoutingConfigOnce;
 
   serve({ fetch: app.fetch, port }, async (info) => {
-    await printBannerWithProvider();
-    const cfg = await loadRoutingConfigOnce();
+    await printBannerWithProvider(opts?.apiMode);
+    const cfg = await loadConfig();
     const eps = extractEndpoints(app);
     await printStartupInfo(info.port, cfg, eps);
   });

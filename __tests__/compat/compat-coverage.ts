@@ -30,8 +30,7 @@ export class CompatCoverage {
   }
 
   mark(provider: string, f: Feature): void {
-    if (!this.seenByProvider.has(provider))
-      this.seenByProvider.set(provider, new Set());
+    if (!this.seenByProvider.has(provider)) this.seenByProvider.set(provider, new Set());
     this.seenByProvider.get(provider)!.add(f);
   }
 
@@ -136,29 +135,23 @@ export function toMarkdown(report: CompatReport): string {
     for (const l of report.logs) lines.push(`- ${l}`);
     lines.push("");
   }
-  lines.push(
-    `> Note: This measures compatibility coverage against the OpenAI API (feature-level), not code coverage.`
-  );
+  lines.push(`> Note: This measures compatibility coverage against the OpenAI API (feature-level), not code coverage.`);
   return lines.join("\n");
 }
 
 import { mkdir, writeFile } from "node:fs/promises";
 import { dirname } from "node:path";
-
-export async function writeMarkdownReport(
-  report: CompatReport,
-  baseDir = "reports/openai-compat"
-): Promise<void> {
-  const filePath = `${baseDir}/${report.provider}.md`;
+const __dirname = import.meta.dirname || new URL(".", import.meta.url).pathname;
+import path from "node:path";
+const exportDir = path.join(__dirname, "/snapshots/openai-compat");
+export async function writeMarkdownReport(report: CompatReport, baseDir = exportDir): Promise<void> {
+  const filePath = path.join(baseDir, `${report.provider}.md`);
   await mkdir(dirname(filePath), { recursive: true });
   await writeFile(filePath, toMarkdown(report), "utf8");
 }
 
-export async function writeCombinedMarkdownReport(
-  reports: CompatReport[],
-  baseDir = "reports/openai-compat"
-): Promise<void> {
-  const filePath = `${baseDir}/summary.md`;
+export async function writeCombinedMarkdownReport(reports: CompatReport[], baseDir = exportDir): Promise<void> {
+  const filePath = path.join(baseDir, "summary.md");
   await mkdir(dirname(filePath), { recursive: true });
   const lines: string[] = [];
   lines.push(`# OpenAI API Compatibility Coverage — Summary`);

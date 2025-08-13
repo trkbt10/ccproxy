@@ -1,6 +1,6 @@
 import { describe, test, expect } from "bun:test";
 import { readFile, writeFile, mkdir } from "node:fs/promises";
-import { existsSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { expandConfig } from "../src/config/expansion";
 import type { RoutingConfig, Provider } from "../src/config/types";
@@ -86,7 +86,7 @@ describe("Config API key ingestion", () => {
       tools: [],
     };
     const p = await writeConfig(cfg);
-    const run = () => expandConfig(JSON.parse(require('node:fs').readFileSync(p, 'utf8')) as RoutingConfig);
+    const run = () => expandConfig(JSON.parse(readFileSync(p, "utf8")) as RoutingConfig);
 
     withEnv({ OPENAI_API_KEY: undefined, ANTHROPIC_API_KEY: "ak-live" }, () => {
       const expanded = run();

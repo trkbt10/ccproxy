@@ -1,11 +1,26 @@
-import type { Provider, RoutingConfig } from "../../../config/types";
+import type { Provider, RoutingConfig, ModelMapping } from "../../../config/types";
 import { getRoutingConfigCache } from "../../../execution/routing-config";
-import { detectModelGrade } from "../../../tools/model/model-grade-detector";
-import { getProviderAliases, getProviderByGrade } from "../../../config/model-mapping";
+import { detectModelGrade } from "../../../config/model/model-grade-detector";
 import { getCachedModelIds } from "./model-list-cache";
 // API key resolution happens inside adapters; no env fallback here
 
 type ProviderType = Provider["type"];
+
+function findProviderByType(
+  cfg: RoutingConfig | undefined | null,
+  providerType: ProviderType
+): Provider | undefined {
+  if (!cfg?.providers) return undefined;
+  return Object.values(cfg.providers).find(p => p.type === providerType);
+}
+
+function getProviderModelMapping(
+  cfg: RoutingConfig | undefined | null,
+  providerType: ProviderType
+): ModelMapping | undefined {
+  const provider = findProviderByType(cfg, providerType);
+  return provider?.modelMapping;
+}
 
 function normalizeModelName(name?: string): string | undefined {
   if (!name) return undefined;
@@ -17,16 +32,16 @@ function normalizeModelName(name?: string): string | undefined {
 function pickByGrade(
   grade: "high" | "mid" | "low",
   providerType: ProviderType,
-  cfg: RoutingConfig | null
+  cfg: RoutingConfig | undefined | null
 ): string | undefined {
-  const byGrade = getProviderByGrade(cfg, providerType);
-  return byGrade?.[grade];
+  const modelMapping = getProviderModelMapping(cfg, providerType);
+  return modelMapping?.byGrade?.[grade];
 }
 
 function tryMapByGrade(
   modelName: string | undefined,
   providerType: ProviderType,
-  cfg: RoutingConfig | null
+  cfg: RoutingConfig | undefined | null
 ): string | undefined {
   if (!modelName) return undefined;
   const grade = detectModelGrade(modelName);
@@ -37,7 +52,7 @@ function resolveWithDefaults(
   sourceModel: string | undefined,
   defaultModel: string | undefined,
   providerType: ProviderType,
-  cfg: RoutingConfig | null
+  cfg: RoutingConfig | undefined | null
 ): string {
   // Try grade mapping for provided source model
   {
@@ -64,14 +79,14 @@ export function mapModelToProvider(params: {
   routingConfig?: RoutingConfig | null;
 }): string {
   const providerType = params.targetProviderType;
-  const cfg = params.routingConfig ?? getRoutingConfigCache();
+  const cfg = params.routingConfig === null ? undefined : (params.routingConfig ?? getRoutingConfigCache());
   const sourceModel = normalizeModelName(params.sourceModel);
   const defaultModel = cfg?.defaults?.model;
 
   // 1) Provider-specific alias mapping
-  const aliases = getProviderAliases(cfg, providerType);
-  if (aliases && sourceModel && aliases[sourceModel]) {
-    return aliases[sourceModel];
+  const modelMapping = getProviderModelMapping(cfg, providerType);
+  if (modelMapping?.aliases && sourceModel && modelMapping.aliases[sourceModel]) {
+    return modelMapping.aliases[sourceModel];
   }
 
   // 2) Grade-based mapping and fallbacks consolidated
@@ -94,14 +109,14 @@ export async function resolveModelForProvider(params: {
     return params.provider.model;
   }
   const providerType = params.provider.type as ProviderType;
-  const cfg = params.routingConfig ?? getRoutingConfigCache();
+  const cfg = params.routingConfig === null ? undefined : (params.routingConfig ?? getRoutingConfigCache());
   const sourceModel = normalizeModelName(params.sourceModel);
   const defaultModel = cfg?.defaults?.model;
 
   // Aliases first
-  const aliases = getProviderAliases(cfg, providerType);
-  if (aliases && sourceModel && aliases[sourceModel]) {
-    return aliases[sourceModel];
+  const modelMapping = getProviderModelMapping(cfg, providerType);
+  if (modelMapping?.aliases && sourceModel && modelMapping.aliases[sourceModel]) {
+    return modelMapping.aliases[sourceModel];
   }
 
   // Load provider models and pick by grade

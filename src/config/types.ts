@@ -23,9 +23,17 @@ export type ToolRule = {
   steps: Step[];
 };
 
+export type ModelMapping = {
+  byGrade?: Partial<{
+    [grade in "high" | "mid" | "low"]: string;
+  }>;
+  aliases?: Record<string, string>;
+};
+
 export type Provider = {
   type: "openai" | "claude" | "gemini" | "grok" | "groq" | (string & {});
   model?: string; // Default model for this provider
+  modelMapping?: ModelMapping; // Provider-specific model mapping
   baseURL?: string;
   apiKey?: string;
   api?: {
@@ -52,18 +60,6 @@ export type RoutingConfig = {
   defaults?: {
     providerId?: string;
     model?: string;
-  };
-  // Optional mapping for cross-provider model selection
-  modelMapping?: {
-    byProviderType?: Record<
-      Provider["type"],
-      {
-        byGrade?: Partial<{
-          [grade in "high" | "mid" | "low"]: string;
-        }>;
-        aliases?: Record<string, string>;
-      }
-    >;
   };
   logging?: {
     dir?: string;

@@ -1,17 +1,13 @@
 import type { MessageCreateParams as ClaudeMessageCreateParams } from "@anthropic-ai/sdk/resources/messages";
 import { Hono } from "hono";
-import { buildOpenAICompatibleClientWithTools } from "../../../../adapters/providers/openai-client-with-tools";
 import type { RoutingConfig } from "../../../../config/types";
 import { selectProviderForRequest } from "../../../../execution/tool-model-planner";
-import { ConversationStore } from "../../../../utils/conversation/conversation-store";
 import { createResponseProcessor } from "./handlers/response-processor";
 import { countTokens } from "./handlers/token-counter";
+import { buildOpenAICompatibleClient } from "../../../../adapters/providers/openai-client";
 
 export function createClaudeRouter(routingConfig: RoutingConfig) {
   const router = new Hono();
-  // Conversation store owned by the router instance (effectively singleton per app)
-  const store = new ConversationStore();
-
   // Root banner text
   router.get("/", (c) => c.text("Claude to OpenAI Responses API Proxy"));
 
@@ -24,25 +20,15 @@ export function createClaudeRouter(routingConfig: RoutingConfig) {
     console.log(`\n    🟢 [Request ${requestId}] new /v1/messages stream=${stream} at ${new Date().toISOString()}`);
 
     const claudeReq = (await c.req.json()) as ClaudeMessageCreateParams;
-    const conversationId = c.req.header("x-conversation-id") || c.req.header("x-session-id") || requestId;
-    console.log(
-      `[Request ${requestId}] Incoming Claude Request (conversation: ${conversationId}):`,
-      JSON.stringify(claudeReq, null, 2)
-    );
 
     const providerSelection = selectProviderForRequest(routingConfig, claudeReq);
     const provider = routingConfig.providers?.[providerSelection.providerId];
     if (!provider) {
       throw new Error(`Provider '${providerSelection.providerId}' not found`);
     }
-    const openai = buildOpenAICompatibleClientWithTools(provider, providerSelection.model, {
-      routingConfig,
-      requestId,
-      conversationId,
-    });
+    const openai = buildOpenAICompatibleClient(provider);
     const processor = createResponseProcessor({
       requestId,
-      conversationId,
       openai,
       claudeReq,
       model: providerSelection.model,
@@ -50,7 +36,6 @@ export function createClaudeRouter(routingConfig: RoutingConfig) {
       providerId: providerSelection.providerId,
       stream,
       signal: abortController.signal,
-      store,
     });
 
     try {

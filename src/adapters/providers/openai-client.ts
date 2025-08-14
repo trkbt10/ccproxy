@@ -16,12 +16,12 @@ export function buildOpenAICompatibleClient(provider: Provider, modelHint?: stri
   if (provider.type === "claude") {
     return buildOpenAICompatibleClientForClaude(provider, modelHint);
   }
-  
+
   // Use specific adapter for OpenAI, generic adapter for others
   if (provider.type === "openai") {
     return buildOpenAIAdapter(provider, modelHint);
   }
-  
+
   // Generic OpenAI-compatible providers
   return buildOpenAIGenericAdapter(provider, modelHint);
 }

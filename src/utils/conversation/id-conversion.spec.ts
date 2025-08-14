@@ -2,7 +2,6 @@ import {
   toOpenAICallIdFromClaude,
   toClaudeToolUseIdFromOpenAI,
   isSameIgnoringPrefix,
-  ensureOpenAICallId,
   generateOpenAICallId,
 } from "./id-conversion";
 
@@ -74,28 +73,6 @@ describe("ID Conversion", () => {
     it("should handle empty strings", () => {
       expect(isSameIgnoringPrefix("", "")).toBe(true);
       expect(isSameIgnoringPrefix("call_", "toolu_")).toBe(true);
-    });
-  });
-
-  describe("ensureOpenAICallId", () => {
-    it("should keep existing call_ prefix", () => {
-      expect(ensureOpenAICallId("call_01ABC123")).toBe("call_01ABC123");
-      expect(ensureOpenAICallId("call_xyz789")).toBe("call_xyz789");
-    });
-
-    it("should convert non-call_ prefixed IDs", () => {
-      expect(ensureOpenAICallId("toolu_01ABC123")).toBe("call_01ABC123");
-      expect(ensureOpenAICallId("fc_xyz789")).toBe("call_xyz789");
-      expect(ensureOpenAICallId("ws_123")).toBe("call_123");
-    });
-
-    it("should handle IDs without prefix", () => {
-      expect(ensureOpenAICallId("abc123")).toBe("call_abc123");
-      expect(ensureOpenAICallId("simple")).toBe("call_simple");
-    });
-
-    it("should handle empty string", () => {
-      expect(ensureOpenAICallId("")).toBe("call_");
     });
   });
 

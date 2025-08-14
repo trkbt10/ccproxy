@@ -8,10 +8,7 @@ import type { ResponsesModel } from "openai/resources/shared";
 import { streamSSE } from "hono/streaming";
 import type { Context } from "hono";
 import type { MessageCreateParams as ClaudeMessageCreateParams } from "@anthropic-ai/sdk/resources/messages";
-import { OpenAIToClaudeSSEStream } from "../../../../../adapters/message-converter/openai-to-claude/streaming-sse";
-import { HonoSSESink } from "../../../streaming/hono-sse-sink";
-import { convertOpenAIResponseToClaude } from "../../../../../adapters/message-converter/openai-to-claude/response";
-import type { ConversationStore } from "../../../../../utils/conversation/conversation-store";
+import { openAIToClaudeStream } from "../../../../../adapters/message-converter/openai-to-claude";
 // Using OpenAICompatibleClient for Responses-compatible flow
 import {
   logError,
@@ -27,7 +24,6 @@ import { claudeToResponsesLocal } from "../../../../../adapters/providers/claude
 
 export type ProcessorConfig = {
   requestId: string;
-  conversationId: string;
   openai: OpenAICompatibleClient;
   claudeReq: ClaudeMessageCreateParams;
   model: string;
@@ -35,17 +31,11 @@ export type ProcessorConfig = {
   signal?: AbortSignal;
   routingConfig?: RoutingConfig;
   providerId?: string;
-  store: ConversationStore;
 };
 
 export type ProcessorResult = { responseId?: string };
 
-function handleError(
-  requestId: string,
-  openaiReq: ResponseCreateParams,
-  error: unknown,
-  conversationId?: string
-): void {
+function handleError(requestId: string, openaiReq: ResponseCreateParams, error: unknown): void {
   const context = { requestId, endpoint: "responses.create" };
 
   if (
@@ -71,40 +61,20 @@ async function processNonStreamingResponse(
   c: Context
 ): Promise<Response> {
   const startTime = Date.now();
-  const context = { requestId: config.requestId, conversationId: config.conversationId, stream: false };
+  const context = { requestId: config.requestId, stream: false };
 
   try {
     logDebug("Starting non-streaming response", { openaiReq }, context);
-    const respOrStream = await config.openai.responses.create(
+    const response = await config.openai.responses.create(
       { ...openaiReq, stream: false },
       config.signal ? { signal: config.signal } : undefined
     );
-    function isOpenAIResponse(v: unknown): v is OpenAIResponse {
-      return (
-        typeof v === "object" &&
-        v !== null &&
-        "object" in (v as Record<string, unknown>) &&
-        (v as { object?: unknown }).object === "response"
-      );
-    }
-    if (!isOpenAIResponse(respOrStream)) throw new Error("Expected non-streaming OpenAI response shape");
-    const response = respOrStream;
 
-    const { message: claudeResponse } = convertOpenAIResponseToClaude(response);
-
-    config.store.updateConversationState({
-      conversationId: config.conversationId,
-      requestId: config.requestId,
-      responseId: response.id,
-    });
-
-    const duration = Date.now() - startTime;
-    logRequestResponse(openaiReq, response, duration, context);
-    logPerformance("non-streaming-response", duration, { responseId: response.id }, context);
-
-    return c.json(claudeResponse);
+    // Non-streaming responses are no longer supported
+    // All responses should use the streaming implementation
+    throw new Error("Non-streaming responses are deprecated. Please use streaming mode.");
   } catch (error) {
-    handleError(config.requestId, openaiReq, error, config.conversationId);
+    handleError(config.requestId, openaiReq, error);
     throw error;
   }
 }
@@ -115,40 +85,45 @@ async function processStreamingResponse(
   c: Context
 ): Promise<Response> {
   return streamSSE(c, async (stream) => {
-    const context = { requestId: config.requestId, conversationId: config.conversationId, stream: true };
+    const context = { requestId: config.requestId, stream: true };
     logDebug("OpenAI Request Params", openaiReq, context);
 
-    const sink = new HonoSSESink(stream);
-    const sse = new OpenAIToClaudeSSEStream(
-      sink,
-      config.conversationId,
-      config.requestId,
-      config.routingConfig?.logging?.eventsEnabled === true
-    );
+    let responseId: string | undefined;
+    let pingInterval: NodeJS.Timeout | undefined;
+    const messageId = "msg_" + config.requestId;
+
+    const writeEvent = async (eventType: string, data: unknown) => {
+      if (config.routingConfig?.logging?.eventsEnabled) {
+        logDebug(`Sending SSE event: ${eventType}`, { eventType, data }, context);
+      }
+      console.log(`Sending SSE event: ${eventType}`);
+      await stream.writeSSE({ event: eventType, data: JSON.stringify(data) });
+    };
 
     try {
-      await sse.start("msg_" + config.requestId);
+      pingInterval = setInterval(async () => {
+        await stream.writeSSE({ event: "ping", data: JSON.stringify({}) });
+      }, 15000);
+
       const iterable = await config.openai.responses.create(
         { ...openaiReq, stream: true },
         config.signal ? { signal: config.signal } : undefined
       );
 
+      // Convert OpenAI stream to Claude stream and emit events
       let eventCount = 0;
-      for await (const event of iterable as AsyncIterable<ResponseStreamEvent>) {
-        if (config.signal?.aborted) break;
+      for await (const claudeEvent of openAIToClaudeStream(iterable, messageId)) {
+        if (config.signal?.aborted) {
+          await stream.abort();
+          break;
+        }
         eventCount++;
-        logDebug(`Received OpenAI event #${eventCount}`, { eventType: event.type, event }, context);
-        await sse.processEvent(event);
-      }
-      logInfo(`Processed ${eventCount} events from OpenAI`, {}, context);
 
-      const { responseId } = sse.getResult();
-      config.store.updateConversationState({
-        conversationId: config.conversationId,
-        requestId: config.requestId,
-        responseId,
-      });
+        await writeEvent(claudeEvent.type, claudeEvent);
+      }
+      logInfo(`Processed ${eventCount} Claude events`, {}, context);
       logInfo("Streaming completed", { responseId }, context);
+      await stream.close();
     } catch (error) {
       try {
         const errorObj = error as { status?: number; code?: string };
@@ -165,25 +140,34 @@ async function processStreamingResponse(
             : status && status >= 400
             ? "bad_request"
             : "api_error");
-        await sse.error(type, String(error));
+        await writeEvent("error", { type, message: String(error) });
       } catch {}
-      handleError(config.requestId, openaiReq, error, config.conversationId);
+      handleError(config.requestId, openaiReq, error);
       throw error;
     } finally {
-      sse.cleanup();
+      if (pingInterval) {
+        clearInterval(pingInterval);
+      }
     }
   });
 }
 
 export function createResponseProcessor(config: ProcessorConfig) {
   async function process(c: Context): Promise<Response> {
-    const openaiReq = claudeToResponsesLocal(
-      config.claudeReq,
-      config.model as ResponsesModel
+    const openaiReq = claudeToResponsesLocal(config.claudeReq, config.model as ResponsesModel);
+    console.log(
+      JSON.stringify(
+        {
+          instructions: openaiReq.instructions,
+          input: openaiReq.input,
+          prompt: openaiReq.prompt,
+        },
+        null,
+        2
+      )
     );
-    
     logDebug("OpenAI Request Params", openaiReq, { requestId: config.requestId });
-    
+
     // Tool interception is now handled at the OpenAI client level
     return config.stream
       ? processStreamingResponse(config, openaiReq, c)
@@ -192,4 +176,3 @@ export function createResponseProcessor(config: ProcessorConfig) {
 
   return { process };
 }
-

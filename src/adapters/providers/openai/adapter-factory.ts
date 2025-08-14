@@ -1,26 +1,15 @@
 import OpenAI from "openai";
-import type {
-  Response as OpenAIResponse,
-  ResponseCreateParams as OpenAIResponseCreateParams,
-  ResponseStreamEvent,
-} from "openai/resources/responses/responses";
 import type { Provider } from "../../../config/types";
 import type { OpenAICompatibleClient, ChatCompletionsCreateFn, ResponsesCreateFn } from "../openai-client-types";
 import { selectApiKey } from "../shared/select-api-key";
-import { isResponseEventStream } from "../openai-generic/guards";
 
-// API key selection centralized in shared/select-api-key
-
-export function buildOpenAIAdapter(
-  provider: Provider,
-  modelHint?: string
-): OpenAICompatibleClient {
+export function buildOpenAIAdapter(provider: Provider, modelHint?: string): OpenAICompatibleClient {
   const resolvedKey = selectApiKey(provider, modelHint);
   if (!resolvedKey) throw new Error("Missing OpenAI API key");
   const client = new OpenAI({
     apiKey: resolvedKey,
     baseURL: provider.baseURL,
-    defaultHeaders: provider.defaultHeaders,
+    defaultHeaders: { "OpenAI-Beta": "responses-2025-06-21", ...provider.defaultHeaders },
   });
   const openAIClient: OpenAICompatibleClient = {
     chat: {
@@ -38,6 +27,6 @@ export function buildOpenAIAdapter(
       },
     },
   };
-  
+
   return openAIClient;
 }

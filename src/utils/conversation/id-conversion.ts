@@ -7,7 +7,7 @@ function suffix(id: string): string {
 }
 
 export function toOpenAICallIdFromClaude(claudeToolUseId: string): string {
-  return `call_${suffix(claudeToolUseId)}`;
+  return `fc_${suffix(claudeToolUseId)}`;
 }
 
 export function toClaudeToolUseIdFromOpenAI(openaiCallId: string): string {
@@ -16,12 +16,6 @@ export function toClaudeToolUseIdFromOpenAI(openaiCallId: string): string {
 
 export function isSameIgnoringPrefix(a: string, b: string): boolean {
   return suffix(a) === suffix(b);
-}
-
-// Ensure an ID conforms to OpenAI call_id prefix; converts from known variants
-export function ensureOpenAICallId(id: string): string {
-  if (id.startsWith("call_")) return id;
-  return toOpenAICallIdFromClaude(id);
 }
 
 export function generateOpenAICallId(): string {

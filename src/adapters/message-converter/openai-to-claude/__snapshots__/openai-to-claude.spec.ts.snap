@@ -1,0 +1,4992 @@
+// Bun Snapshot v1, https://bun.sh/docs/test/snapshots
+
+exports[`openAIToClaudeStream should convert OpenAI stream chunks to Claude stream events 1`] = `
+[
+  {
+    "message": {
+      "content": [],
+      "id": "msg_1755170862366",
+      "model": "claude-3-opus-20240229",
+      "role": "assistant",
+      "stop_reason": null,
+      "stop_sequence": null,
+      "type": "message",
+      "usage": {
+        "cache_creation_input_tokens": null,
+        "cache_read_input_tokens": null,
+        "input_tokens": 0,
+        "output_tokens": 0,
+        "server_tool_use": null,
+        "service_tier": null,
+      },
+    },
+    "type": "message_start",
+  },
+  {
+    "content_block": {
+      "id": "toolu_x10dgBSpzBZDm5vGaL9tkoma",
+      "input": {},
+      "name": "get_weather",
+      "type": "tool_use",
+    },
+    "index": 0,
+    "type": "content_block_start",
+  },
+  {
+    "delta": {
+      "partial_json": "{"",
+      "type": "input_json_delta",
+    },
+    "index": 0,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "partial_json": "location",
+      "type": "input_json_delta",
+    },
+    "index": 0,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "partial_json": "":"",
+      "type": "input_json_delta",
+    },
+    "index": 0,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "partial_json": "Tokyo",
+      "type": "input_json_delta",
+    },
+    "index": 0,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "partial_json": ""}",
+      "type": "input_json_delta",
+    },
+    "index": 0,
+    "type": "content_block_delta",
+  },
+  {
+    "index": 0,
+    "type": "content_block_stop",
+  },
+  {
+    "delta": {
+      "stop_reason": "tool_use",
+      "stop_sequence": null,
+    },
+    "type": "message_delta",
+    "usage": {
+      "output_tokens": 660,
+    },
+  },
+  {
+    "type": "message_stop",
+  },
+]
+`;
+
+exports[`openAIToClaudeStream should convert OpenAI web search stream to Claude stream events: web-search-stream 1`] = `
+[
+  {
+    "message": {
+      "content": [],
+      "id": "msg_1755170862367",
+      "model": "claude-3-opus-20240229",
+      "role": "assistant",
+      "stop_reason": null,
+      "stop_sequence": null,
+      "type": "message",
+      "usage": {
+        "cache_creation_input_tokens": null,
+        "cache_read_input_tokens": null,
+        "input_tokens": 0,
+        "output_tokens": 0,
+        "server_tool_use": null,
+        "service_tier": null,
+      },
+    },
+    "type": "message_start",
+  },
+  {
+    "content_block": {
+      "id": "toolu_689db921a4908197b9c43938fda412c20db269b14ed6f488",
+      "input": {},
+      "name": "web_search",
+      "type": "tool_use",
+    },
+    "index": 0,
+    "type": "content_block_start",
+  },
+  {
+    "delta": {
+      "partial_json": "{"status":"in_progress"}",
+      "type": "input_json_delta",
+    },
+    "index": 0,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "partial_json": "{"status":"searching"}",
+      "type": "input_json_delta",
+    },
+    "index": 0,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "partial_json": "{"status":"completed"}",
+      "type": "input_json_delta",
+    },
+    "index": 0,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "partial_json": "{"query":"TypeScript 5.7 release notes"}",
+      "type": "input_json_delta",
+    },
+    "index": 0,
+    "type": "content_block_delta",
+  },
+  {
+    "index": 0,
+    "type": "content_block_stop",
+  },
+  {
+    "content_block": {
+      "id": "toolu_689db928b0a48197b29c202c3811b8b50db269b14ed6f488",
+      "input": {},
+      "name": "web_search",
+      "type": "tool_use",
+    },
+    "index": 1,
+    "type": "content_block_start",
+  },
+  {
+    "delta": {
+      "partial_json": "{"status":"in_progress"}",
+      "type": "input_json_delta",
+    },
+    "index": 1,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "partial_json": "{"status":"searching"}",
+      "type": "input_json_delta",
+    },
+    "index": 1,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "partial_json": "{"status":"completed"}",
+      "type": "input_json_delta",
+    },
+    "index": 1,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "partial_json": "{"query":"TypeScript 5.7 release date"}",
+      "type": "input_json_delta",
+    },
+    "index": 1,
+    "type": "content_block_delta",
+  },
+  {
+    "index": 1,
+    "type": "content_block_stop",
+  },
+  {
+    "content_block": {
+      "id": "toolu_689db92e4bb481979724726d29b29eaa0db269b14ed6f488",
+      "input": {},
+      "name": "web_search",
+      "type": "tool_use",
+    },
+    "index": 2,
+    "type": "content_block_start",
+  },
+  {
+    "delta": {
+      "partial_json": "{"status":"in_progress"}",
+      "type": "input_json_delta",
+    },
+    "index": 2,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "partial_json": "{"status":"searching"}",
+      "type": "input_json_delta",
+    },
+    "index": 2,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "partial_json": "{"status":"completed"}",
+      "type": "input_json_delta",
+    },
+    "index": 2,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "partial_json": "{"query":"site:typescriptlang.org \\"const type parameters\\" \\"5.7\\""}",
+      "type": "input_json_delta",
+    },
+    "index": 2,
+    "type": "content_block_delta",
+  },
+  {
+    "index": 2,
+    "type": "content_block_stop",
+  },
+  {
+    "content_block": {
+      "citations": [],
+      "text": "",
+      "type": "text",
+    },
+    "index": 3,
+    "type": "content_block_start",
+  },
+  {
+    "delta": {
+      "text": "I",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " searched",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " the",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " Type",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": "Script",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " release",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " notes",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " and",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " announcement",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " for",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " Type",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": "Script",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " ",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": "5",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": ".",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": "7",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " and",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " summarized",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " the",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " key",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " improvements",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " below",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": 
+".
+
+"
+,
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": "Summary",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " —",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " Key",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " Type",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": "Script",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " ",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": "5",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": ".",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": "7",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " improvements",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": 
+"
+
+"
+,
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": "-",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " Support",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " for",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " --",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": "target",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " es",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": "202",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": "4",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " /",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " --",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": "lib",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " es",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": "202",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": "4",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": 
+"
+"
+,
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " ",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " -",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " Adds",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " ES",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": "202",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": "4",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " runtime",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " typings",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " (",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": "e",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": ".g",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": ".,",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " Object",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": ".group",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": "By",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": ",",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " Map",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": ".group",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": "By",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": ",",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " Promise",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": ".with",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": "Resolvers",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": ",",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " Atom",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": "ics",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": ".wait",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": "Async",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " moved",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " to",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " es",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": "202",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": "4",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": ").",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " Typed",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": "Array",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " types",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " are",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " now",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " generic",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " over",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " Array",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": "Buffer",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": "Like",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " (",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": "may",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " require",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " updating",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " @",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": "types",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": "/node",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": ").",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " ",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": "([typescriptlang.org](https://www.typescriptlang.org/docs/handbook/release-notes/typescript-5-7.html?utm_source=chatgpt.com))",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": 
+"
+"
+,
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": 
+"
+-"
+,
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " Path",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " rewriting",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " for",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " relative",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " Type",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": "Script",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " imports",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " (",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": "new",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " compiler",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " option",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " --",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": "rewrite",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": "Relative",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": "Import",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": "Extensions",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": ")",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": 
+"
+ "
+,
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " -",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " When",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " enabled",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": ",",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " relative",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " imports",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " that",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " end",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " in",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " .",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": "ts",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": "/.",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": "tsx",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": "/.",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": "mts",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": "/.",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": "cts",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " are",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " rewritten",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " to",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " their",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " corresponding",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " .",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": "js",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": "/.",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": "jsx",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": "/.",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": "m",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": "js",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": "/.",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": "c",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": "js",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " in",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " emitted",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " output",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " —",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " helpful",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " for",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " code",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " you",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " sometimes",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " run",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " “",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": "in",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": "-place",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": "”",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " (",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": "ts",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": "-node",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": "/",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": "tsx",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": "/D",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": "eno",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": "/B",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": "un",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": ")",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " and",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " sometimes",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " compile",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " for",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " distribution",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": ".",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " ",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": "([devblogs.microsoft.com](https://devblogs.microsoft.com/typescript/announcing-typescript-5-7/?utm_source=chatgpt.com))",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " [typescriptlang.org](https://www.typescriptlang.org/docs/handbook/release-notes/typescript-5-7.html?utm_source=chatgpt.com))",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": 
+"
+"
+,
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": 
+"
+-"
+,
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " Checks",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " for",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " never",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": "-in",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": "itial",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": "ized",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " variables",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": 
+"
+ "
+,
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " -",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " The",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " type",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " checker",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " now",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " reports",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " errors",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " when",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " a",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " variable",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " is",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " never",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " initialized",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " at",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " all",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " (",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": "im",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": "pro",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": "ves",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " detection",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " of",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " definite",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": "-un",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": "assigned",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " uses",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " that",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " earlier",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " escaped",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " analysis",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": ").",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " ",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": "([devblogs.microsoft.com](https://devblogs.microsoft.com/typescript/announcing-typescript-5-7/?utm_source=chatgpt.com))",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": 
+"
+"
+,
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": 
+"
+-"
+,
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " Faster",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " /",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " more",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " accurate",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " project",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " ownership",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " and",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " config",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " resolution",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " in",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " editors",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": 
+"
+ "
+,
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " -",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " Editor",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": "/T",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": "SS",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": "erver",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " logic",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " better",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " finds",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " the",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " owning",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " ts",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": "config",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": ".json",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " (",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": "search",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": "es",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " ancestor",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " configs",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": ")",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " and",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " avoids",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " pathological",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " work",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " for",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " composite",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " projects",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " by",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " checking",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " only",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " the",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " root",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " file",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " set",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " when",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " probing",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " referenced",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " composite",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " projects",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": ".",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " This",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " reduces",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " editor",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " slow",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": "downs",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " for",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " large",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " mon",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": "ore",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": "pos",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": ".",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " ",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": "([typescriptlang.org](https://www.typescriptlang.org/docs/handbook/release-notes/typescript-5-7.html?utm_source=chatgpt.com))",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " [devblogs.microsoft.com](https://devblogs.microsoft.com/typescript/announcing-typescript-5-7/?utm_source=chatgpt.com))",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": 
+"
+"
+,
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": 
+"
+-"
+,
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " Valid",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": "ated",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " JSON",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " imports",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " under",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " --",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": "module",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " nod",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": "en",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": "ext",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": 
+"
+ "
+,
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " -",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " JSON",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " imports",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " require",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " an",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " import",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " attribute",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " like",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " with",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " {",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " type",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": ":",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " "",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": "json",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": """,
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " }",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " and",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " are",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " only",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " exposed",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " via",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " default",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " exports",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " (",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": "no",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " named",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " exports",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": "),",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " matching",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " Node",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " E",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": "SM",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " behavior",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " and",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " avoiding",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " runtime",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " mism",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": "atches",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": ".",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " ",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": "([devblogs.microsoft.com](https://devblogs.microsoft.com/typescript/announcing-typescript-5-7/?utm_source=chatgpt.com))",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": 
+"
+"
+,
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": 
+"
+-"
+,
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " Support",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " for",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " V",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": "8",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " compile",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " caching",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " in",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " Node",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": ".js",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": 
+"
+ "
+,
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " -",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " Type",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": "Script",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " uses",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " Node",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": "’s",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " module",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": ".enable",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": "Compile",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": "Cache",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": "()",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " (",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": "Node",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " ",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": "22",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": "+)",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " to",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " speed",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " some",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " compiler",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " startup",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": "/",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": "commands",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " (",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": "examples",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " show",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " ~",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": "2",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": ".",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": "5",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": "x",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " speed",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " for",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " a",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " simple",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " t",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": "sc",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " run",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " in",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " their",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " benchmarks",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": ").",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " ",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": "([typescriptlang.org](https://www.typescriptlang.org/docs/handbook/release-notes/typescript-5-7.html?utm_source=chatgpt.com))",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " [devblogs.microsoft.com](https://devblogs.microsoft.com/typescript/announcing-typescript-5-7/?utm_source=chatgpt.com))",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": 
+"
+"
+,
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": 
+"
+-"
+,
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " Behavioral",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " /",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " typing",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " refin",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": "ements",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": 
+"
+ "
+,
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " -",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " Methods",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " with",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " non",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": "-l",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": "iteral",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " computed",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " names",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " on",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " classes",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " now",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " contribute",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " index",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": "-sign",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": "ature",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": "-like",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " types",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " (",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": "more",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " consistent",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " with",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " object",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " literal",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " behavior",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": ").",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": 
+"
+ "
+,
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " -",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " More",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " implicit",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": "-any",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " errors",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " in",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " some",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " cases",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " (",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": "e",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": ".g",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": ".,",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " function",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " expressions",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " context",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": "ually",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " typed",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " by",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " a",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " generic",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": "-return",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": "ing",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " signature",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " that",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " return",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " null",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": "/",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": "undefined",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": ").",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": 
+"
+ "
+,
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " -",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " General",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " “",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": "not",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": "able",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " behavioral",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " changes",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": "”",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " and",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " lib",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": ".d",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": ".ts",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " updates",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " (",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": "DOM",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": "/",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": "typed",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": "-array",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " typing",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " changes",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": ")",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " that",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " may",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " require",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " small",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " migration",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " steps",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " in",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " some",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " code",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": "bases",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": ".",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " ",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": "([typescriptlang.org](https://www.typescriptlang.org/docs/handbook/release-notes/typescript-5-7.html?utm_source=chatgpt.com))",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " [devblogs.microsoft.com](https://devblogs.microsoft.com/typescript/announcing-typescript-5-7/?utm_source=chatgpt.com))",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": 
+"
+"
+,
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": 
+"
+If"
+,
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " you",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " want",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": ",",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " I",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " can",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": ":",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": 
+"
+-"
+,
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " Show",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " short",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " code",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " examples",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " for",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " any",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " of",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " the",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " above",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " (",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": "e",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": ".g",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": ".,",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " how",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " --",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": "rewrite",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": "Relative",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": "Import",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": "Extensions",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " rew",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": "rites",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " imports",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": ").",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": 
+"
+-"
+,
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " Check",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " whether",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " a",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " specific",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " dependency",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " in",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " your",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " project",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " (",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": "for",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " example",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " @",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": "types",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": "/node",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": ")",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " will",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " need",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " updating",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " for",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " the",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " Typed",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": "Array",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " changes",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": ".",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": 
+"
+-"
+,
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " Paste",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " the",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " exact",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " release",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": "-note",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " excerpts",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " for",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " any",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " item",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " you",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " care",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": " about",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "delta": {
+      "text": ".",
+      "type": "text_delta",
+    },
+    "index": 3,
+    "type": "content_block_delta",
+  },
+  {
+    "index": 3,
+    "type": "content_block_stop",
+  },
+  {
+    "delta": {
+      "stop_reason": "tool_use",
+      "stop_sequence": null,
+    },
+    "type": "message_delta",
+    "usage": {
+      "output_tokens": 1785,
+    },
+  },
+  {
+    "type": "message_stop",
+  },
+]
+`;

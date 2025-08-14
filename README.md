@@ -17,21 +17,21 @@ bun run build:cli
 chmod +x ./ccproxy
 
 # Start server
-./ccproxy serve
 
-# Use with Claude CLI
-ANTHROPIC_BASE_URL="http://localhost:8082" ANTHROPIC_AUTH_TOKEN="any-value" claude
+## Use with Claude Code
+$ ./ccproxy serve claude --port 8082
+$ ANTHROPIC_BASE_URL="http://localhost:8082" ANTHROPIC_AUTH_TOKEN="any-value" claude
+
+## Use with codex
+$ ./ccproxy serve openai --config ./config/claude.config.json --port 11434
+$ codex --oss --model claude-sonnet-4-20250514
+
 ```
-
-## Operating Modes
-
-- **Claude API Mode** (default, port 8082): Accepts Claude API requests
-- **OpenAI API Mode** (port 8085): Provides OpenAI-compatible endpoints
-- **Gemini API Mode** (port 8086): Provides Gemini-compatible endpoints
 
 ## Configuration
 
 ### File Locations
+
 - `ROUTING_CONFIG_PATH` environment variable
 - `./ccproxy.config.json`
 - `./config/ccproxy.config.json`
@@ -45,60 +45,32 @@ ANTHROPIC_BASE_URL="http://localhost:8082" ANTHROPIC_AUTH_TOKEN="any-value" clau
     "default": {
       "type": "openai",
       "apiKey": "${OPENAI_API_KEY}",
-      "model": "gpt-4",
-      "tools": {
-        "defaultStrategy": "passthrough",
-        "routing": {
-          "specific_tool": "builtin-first"
-        }
-      }
+      "model": "gpt-5"
     }
   },
-  "tools": [
-    {
-      "name": "tool_name",
-      "steps": [
-        {
-          "kind": "responses_model",
-          "providerId": "default",
-          "model": "gpt-4"
-        }
-      ]
-    }
-  ],
   "logging": {
     "enabled": true,
     "dir": "./logs"
-  },
-  "dynamicTools": {
-    "storage": "filesystem",
-    "storageRoot": "./generated-tools",
-    "provider": "default"
   }
 }
 ```
 
 ### Provider Options
+
 - `type`: Provider type (`openai`, `claude`, `gemini`, `grok`, `groq`)
 - `apiKey`: API key with environment variable expansion
 - `baseURL`: Custom API endpoint
 - `model`: Default model
 - `defaultHeaders`: Headers added to all requests
-- `tools`: Tool routing configuration
-
-### Tool Routing Strategies
-- `builtin-only`: Use only provider-specific builtin tools
-- `dynamic-only`: Use only dynamically generated tools
-- `builtin-first`: Try builtin, fallback to dynamic
-- `dynamic-first`: Try dynamic, fallback to builtin
-- `passthrough`: Let LLM handle directly
 
 ### Environment Variable Expansion
+
 - `${VAR}`: Simple expansion
 - `${VAR:-default}`: With default value
 - `${VAR:?error message}`: Required variable
 
 ### Examples
+
 See `/config/examples/` for complete configuration examples.
 
 ## CLI Reference
@@ -126,29 +98,3 @@ See `/config/examples/` for complete configuration examples.
 ./ccproxy config get <path> [--config <path>]
 ./ccproxy config set <path> <value> [--config <path>]
 ```
-
-## Environment Variables
-
-- `OPENAI_API_KEY`: Default provider API key (when no config file exists)
-- `OPENAI_MODEL`: Default model
-- `PORT`: Server port
-- `ANTHROPIC_BASE_URL`: Redirect Claude CLI to proxy
-- `ANTHROPIC_AUTH_TOKEN`: Any value for Claude CLI authentication
-
-## Integration Examples
-
-### Codex CLI
-Add to `~/.codex/config.toml`:
-```toml
-[model_providers.ccproxy]
-name = "CCProxy"
-base_url = "http://localhost:8082/v1"
-env_key = "DUMMY_KEY"
-```
-
-## Notes
-
-- Zero-config mode: Runs without configuration file using environment variables
-- Default provider synthesized from `OPENAI_API_KEY` when no config exists
-- HTTP errors from upstream providers are preserved with matching format
-- Streaming errors emit SSE `error` event before termination

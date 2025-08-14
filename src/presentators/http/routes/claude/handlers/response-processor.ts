@@ -96,7 +96,6 @@ async function processStreamingResponse(
       if (config.routingConfig?.logging?.eventsEnabled) {
         logDebug(`Sending SSE event: ${eventType}`, { eventType, data }, context);
       }
-      console.log(`Sending SSE event: ${eventType}`);
       await stream.writeSSE({ event: eventType, data: JSON.stringify(data) });
     };
 

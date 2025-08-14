@@ -1,0 +1,15 @@
+{
+  "defaults": {
+    "providerId": "claude",
+    "model": "claude-sonnet-4-20250514"
+  },
+  "providers": {
+    "claude": {
+      "type": "claude",
+      "apiKey": "${ANTHROPIC_API_KEY:?Missing ANTHROPIC_API_KEY in environment}",
+      "baseURL": "${ANTHROPIC_BASE_URL:-}",
+      "model": "claude-sonnet-4-20250514"
+    }
+  },
+  "tools": []
+}

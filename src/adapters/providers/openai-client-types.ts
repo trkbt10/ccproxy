@@ -64,7 +64,7 @@ export interface OpenAICompatibleClient {
     create: ResponsesCreateFn;
   };
   models: {
-    list(): Promise<{ data: Array<{ id: string }> }>;
+    list(): Promise<{ data: Array<{ id: string; created: number; object: string; owned_by: string }> }>;
   };
   setToolNameResolver?(resolver: (callId: string) => string | undefined): void;
   setConversationId?(conversationId: string): void;

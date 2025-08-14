@@ -11,22 +11,20 @@ async function printBannerWithProvider(apiMode?: "claude" | "openai" | "gemini")
   const configs = {
     claude: {
       text: "CLAUDE",
-      color: "cyan" as const,      // Anthropic's cyan/blue
+      color: "cyan" as const, // Anthropic's cyan/blue
     },
     openai: {
-      text: "OPENAI", 
-      color: "green" as const,     // OpenAI's green
+      text: "OPENAI",
+      color: "green" as const, // OpenAI's green
     },
     gemini: {
       text: "GEMINI",
-      color: "blue" as const,      // Google's blue (changed from magenta)
-    }
+      color: "blue" as const, // Google's blue (changed from magenta)
+    },
   };
-  
+
   const config = configs[apiMode || "claude"];
   printBanner(config.text, config.color);
-  console.log();
-  await printProviderInfoLine();
   console.log();
 }
 
@@ -55,9 +53,10 @@ export async function startHonoServer(app: Hono, opts?: ServerOptions): Promise<
   const port = resolvePort(opts?.port ?? undefined);
 
   // Create config loader with overrides if provided
-  const loadConfig = opts?.configPath || opts?.configOverrides
-    ? createConfigLoader(opts.configPath, opts.configOverrides)
-    : loadRoutingConfigOnce;
+  const loadConfig =
+    opts?.configPath || opts?.configOverrides
+      ? createConfigLoader(opts.configPath, opts.configOverrides)
+      : loadRoutingConfigOnce;
 
   serve({ fetch: app.fetch, port }, async (info) => {
     await printBannerWithProvider(opts?.apiMode);

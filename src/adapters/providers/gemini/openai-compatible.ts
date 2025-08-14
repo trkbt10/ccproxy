@@ -81,7 +81,14 @@ export function buildOpenAICompatibleClientForGemini(provider: Provider, modelHi
     models: {
       async list() {
         const res = await client.listModels();
-        return { data: res.models.map((m) => ({ id: m.name })) };
+        return { 
+          data: res.models.map((m) => ({ 
+            id: m.name,
+            object: "model",
+            created: Math.floor(Date.now() / 1000),
+            owned_by: "google"
+          })) 
+        };
       },
     },
     setToolNameResolver(resolver: (callId: string) => string | undefined) {

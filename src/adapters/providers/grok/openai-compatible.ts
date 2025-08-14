@@ -189,9 +189,16 @@ export function buildOpenAICompatibleClientForGrok(provider: Provider, modelHint
           const text = await res.text().catch(() => "");
           throw httpErrorFromResponse(res as unknown as Response, text);
         }
-        const json = (await res.json()) as { data?: Array<{ id?: string }> };
-        const data = (json.data || []).map((m) => ({ id: m.id || "" })).filter((m) => m.id);
-        return { data } as { data: Array<{ id: string }> };
+        const json = (await res.json()) as { data?: Array<{ id?: string; object?: string; created?: number; owned_by?: string }> };
+        const data = (json.data || [])
+          .map((m) => ({ 
+            id: m.id || "",
+            object: m.object || "model",
+            created: m.created || Math.floor(Date.now() / 1000),
+            owned_by: m.owned_by || "xai"
+          }))
+          .filter((m) => m.id);
+        return { data };
       },
     },
   };

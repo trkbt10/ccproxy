@@ -27,10 +27,10 @@ export function createClaudeApp(opts?: Pick<ServerOptions, "configPath" | "confi
   });
 
   // Use custom config loader if options provided
-  const loadConfig = opts?.configPath || opts?.configOverrides
-    ? createConfigLoader(opts.configPath, opts.configOverrides)
-    : loadRoutingConfigOnce;
-    
+  const loadConfig =
+    opts?.configPath || opts?.configOverrides
+      ? createConfigLoader(opts.configPath, opts.configOverrides)
+      : loadRoutingConfigOnce;
   const routingConfigPromise = loadConfig();
   routingConfigPromise.then((routingConfig: RoutingConfig) => {
     // Claude API router mounted at root (Anthropic-compatible)

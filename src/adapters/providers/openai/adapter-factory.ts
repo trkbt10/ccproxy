@@ -23,7 +23,14 @@ export function buildOpenAIAdapter(provider: Provider, modelHint?: string): Open
     models: {
       async list() {
         const res = await client.models.list();
-        return { data: res.data.map((m) => ({ id: m.id })) };
+        return { 
+          data: res.data.map((m) => ({ 
+            id: m.id,
+            object: m.object,
+            created: m.created,
+            owned_by: m.owned_by
+          })) 
+        };
       },
     },
   };

@@ -62,9 +62,6 @@ export async function runCli(argv: string[]): Promise<void> {
       } else {
         console.log(getBanner("CCPROXY", { color: "cyan" }));
         console.log();
-        if (rest.includes("--with-provider")) {
-          await printProviderInfoLine();
-        }
       }
       process.exit(0);
     }

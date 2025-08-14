@@ -51,22 +51,16 @@ export async function printStartupInfo(port: number, cfg: RoutingConfig, endpoin
   const tools = (cfg.tools || []).map((t) => t.name);
   const log = cfg.logging || {};
 
-  let defaultModel = process.env.OPENAI_MODEL || "gpt-4.1-mini";
-  const toolsWithModel = (cfg.tools || []).filter((t) => t.steps?.some((s) => s.kind === "responses_model" && s.model));
-  if (toolsWithModel.length > 0) {
-    const firstModel = toolsWithModel[0].steps.find((s) => s.kind === "responses_model" && s.model);
-    if (firstModel && firstModel.kind === "responses_model" && firstModel.model) {
-      defaultModel = firstModel.model;
-    }
-  }
-
   const sections = [
     { icon: "🚀", label: "Server is running", body: base },
     { icon: "📦", label: "Config file", body: cfgPath },
     { icon: "🔧", label: "Providers", body: `${providers.length} (${formatList(providers)})` },
     { icon: "🛠️", label: "Tools", body: `${tools.length} (${formatList(tools)})` },
-    { icon: "🗂", label: "Logging", body: `enabled=${log.enabled !== false}, events=${log.eventsEnabled === true}, dir=${log.dir || "./logs"}` },
-    { icon: "🤖", label: "Default model", body: defaultModel },
+    {
+      icon: "🗂",
+      label: "Logging",
+      body: `enabled=${log.enabled !== false}, events=${log.eventsEnabled === true}, dir=${log.dir || "./logs"}`,
+    },
   ];
 
   const maxLabelLength = Math.max(...sections.map((s) => s.label.length));
@@ -96,4 +90,3 @@ export async function printStartupInfo(port: number, cfg: RoutingConfig, endpoin
     for (const line of summarizeTools(cfg)) console.log(line);
   }
 }
-

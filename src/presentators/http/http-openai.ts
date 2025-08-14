@@ -41,7 +41,6 @@ export function createOpenAIApp(opts?: Pick<ServerOptions, "configPath" | "confi
     // Ollama like endpoints
     app.get("/api/tags", async (c) => {
       const requestId = c.get("requestId");
-      const abortController = c.get("abortController");
       const method = c.req.header("x-stainless-helper-method");
       const stream = method === "stream";
       console.log(`\n    🟢 [Request ${requestId}] new /v1/messages stream=${stream} at ${new Date().toISOString()}`);
@@ -56,7 +55,6 @@ export function createOpenAIApp(opts?: Pick<ServerOptions, "configPath" | "confi
       }
       const client = buildOpenAICompatibleClient(provider);
       const models = await client.models.list();
-      console.log(provider, client);
       return c.json({
         models: models.data.map((tag) => ({
           name: tag.id,

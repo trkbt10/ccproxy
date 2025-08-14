@@ -1,3 +1,4 @@
+import OpenAI from "openai";
 import { ResponsesAPI } from "./responses-api";
 import type {
   Response as OpenAIResponse,
@@ -13,7 +14,7 @@ describe("ResponsesAPI emulator (OpenAI-backed)", () => {
   const maybe = API_KEY ? it : it.skip;
 
   maybe("non-stream returns response with output", async () => {
-    const api = new ResponsesAPI({ apiKey: API_KEY! });
+    const api = new ResponsesAPI(new OpenAI({ apiKey: API_KEY! }));
     const params: ResponseCreateParamsNonStreaming = {
       model: MODEL,
       input: "Hello",
@@ -24,7 +25,7 @@ describe("ResponsesAPI emulator (OpenAI-backed)", () => {
   });
 
   maybe("stream yields responses SSE events", async () => {
-    const api = new ResponsesAPI({ apiKey: API_KEY! });
+    const api = new ResponsesAPI(new OpenAI({ apiKey: API_KEY! }));
     const params: ResponseCreateParamsStreaming = {
       model: MODEL,
       input: "streaming",
@@ -36,11 +37,12 @@ describe("ResponsesAPI emulator (OpenAI-backed)", () => {
       delta = false,
       done = false,
       completed = false;
-    for await (const ev of stream as AsyncIterable<ResponseStreamEvent>) {
-      if (ev.type === "response.created") created = true;
-      if (ev.type === "response.output_text.delta") delta = true;
-      if (ev.type === "response.output_text.done") done = true;
-      if (ev.type === "response.completed") completed = true;
+    for await (const ev of stream) {
+      const e = ev as ResponseStreamEvent;
+      if (e.type === "response.created") created = true;
+      if (e.type === "response.output_text.delta") delta = true;
+      if (e.type === "response.output_text.done") done = true;
+      if (e.type === "response.completed") completed = true;
     }
     expect(created).toBe(true);
     expect(delta).toBe(true);

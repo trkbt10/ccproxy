@@ -6,7 +6,7 @@ Goal
 Recommended Approach (Option A)
 - Implement `openai-compatible.ts` that exports a function to build an `OpenAICompatibleClient` over Anthropic:
   - Convert Requests: OpenAI `ResponseCreateParams` → Chat params → Claude `messages.create` input
-    - Use `responses-adapter/input-converter.ts` + tool converters
+    - Use `providers/openai-generic/responses-adapter/input-converter.ts` + tool converters
     - Reuse `adapters/message-converter/openai-to-claude/chat-completion-request.ts`
   - Non-streaming: map Claude JSON to `OpenAIResponse`
   - Streaming: map Claude SSE events to `ResponseStreamEvent`
@@ -24,4 +24,3 @@ Next Steps
 - Choose Option A or B.
 - Implement conversions and event mapping.
 - Wire `execution/routing-config.ts#buildProviderClient` for `type === "claude"` if using Option A.
-

@@ -9,6 +9,7 @@ import { streamSSE } from "hono/streaming";
 import type { Context } from "hono";
 import type { MessageCreateParams as ClaudeMessageCreateParams } from "@anthropic-ai/sdk/resources/messages";
 import { openAIToClaudeStream } from "../../../../../adapters/message-converter/openai-to-claude";
+import { openAINonStreamToClaudeMessage } from "../../../../../adapters/message-converter/openai-to-claude/from-nonstream";
 // Using OpenAICompatibleClient for Responses-compatible flow
 import {
   logError,
@@ -70,9 +71,11 @@ async function processNonStreamingResponse(
       config.signal ? { signal: config.signal } : undefined
     );
 
-    // Non-streaming responses are no longer supported
-    // All responses should use the streaming implementation
-    throw new Error("Non-streaming responses are deprecated. Please use streaming mode.");
+    // Convert OpenAI Response JSON into Claude Message shape
+    const messageId = "msg_" + config.requestId;
+    const claudeMessage = openAINonStreamToClaudeMessage(response as OpenAIResponse, messageId, config.model);
+    logInfo("Non-streaming conversion complete", { usage: (response as OpenAIResponse).usage }, context);
+    return c.json(claudeMessage);
   } catch (error) {
     handleError(config.requestId, openaiReq, error);
     throw error;

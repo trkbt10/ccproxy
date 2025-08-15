@@ -38,7 +38,7 @@ Option A — Dedicated OpenAI-Compatible Builder (recommended)
   - `providers/claude/openai-compatible.ts` (builds `OpenAICompatibleClient` using Anthropic SDK)
   - `providers/claude/claude-response-adapter.ts` (maps Claude JSON/stream events to OpenAI Responses `OpenAIResponse` / `ResponseStreamEvent`)
 - Flow:
-  1) Convert OpenAI Responses `ResponseCreateParams` → Chat Completion params using `responses-adapter/input-converter.ts` and helpers.
+  1) Convert OpenAI Responses `ResponseCreateParams` → Chat Completion params using `providers/openai-generic/responses-adapter/input-converter.ts` and helpers.
   2) Convert Chat Completion params → Claude Messages request via `adapters/message-converter/openai-to-claude/chat-completion-request.ts`.
   3) Call Anthropic Messages API (streaming or non-streaming) with `ANTHROPIC_API_KEY` (or provider-config key via `selectApiKey`).
   4) Convert Claude responses/events → OpenAI Responses API shapes.
@@ -65,7 +65,7 @@ Model Handling
 - Pass `modelHint` from routing into the adapter/builder. Respect model mapping rules if needed (e.g., translating Claude models).
 
 Streaming
-- Prefer adapting provider-native streams to OpenAI Responses `ResponseStreamEvent` via a dedicated adapter (see `responses-adapter/stream-handler.ts` as a reference for conversions from Chat Completions streams).
+- Prefer adapting provider-native streams to OpenAI Responses `ResponseStreamEvent` via a dedicated adapter (see `providers/openai-generic/responses-adapter/stream-handler.ts` as a reference for conversions from Chat Completions streams).
 
 Testing Strategy
 - Unit-test the transformation layers (Responses → Chat → Claude request; Claude events → OpenAI Responses events).
@@ -77,4 +77,3 @@ Implementation Checklist (Claude)
 - [ ] Implement Claude JSON/stream → OpenAI Responses mapping.
 - [ ] Wire `buildProviderClient()` to use the new builder for `type === "claude"`.
 - [ ] Add docs and small tests for conversions and streaming.
-

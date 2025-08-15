@@ -28,3 +28,4 @@ export async function* openAIToClaudeStream(
 }
 
 export { openAIToClaudeStream as openAIToClaudeStreamV2 };
+export { openAINonStreamToClaudeMessage } from "./from-nonstream";

@@ -4,17 +4,6 @@ import { createChatCompletionsHandler } from "./handlers/chat-completions";
 import { createModelsHandler } from "./handlers/models";
 import { createResponsesHandler } from "./handlers/responses";
 import { createTagsHandler } from "./handlers/tags";
-import {
-  createOllamaChatHandler,
-  createOllamaGenerateHandler,
-  createOllamaEmbeddingsHandler,
-  createOllamaPullHandler,
-  createOllamaCreateHandler,
-  createOllamaDeleteHandler,
-  createOllamaPsHandler,
-  createOllamaShowHandler,
-  createOllamaCopyHandler,
-} from "./handlers/ollama";
 import { isErrorWithStatus } from "../../utils/error-helpers";
 import { toErrorBody } from "../../../../adapters/errors/error-converter";
 
@@ -54,15 +43,5 @@ export const createOpenAIRouter = (routingConfig: RoutingConfig) => {
   openaiRouter.post("/v1/responses", createResponsesHandler(routingConfig));
   openaiRouter.get("/v1/models", createModelsHandler(routingConfig));
   openaiRouter.get("/api/tags", createTagsHandler(routingConfig));
-  // Ollama-major endpoints
-  openaiRouter.post("/api/generate", createOllamaGenerateHandler(routingConfig));
-  openaiRouter.post("/api/chat", createOllamaChatHandler(routingConfig));
-  openaiRouter.post("/api/embeddings", createOllamaEmbeddingsHandler(routingConfig));
-  openaiRouter.post("/api/pull", createOllamaPullHandler(routingConfig));
-  openaiRouter.post("/api/create", createOllamaCreateHandler(routingConfig));
-  openaiRouter.post("/api/delete", createOllamaDeleteHandler(routingConfig));
-  openaiRouter.post("/api/ps", createOllamaPsHandler(routingConfig));
-  openaiRouter.post("/api/show", createOllamaShowHandler(routingConfig));
-  openaiRouter.post("/api/copy", createOllamaCopyHandler(routingConfig));
   return openaiRouter;
 };

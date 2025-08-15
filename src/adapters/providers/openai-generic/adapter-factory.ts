@@ -7,7 +7,7 @@ import type {
   ResponseCreateParamsNonStreaming,
 } from "openai/resources/responses/responses";
 import { selectApiKey } from "../shared/select-api-key";
-import { ResponsesAPI } from "../../responses-adapter/responses-api";
+import { ResponsesAPI } from "./responses-adapter/responses-api";
 import { isResponseEventStream } from "./guards";
 
 

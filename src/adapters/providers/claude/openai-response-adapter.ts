@@ -15,17 +15,17 @@ import type {
   ChatCompletionMessageToolCall,
 } from "openai/resources/chat/completions";
 import {
-  isContentDelta,
-  isContentStart,
-  isContentStop,
-  isInputJsonDelta,
-  isMessageDeltaWithStop,
-  isMessageStop,
-  isTextBlock,
-  isToolUseBlock,
-  isTextDelta,
-  hasUsage,
-  hasContentArray,
+  isClaudeContentDelta,
+  isClaudeContentStart,
+  isClaudeContentStop,
+  isClaudeInputJsonDelta,
+  isClaudeMessageDeltaWithStop,
+  isClaudeMessageStop,
+  isClaudeTextBlock,
+  isClaudeToolUseBlock,
+  isClaudeTextDelta,
+  claudeHasUsage,
+  claudeHasContentArray,
   isResponseOutputText,
   isResponseOutputMessage,
 } from "./guards";
@@ -45,7 +45,7 @@ export function claudeToOpenAIResponse(claude: ClaudeMessage, requestModel: stri
 export function claudeToChatCompletion(claude: ClaudeMessage, requestModel: string): ChatCompletion {
   const { text, toolCalls } = extractChatContentFromClaude(claude);
   const created = Math.floor(Date.now() / 1000);
-  const usage = hasUsage(claude) ? claude.usage : { input_tokens: 0, output_tokens: 0 };
+  const usage = claudeHasUsage(claude) ? claude.usage : { input_tokens: 0, output_tokens: 0 };
 
   return {
     id: `chatcmpl_${Date.now()}`,
@@ -86,10 +86,10 @@ export async function* claudeToChatCompletionStream(
   const toolCallsInProgress = new Map<number, { id: string; name: string; args: string }>();
 
   for await (const ev of events) {
-    if (isContentStart(ev)) {
+    if (isClaudeContentStart(ev)) {
       const index = ev.index ?? 0;
       const block = ev.content_block;
-      if (isToolUseBlock(block)) {
+      if (isClaudeToolUseBlock(block)) {
         const openaiId = toOpenAICallIdFromClaude(block.id);
         toolCallsInProgress.set(index, { id: openaiId, name: block.name, args: "" });
 
@@ -119,10 +119,10 @@ export async function* claudeToChatCompletionStream(
           ],
         };
       }
-    } else if (isContentDelta(ev)) {
+    } else if (isClaudeContentDelta(ev)) {
       const index = ev.index ?? 0;
       const d = ev.delta;
-      if (isTextDelta(d) && d.text) {
+      if (isClaudeTextDelta(d) && d.text) {
         yield {
           id,
           object: "chat.completion.chunk",
@@ -138,7 +138,7 @@ export async function* claudeToChatCompletionStream(
             },
           ],
         };
-      } else if (isInputJsonDelta(d)) {
+      } else if (isClaudeInputJsonDelta(d)) {
         const t = toolCallsInProgress.get(index);
         if (t && d.partial_json) {
           t.args += d.partial_json;
@@ -166,7 +166,7 @@ export async function* claudeToChatCompletionStream(
           };
         }
       }
-    } else if (isMessageStop(ev)) {
+    } else if (isClaudeMessageStop(ev)) {
       yield {
         id,
         object: "chat.completion.chunk",
@@ -191,14 +191,14 @@ function extractChatContentFromClaude(msg: ClaudeMessage): {
   const toolCalls: ChatCompletionMessageToolCall[] = [];
   const textParts: string[] = [];
 
-  if (!hasContentArray(msg)) {
+  if (!claudeHasContentArray(msg)) {
     return { text: "", toolCalls };
   }
 
   for (const block of msg.content) {
-    if (isTextBlock(block)) {
+    if (isClaudeTextBlock(block)) {
       textParts.push(block.text);
-    } else if (isToolUseBlock(block)) {
+    } else if (isClaudeToolUseBlock(block)) {
       const args = JSON.stringify(block.input ?? {});
       const openaiId = toOpenAICallIdFromClaude(block.id);
       toolCalls.push({
@@ -243,10 +243,10 @@ export async function* claudeToOpenAIStream(
       } as const;
       yield created;
     }
-    if (isContentStart(ev)) {
+    if (isClaudeContentStart(ev)) {
       const index = ev.index ?? 0;
       const block = ev.content_block;
-      if (isToolUseBlock(block)) {
+      if (isClaudeToolUseBlock(block)) {
         const openaiId = toOpenAICallIdFromClaude(block.id);
         toolsMap.set(index, { id: openaiId, name: block.name, args: "" });
         const item: ResponseOutputItem = buildFunctionCallItem(openaiId, block.name, undefined);
@@ -259,10 +259,10 @@ export async function* claudeToOpenAIStream(
         } as const;
         yield added;
       }
-    } else if (isContentDelta(ev)) {
+    } else if (isClaudeContentDelta(ev)) {
       const index = ev.index ?? 0;
       const d = ev.delta;
-      if (isTextDelta(d)) {
+      if (isClaudeTextDelta(d)) {
         if (d.text) {
           sawText = true;
           if (!textItemId) {
@@ -294,7 +294,7 @@ export async function* claudeToOpenAIStream(
           yield deltaEv;
           accumulatedText += d.text;
         }
-      } else if (isInputJsonDelta(d)) {
+      } else if (isClaudeInputJsonDelta(d)) {
         const t = toolsMap.get(index);
         if (t && d.partial_json) {
           t.args += d.partial_json;
@@ -308,7 +308,7 @@ export async function* claudeToOpenAIStream(
           yield argsDelta;
         }
       }
-    } else if (isContentStop(ev)) {
+    } else if (isClaudeContentStop(ev)) {
       const index = ev.index ?? 0;
       const t = toolsMap.get(index);
       if (t) {
@@ -326,9 +326,9 @@ export async function* claudeToOpenAIStream(
         } as const;
         yield done;
       }
-    } else if (isMessageDeltaWithStop(ev)) {
+    } else if (isClaudeMessageDeltaWithStop(ev)) {
       // Handle stop_reason in delta - don't emit text done here
-    } else if (isMessageStop(ev)) {
+    } else if (isClaudeMessageStop(ev)) {
       // Handle final message stop - emit text done first, then completed
       if (sawText && textItemId) {
         // Update text in outputItems
@@ -370,13 +370,13 @@ export async function* claudeToOpenAIStream(
 function extractItemsFromClaude(msg: ClaudeMessage): { text: string; items: ResponseOutputItem[] } {
   const items: ResponseOutputItem[] = [];
   const textParts: string[] = [];
-  if (!hasContentArray(msg)) {
+  if (!claudeHasContentArray(msg)) {
     return { text: "", items };
   }
   for (const block of msg.content) {
-    if (isTextBlock(block)) {
+    if (isClaudeTextBlock(block)) {
       textParts.push(block.text);
-    } else if (isToolUseBlock(block)) {
+    } else if (isClaudeToolUseBlock(block)) {
       const args = JSON.stringify(block.input ?? {});
       const openaiId = toOpenAICallIdFromClaude(block.id);
       items.push(buildFunctionCallItem(openaiId, block.name, args));
@@ -395,7 +395,7 @@ function buildResponse(
   text: string
 ): OpenAIResponse {
   const created = Math.floor(Date.now() / 1000);
-  const usage = msg && hasUsage(msg) ? msg.usage : { input_tokens: 0, output_tokens: 0 };
+  const usage = msg && claudeHasUsage(msg) ? msg.usage : { input_tokens: 0, output_tokens: 0 };
   const res: OpenAIResponse = {
     id: `resp_${Date.now()}`,
     object: "response",

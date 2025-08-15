@@ -9,18 +9,13 @@ import type {
   ResponseInputItem,
   Tool,
 } from "openai/resources/responses/responses";
-
-function isObject(v: unknown): v is Record<string, unknown> {
-  return typeof v === "object" && v !== null;
-}
-
-export function isTextPart(part: ChatCompletionContentPart): part is ChatCompletionContentPartText {
-  return (
-    isObject(part) &&
-    (part as { type?: unknown }).type === "text" &&
-    typeof (part as { text?: unknown }).text === "string"
-  );
-}
+import {
+  isObject,
+  isOpenAIChatTextPart,
+  isOpenAIChatFunctionTool,
+  isOpenAIChatFunctionToolChoice,
+  isOpenAIChatBasicRole,
+} from "./guards";
 
 export function extractTextFromContent(
   content: ChatCompletionCreateParams["messages"][number]["content"]
@@ -28,25 +23,11 @@ export function extractTextFromContent(
   if (typeof content === "string") return content;
   if (Array.isArray(content)) {
     const texts = (content as ChatCompletionContentPart[])
-      .map((p) => (isTextPart(p) ? p.text : ""))
+      .map((p) => (isOpenAIChatTextPart(p) ? p.text : ""))
       .filter(Boolean);
     return texts.join("");
   }
   return "";
-}
-
-export function isFunctionTool(
-  t: ChatCompletionTool
-): t is ChatCompletionTool & {
-  type: "function";
-  function: { name: string; description?: string; parameters?: unknown };
-} {
-  return (
-    isObject(t) &&
-    (t as { type?: unknown }).type === "function" &&
-    isObject((t as { function?: unknown }).function) &&
-    typeof ((t as { function: { name?: unknown } }).function.name) === "string"
-  );
 }
 
 export function mapChatToolsToResponses(
@@ -55,13 +36,10 @@ export function mapChatToolsToResponses(
   if (!Array.isArray(tools)) return undefined;
   const out: Tool[] = [];
   for (const t of tools) {
-    if (isFunctionTool(t)) {
-      const params = ((): Record<string, unknown> | null => {
-        const p = (t.function as { parameters?: unknown }).parameters;
-        return typeof p === "object" && p !== null
-          ? (p as Record<string, unknown>)
-          : null;
-      })();
+    if (isOpenAIChatFunctionTool(t)) {
+      const raw = (t.function as { parameters?: unknown }).parameters;
+      const params: Record<string, unknown> | undefined =
+        isObject(raw) ? (raw as Record<string, unknown>) : undefined;
       const tool: Tool = {
         type: "function",
         name: t.function.name,
@@ -69,7 +47,7 @@ export function mapChatToolsToResponses(
           typeof t.function.description === "string"
             ? t.function.description
             : undefined,
-        parameters: params ?? undefined,
+        parameters: params,
         strict: false,
       };
       out.push(tool);
@@ -78,15 +56,24 @@ export function mapChatToolsToResponses(
   return out.length ? out : undefined;
 }
 
-function isFunctionToolChoice(
-  v: unknown
-): v is { type: "function"; function: { name: string } } {
-  return (
-    isObject(v) &&
-    (v as { type?: unknown }).type === "function" &&
-    isObject((v as { function?: unknown }).function) &&
-    typeof ((v as { function: { name?: unknown } }).function.name) === "string"
-  );
+// Single tool converter for reuse in other providers
+export function convertOpenAIChatToolToResponsesTool(
+  chatTool: ChatCompletionTool
+): Tool | null {
+  if (!isOpenAIChatFunctionTool(chatTool)) return null;
+  const raw = (chatTool.function as { parameters?: unknown }).parameters;
+  const params: Record<string, unknown> | undefined =
+    isObject(raw) ? (raw as Record<string, unknown>) : undefined;
+  return {
+    type: "function",
+    name: chatTool.function.name,
+    description:
+      typeof chatTool.function.description === "string"
+        ? chatTool.function.description
+        : undefined,
+    parameters: params,
+    strict: false,
+  };
 }
 
 export function mapChatToolChoiceToResponses(
@@ -94,8 +81,10 @@ export function mapChatToolChoiceToResponses(
 ): ResponseCreateParams["tool_choice"] | undefined {
   if (!tc) return undefined;
   if (tc === "auto" || tc === "none" || tc === "required") return tc;
-  if (isFunctionToolChoice(tc)) {
-    return { type: "function", name: tc.function.name };
+  // Reuse provider-specific guard; additionally ensure function.name is a string
+  if (isOpenAIChatFunctionToolChoice(tc) && isObject((tc as { function?: unknown }).function)) {
+    const name = (tc as { function: { name?: unknown } }).function.name;
+    if (typeof name === "string") return { type: "function", name };
   }
   return undefined;
 }
@@ -110,7 +99,7 @@ export function buildResponseInputFromChatMessages(
     const parts: Array<{ type: "input_text"; text: string }> = text
       ? [{ type: "input_text", text }]
       : [];
-    if (isBasicRole(m.role)) {
+    if (isOpenAIChatBasicRole(m.role)) {
       const item: ResponseInputItem = {
         type: "message",
         role: m.role,
@@ -120,8 +109,4 @@ export function buildResponseInputFromChatMessages(
     }
   }
   return out;
-}
-
-function isBasicRole(role: unknown): role is "user" | "assistant" | "system" {
-  return role === "user" || role === "assistant" || role === "system";
 }

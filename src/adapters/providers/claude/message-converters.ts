@@ -13,7 +13,7 @@ import type {
   ResponseFunctionToolCallOutputItem,
 } from "openai/resources/responses/responses";
 import { toOpenAICallIdFromClaude } from "../../../utils/conversation/id-conversion";
-import { isImageBlockParam, isToolResultBlockParam } from "./guards";
+import { isClaudeImageBlockParam, isClaudeToolResultBlockParam } from "./guards";
 
 function isBase64Source(src: unknown): src is Base64ImageSource {
   return (
@@ -101,11 +101,11 @@ export function convertClaudeMessage(message: ClaudeMessageParam): ResponseInput
     for (const b of blocks) {
       if (b.type === "text" && typeof b.text === "string") {
         textParts.push({ type: "input_text", text: b.text });
-      } else if (isImageBlockParam(b)) {
+      } else if (isClaudeImageBlockParam(b)) {
         flushTextParts();
         const img = convertClaudeImageToOpenAI(b);
         out.push({ role: "user", content: [img] });
-      } else if (isToolResultBlockParam(b)) {
+      } else if (isClaudeToolResultBlockParam(b)) {
         flushTextParts();
         out.push(convertToolResult(b));
       }

@@ -6,14 +6,14 @@ import type {
   ChatCompletionToolChoiceOption,
 } from "openai/resources/chat/completions";
 import type { ChatCompletionMessage, ChatCompletionMessageToolCall } from "openai/resources/chat/completions";
-import { isFunctionToolChoice } from "./guards";
+import { isOpenAIChatFunctionToolChoice } from "../openai-generic/guards";
 import { textFromMessages, generateId as id } from "./utils";
 
 export function grokToChatCompletion(params: ChatCompletionCreateParams): ChatCompletion {
   const rid = id("chatcmpl");
   const created = Math.floor(Date.now() / 1000);
   const choice = params.tool_choice;
-  const forced = isFunctionToolChoice(choice);
+  const forced = isOpenAIChatFunctionToolChoice(choice);
   const name = forced ? choice.function?.name || "" : "";
   const content = `Grok: ${textFromMessages(params.messages)}`;
 
@@ -35,7 +35,7 @@ export async function* grokToChatCompletionStream(params: ChatCompletionCreatePa
   const rid = id("chatcmpl");
   const created = Math.floor(Date.now() / 1000);
   const choice2 = params.tool_choice;
-  const forced = isFunctionToolChoice(choice2);
+  const forced = isOpenAIChatFunctionToolChoice(choice2);
   const name = forced ? choice2.function?.name || "" : "";
 
   if (forced) {

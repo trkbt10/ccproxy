@@ -1,13 +1,12 @@
 import type { ResponseStreamEvent as OpenAIResponseStreamEvent } from "openai/resources/responses/responses";
-import { GenerateContentResponse, GeminiPart } from "./fetch-client";
+import { GenerateContentResponse } from "./fetch-client";
+import { getCandidateParts, isGeminiFunctionCallPart, isGeminiTextPart } from "./guards";
 import { generateOpenAICallId } from "../../../utils/conversation/id-conversion";
 
 function extractText(resp: GenerateContentResponse): string {
-  const cand = resp.candidates && resp.candidates[0];
-  const parts = cand?.content?.parts || [];
   let text = "";
-  for (const p of parts as GeminiPart[]) {
-    if ("text" in p && typeof p.text === "string") text += p.text;
+  for (const p of getCandidateParts(resp)) {
+    if (isGeminiTextPart(p)) text += p.text;
   }
   return text;
 }
@@ -16,14 +15,8 @@ function extractFunctionCalls(
   resp: GenerateContentResponse
 ): Array<{ id?: string; name: string; arguments?: string }> {
   const out: Array<{ id?: string; name: string; arguments?: string }> = [];
-  const cand = resp.candidates && resp.candidates[0];
-  const parts = cand?.content?.parts || [];
-  for (const p of parts as GeminiPart[]) {
-    if (
-      "functionCall" in p &&
-      p.functionCall &&
-      typeof p.functionCall.name === "string"
-    ) {
+  for (const p of getCandidateParts(resp)) {
+    if (isGeminiFunctionCallPart(p)) {
       const args =
         p.functionCall.args !== undefined
           ? JSON.stringify(p.functionCall.args)

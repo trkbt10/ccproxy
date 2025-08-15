@@ -1,6 +1,6 @@
 import type { ChatCompletionCreateParams, ChatCompletionMessageParam, ChatCompletionTool } from "openai/resources/chat/completions";
 import type { MessageCreateParams as ClaudeMessageCreateParams, Tool as ClaudeTool } from "@anthropic-ai/sdk/resources/messages";
-import { contentToPlainText, isChatCompletionFunctionTool } from "./guards";
+import { isOpenAIChatFunctionTool, isOpenAIChatTextPart } from "../openai-generic/guards";
 import { mapModelToProvider } from "../shared/model-mapper";
 import { normalizeJSONSchemaForOpenAI } from "./schema-normalizer";
 
@@ -12,7 +12,7 @@ function convertTools(tools?: ChatCompletionTool[]): ClaudeTool[] | undefined {
   if (!tools) return undefined;
   const out: ClaudeTool[] = [];
   for (const t of tools) {
-    if (isChatCompletionFunctionTool(t)) {
+    if (isOpenAIChatFunctionTool(t)) {
       const params = t.function.parameters;
       // Convert function parameters to Claude's input_schema format
       let inputSchema: ClaudeTool["input_schema"];
@@ -54,6 +54,17 @@ function convertToolChoice(toolChoice: ChatCompletionCreateParams["tool_choice"]
   return undefined;
 }
 
+function openAIChatContentToPlainText(content: ChatCompletionMessageParam["content"]): string {
+  if (typeof content === "string") return content;
+  if (Array.isArray(content)) {
+    return content
+      .map((p) => (isOpenAIChatTextPart(p) ? p.text : ""))
+      .filter(Boolean)
+      .join("");
+  }
+  return "";
+}
+
 function convertMessages(msgs: ChatCompletionMessageParam[]): ClaudeMessageCreateParams["messages"] {
   const out: ClaudeMessageCreateParams["messages"] = [];
   for (const m of msgs) {
@@ -61,7 +72,7 @@ function convertMessages(msgs: ChatCompletionMessageParam[]): ClaudeMessageCreat
       // system is handled at top-level in chatCompletionToClaudeLocal
       continue;
     }
-    const contentText = contentToPlainText(m.content);
+    const contentText = openAIChatContentToPlainText(m.content);
     if (m.role === "user" || m.role === "assistant") {
       out.push({ role: m.role, content: contentText });
     }
@@ -75,7 +86,7 @@ export function chatCompletionToClaudeLocal(request: ChatCompletionCreateParams)
   const messages = convertMessages(request.messages);
   const systemTexts = (request.messages || [])
     .filter((m) => m.role === "system")
-    .map((m) => contentToPlainText(m.content))
+    .map((m) => openAIChatContentToPlainText(m.content))
     .filter(Boolean);
 
   const claudeReq: ClaudeMessageCreateParams = {

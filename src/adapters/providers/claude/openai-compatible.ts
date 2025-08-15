@@ -34,7 +34,7 @@ import { chatCompletionToClaudeLocal } from "./request-converter";
 import type { Message as ClaudeMessage, MessageStreamEvent } from "@anthropic-ai/sdk/resources/messages";
 import { resolveModelForProvider } from "../shared/model-mapper";
 import type { ChatCompletionsCreateFn, ResponsesCreateFn } from "../openai-client-types";
-import { convertChatCompletionToolToTool } from "./guards";
+import { convertOpenAIChatToolToResponsesTool } from "../openai-generic/chat-request-converter";
 
 function buildChatParams(params: ResponseCreateParams): ChatCompletionCreateParams {
   const messages: ChatCompletionCreateParams["messages"] = [];
@@ -147,7 +147,9 @@ export function buildOpenAICompatibleClientForClaude(provider: Provider, modelHi
 
     if (chatParams.stream) {
       const streamAny = await anthropic.messages.create({ ...claudeReq, stream: true }, { signal: options?.signal });
-      const openaiTools = chatParams.tools?.map(convertChatCompletionToolToTool).filter((t): t is Tool => t !== null);
+      const openaiTools = chatParams.tools
+        ?.map(convertOpenAIChatToolToResponsesTool)
+        .filter((t): t is Tool => t !== null);
       return claudeToOpenAIStream(streamAny, chatParams.model, openaiTools);
     }
 

@@ -1,10 +1,8 @@
 import type {
   Responses as OpenAIResponsesNS,
-  Tool as OpenAITool,
 } from "openai/resources/responses/responses";
-import type {
-  ChatCompletionToolChoiceOption,
-} from "openai/resources/chat/completions";
+import type { ChatCompletionToolChoiceOption } from "openai/resources/chat/completions";
+import { isOpenAIResponsesFunctionTool, isOpenAIChatFunctionToolChoice } from "../openai-generic/guards";
 
 export type GrokFunction = { name: string; arguments?: string };
 export type GrokToolCall = { id?: string; type: "function"; function: GrokFunction };
@@ -72,18 +70,8 @@ export function isResponseInputMessageItem(v: unknown): v is OpenAIResponsesNS.R
   );
 }
 
-export function isFunctionTool(t: unknown): t is OpenAITool & { type: "function"; function: { name: string; parameters?: unknown; description?: string } } {
-  return (
-    isObject(t) &&
-    (t as { type?: unknown }).type === "function" &&
-    isObject((t as { function?: unknown }).function) &&
-    typeof ((t as { function: { name?: unknown } }).function.name) === "string"
-  );
-}
-
-export function isFunctionToolChoice(
+// Backward-compat exports for OpenAI tool guards (delegate to openai-generic)
+export const isFunctionTool = isOpenAIResponsesFunctionTool;
+export const isFunctionToolChoice = isOpenAIChatFunctionToolChoice as (
   tc: unknown
-): tc is Extract<ChatCompletionToolChoiceOption, { type: "function" }> {
-  return isObject(tc) && ("type" in tc) && (tc as { type?: unknown }).type === "function";
-}
-
+) => tc is Extract<ChatCompletionToolChoiceOption, { type: "function" }>;

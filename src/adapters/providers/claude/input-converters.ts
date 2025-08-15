@@ -1,5 +1,6 @@
 import type { ResponseInput, Tool, ToolChoiceOptions, ToolChoiceFunction } from "openai/resources/responses/responses";
-import { isEasyInputMessage, isOpenAIFunctionTool } from "./guards";
+import { isEasyInputMessage } from "./guards";
+import { isOpenAIResponsesFunctionTool } from "../openai-generic/guards";
 import type { ChatCompletionMessageParam, ChatCompletionTool, ChatCompletionToolChoiceOption } from "openai/resources/chat/completions";
 import type { FunctionDefinition } from "openai/resources/shared";
 
@@ -47,7 +48,7 @@ export function convertToolsForChatLocal(tools: Tool[] | undefined): ChatComplet
   if (!Array.isArray(tools) || tools.length === 0) return undefined;
   const out: ChatCompletionTool[] = [];
   for (const t of tools) {
-    if (isOpenAIFunctionTool(t)) {
+    if (isOpenAIResponsesFunctionTool(t)) {
       const fn: FunctionDefinition = {
         name: t.name,
         description: t.description ?? "",

@@ -1,6 +1,7 @@
 import type { Responses as OpenAIResponsesNS } from "openai/resources/responses/responses";
 import type { ChatCompletionMessageParam } from "openai/resources/chat/completions";
-import { isObject, isEasyInputMessage, isResponseInputMessageItem, isFunctionTool } from "./guards";
+import { isObject, isEasyInputMessage, isResponseInputMessageItem } from "./guards";
+import { isOpenAIResponsesFunctionTool } from "../openai-generic/guards";
 import type { GrokChatMessage, GrokFunctionTool, GrokToolChoice } from "./guards";
 
 export function extractTextFromContent(content: unknown): string {
@@ -33,7 +34,7 @@ export function mapTools(tools: unknown): GrokFunctionTool[] | undefined {
   if (!Array.isArray(tools)) return undefined;
   const out: GrokFunctionTool[] = [];
   for (const t of tools) {
-    if (isFunctionTool(t)) {
+    if (isOpenAIResponsesFunctionTool(t)) {
       out.push({
         type: "function",
         function: {

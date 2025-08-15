@@ -12,6 +12,7 @@ import type {
   ChatCompletionTool,
   ChatCompletionToolChoiceOption 
 } from "openai/resources/chat/completions";
+import { isOpenAIResponsesFunctionTool } from "../guards";
 
 /**
  * Converts Responses API tools to Chat Completion tools
@@ -20,7 +21,7 @@ export const convertToolsForChat = (tools: Tool[]): ChatCompletionTool[] => {
   const chatTools: ChatCompletionTool[] = [];
   
   for (const tool of tools) {
-    if (isFunctionTool(tool)) {
+    if (isOpenAIResponsesFunctionTool(tool)) {
       chatTools.push({
         type: "function",
         function: {
@@ -78,11 +79,6 @@ export const convertToolChoiceForChat = (
   return "auto"; // Default fallback
 };
 
-// Type guards
-const isFunctionTool = (tool: Tool): tool is FunctionTool => {
-  return tool.type === "function";
-};
-
 const isToolChoiceFunction = (choice: any): choice is ToolChoiceFunction => {
   return choice &&
     typeof choice === "object" &&
@@ -94,4 +90,3 @@ const isToolChoiceOptions = (choice: any): choice is ToolChoiceOptions => {
   // ToolChoiceOptions is just a string type
   return typeof choice === "string";
 };
-

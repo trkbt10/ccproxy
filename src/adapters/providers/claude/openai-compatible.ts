@@ -62,8 +62,9 @@ function buildChatParams(params: ResponseCreateParams): ChatCompletionCreatePara
   };
 
   if (params.max_output_tokens != null) chatParams.max_tokens = params.max_output_tokens;
-  if (params.temperature != null) chatParams.temperature = params.temperature;
-  if (params.top_p != null) chatParams.top_p = params.top_p;
+  // Temperature and top_p disabled for all models
+  // if (params.temperature != null) chatParams.temperature = params.temperature;
+  // if (params.top_p != null) chatParams.top_p = params.top_p;
   if (params.tools) {
     const mapped = convertToolsForChatLocal(params.tools);
     if (mapped) chatParams.tools = mapped;
@@ -173,10 +174,10 @@ export function buildOpenAICompatibleClientForClaude(provider: Provider, modelHi
         const data = models.data.map((m) => ({
           id: m.id,
           object: "model" as const,
-          created: m.created_at ? new Date(m.created_at).getTime() : undefined,
+          created: m.created_at ? Math.floor(new Date(m.created_at).getTime() / 1000) : Math.floor(Date.now() / 1000),
           owned_by: "anthropic",
         }));
-        return { object: "list" as const, data };
+        return { data };
       },
     },
     setConversationId(convId: string) {

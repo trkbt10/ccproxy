@@ -6,9 +6,26 @@ import type {
   ResponseCreateParamsStreaming,
   ResponseCreateParamsNonStreaming,
 } from "openai/resources/responses/responses";
+import type { ChatCompletionCreateParams } from "openai/resources/chat/completions";
 import { selectApiKey } from "../shared/select-api-key";
 import { ResponsesAPI } from "./responses-adapter/responses-api";
 import { isResponseEventStream } from "./guards";
+
+function isO1Model(model: string): boolean {
+  return model.startsWith("o1") || model.startsWith("o3") || model.startsWith("o4");
+}
+
+function filterChatParams(params: ChatCompletionCreateParams): ChatCompletionCreateParams {
+  // Always remove temperature and top_p for all models
+  const { temperature, top_p, ...filteredParams } = params;
+  return filteredParams;
+}
+
+function filterResponseParams(params: ResponseCreateParams): ResponseCreateParams {
+  // Always remove temperature and top_p for all models
+  const { temperature, top_p, ...filteredParams } = params;
+  return filteredParams;
+}
 
 
 export function buildOpenAIGenericAdapter(
@@ -36,17 +53,26 @@ export function buildOpenAIGenericAdapter(
   });
   const shim = new ResponsesAPI(client);
 
+  // Wrapper for chat completions that filters o1 model parameters
+  const chatCompletionsCreate: ChatCompletionsCreateFn = async (params: any, options?: any) => {
+    const filteredParams = filterChatParams(params);
+    return client.chat.completions.create(filteredParams, options);
+  };
+
   const openAIClient: OpenAICompatibleClient = {
     chat: {
       completions: {
-        create: client.chat.completions.create.bind(client.chat.completions) as ChatCompletionsCreateFn,
+        create: chatCompletionsCreate,
       },
     },
     responses: {
       create: (async (params: ResponseCreateParams, options?: { signal?: AbortSignal }) => {
         try {
+          // Filter parameters for o1 models before calling native API
+          const filteredParams = filterResponseParams(params);
+          
           // Try native Responses API first
-          const result = await client.responses.create(params, options);
+          const result = await client.responses.create(filteredParams, options);
           
           // Validate the response type matches what was requested
           if (params.stream && !isResponseEventStream(result)) {
@@ -56,7 +82,7 @@ export function buildOpenAIGenericAdapter(
           
           return result;
         } catch (error: unknown) {
-          // Fallback to chat completions via shim
+          // Fallback to chat completions via shim (shim already handles filtering)
           if (params.stream) {
             return shim.create(params as ResponseCreateParamsStreaming);
           } else {

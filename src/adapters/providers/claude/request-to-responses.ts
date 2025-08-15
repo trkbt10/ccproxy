@@ -37,8 +37,9 @@ export function claudeToResponsesLocal(
     }
   }
   if (typeof req.max_tokens === 'number') body.max_output_tokens = req.max_tokens;
-  if (typeof req.temperature === 'number') body.temperature = req.temperature;
-  if (typeof req.top_p === 'number') body.top_p = req.top_p;
+  // Temperature and top_p disabled for all models
+  // if (typeof req.temperature === 'number') body.temperature = req.temperature;
+  // if (typeof req.top_p === 'number') body.top_p = req.top_p;
   return body;
 }
 

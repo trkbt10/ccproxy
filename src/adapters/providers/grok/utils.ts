@@ -38,9 +38,9 @@ export function mapTools(tools: unknown): GrokFunctionTool[] | undefined {
       out.push({
         type: "function",
         function: {
-          name: t.function.name,
-          description: (t.function as { description?: string }).description,
-          parameters: (t.function as { parameters?: unknown }).parameters ?? { type: "object", properties: {} },
+          name: (t as { name: string }).name,
+          description: (t as { description?: string }).description,
+          parameters: (t as { parameters?: unknown }).parameters ?? { type: "object", properties: {} },
         },
       });
     }

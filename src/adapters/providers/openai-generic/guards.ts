@@ -52,7 +52,7 @@ export function responseHasFunctionCall(resp: OpenAIResponse): boolean {
 // Chat (OpenAI) specific guards aggregated here for openai-generic context
 
 export function isOpenAIChatTextPart(
-  part: ChatCompletionContentPart
+  part: unknown
 ): part is ChatCompletionContentPartText {
   return (
     isObject(part) &&

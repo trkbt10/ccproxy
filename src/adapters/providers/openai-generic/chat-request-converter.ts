@@ -38,8 +38,8 @@ export function mapChatToolsToResponses(
   for (const t of tools) {
     if (isOpenAIChatFunctionTool(t)) {
       const raw = (t.function as { parameters?: unknown }).parameters;
-      const params: Record<string, unknown> | undefined =
-        isObject(raw) ? (raw as Record<string, unknown>) : undefined;
+      const params: Record<string, unknown> | null =
+        isObject(raw) ? (raw as Record<string, unknown>) : null;
       const tool: Tool = {
         type: "function",
         name: t.function.name,
@@ -62,8 +62,8 @@ export function convertOpenAIChatToolToResponsesTool(
 ): Tool | null {
   if (!isOpenAIChatFunctionTool(chatTool)) return null;
   const raw = (chatTool.function as { parameters?: unknown }).parameters;
-  const params: Record<string, unknown> | undefined =
-    isObject(raw) ? (raw as Record<string, unknown>) : undefined;
+  const params: Record<string, unknown> | null =
+    isObject(raw) ? (raw as Record<string, unknown>) : null;
   return {
     type: "function",
     name: chatTool.function.name,

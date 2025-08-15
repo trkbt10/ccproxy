@@ -77,8 +77,9 @@ export class ResponsesAPI {
     params: ResponseCreateParams,
     messages: OpenAI.Chat.ChatCompletionMessageParam[]
   ): OpenAI.Chat.ChatCompletionCreateParams {
+    const model = params.model ?? "gpt-4o";
     const chatParams: OpenAI.Chat.ChatCompletionCreateParams = {
-      model: params.model ?? "gpt-4o",
+      model,
       messages,
       stream: params.stream ?? false,
     };
@@ -88,13 +89,14 @@ export class ResponsesAPI {
       chatParams.max_tokens = params.max_output_tokens;
     }
 
-    if (params.temperature !== undefined && params.temperature !== null) {
-      chatParams.temperature = params.temperature;
-    }
+    // Temperature and top_p are disabled for all models
+    // if (params.temperature !== undefined && params.temperature !== null) {
+    //   chatParams.temperature = params.temperature;
+    // }
 
-    if (params.top_p !== undefined && params.top_p !== null) {
-      chatParams.top_p = params.top_p;
-    }
+    // if (params.top_p !== undefined && params.top_p !== null) {
+    //   chatParams.top_p = params.top_p;
+    // }
 
     if (params.tools) {
       chatParams.tools = convertToolsForChat(params.tools);
@@ -113,6 +115,10 @@ export class ResponsesAPI {
     // based on your specific requirements
 
     return chatParams;
+  }
+
+  private isO1Model(model: string): boolean {
+    return model.startsWith("o1") || model.startsWith("o3") || model.startsWith("o4");
   }
 
   private async handleNonStreamingResponse(

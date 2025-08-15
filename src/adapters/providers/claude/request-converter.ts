@@ -101,8 +101,9 @@ export function chatCompletionToClaudeLocal(request: ChatCompletionCreateParams)
   if (tools) claudeReq.tools = tools;
   const choice = convertToolChoice(request.tool_choice);
   if (choice) claudeReq.tool_choice = choice;
-  if (request.temperature != null) claudeReq.temperature = request.temperature ?? undefined;
-  if (request.top_p != null) claudeReq.top_p = request.top_p ?? undefined;
+  // Temperature and top_p disabled for all models
+  // if (request.temperature != null) claudeReq.temperature = request.temperature ?? undefined;
+  // if (request.top_p != null) claudeReq.top_p = request.top_p ?? undefined;
   if (request.stop) {
     const stop = request.stop;
     claudeReq.stop_sequences = Array.isArray(stop) ? stop : [String(stop)];

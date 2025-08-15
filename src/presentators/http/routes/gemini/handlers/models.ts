@@ -20,7 +20,7 @@ export const createModelsHandler = (routingConfig: RoutingConfig) => {
       // Create OpenAI client and get available models
       const openai = buildOpenAICompatibleClient(provider);
       const modelsResponse = await openai.models.list();
-      
+
       // Convert OpenAI model format to Gemini format
       const models = modelsResponse.data.map((model: any) => ({
         name: `models/${model.id}`,
@@ -31,9 +31,9 @@ export const createModelsHandler = (routingConfig: RoutingConfig) => {
         inputTokenLimit: 32768, // Default values
         outputTokenLimit: 8192,
         supportedGenerationMethods: ["generateContent", "streamGenerateContent"],
-        temperature: 0.9,
+        temperature: 1,
         topP: 1.0,
-        topK: 40
+        topK: 40,
       }));
 
       return c.json({ models });

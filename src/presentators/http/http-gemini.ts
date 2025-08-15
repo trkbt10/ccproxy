@@ -1,5 +1,5 @@
 import { Hono } from "hono";
-import { loadRoutingConfigOnce } from "../../execution/routing-config";
+import { getRoutingConfigPromise } from "./utils/config-loader";
 import { requestIdMiddleware } from "./middleware/request-id";
 import { clientDisconnectMiddleware } from "./middleware/client-disconnect";
 import { corsMiddleware } from "./middleware/cors";
@@ -24,7 +24,7 @@ export function createGeminiApp(): Hono {
     return c.json({ status: "ok", timestamp: new Date().toISOString() });
   });
 
-  const routingConfigPromise = loadRoutingConfigOnce();
+  const routingConfigPromise = getRoutingConfigPromise();
   routingConfigPromise.then((routingConfig: RoutingConfig) => {
     // Gemini compatibility router mounted at root
     const geminiRouter = createGeminiRouter(routingConfig);

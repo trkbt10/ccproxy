@@ -1,5 +1,6 @@
 import type { MessageCreateParams as ClaudeMessageCreateParams } from "@anthropic-ai/sdk/resources/messages";
 import type { RoutingConfig, Step } from "../config/types";
+import { selectProvider } from "./provider-selection";
 import type { UnknownRecord } from "../types/common";
 
 // Type guard for ClaudeMessageCreateParams
@@ -34,45 +35,8 @@ export function selectProviderForRequest(
   cfg: RoutingConfig,
   req: ClaudeMessageCreateParams
 ): { providerId: string; model: string } {
-  // Model is determined by tool step or env/defaults; no header override
-  const overrideModel = undefined;
-
-  // Check tool-specific provider settings
   const toolNames = extractToolNames(req);
-  for (const name of toolNames) {
-    const steps = planToolExecution(cfg, name, undefined);
-    for (const s of steps) {
-      if (s.kind === "responses_model") {
-        const providerId =
-          s.providerId || cfg.defaults?.providerId || "default";
-        const model = s.model || cfg.defaults?.model || "gpt-4o-mini";
-
-        // Verify provider exists if not using default
-        if (
-          providerId !== "default" &&
-          cfg.providers &&
-          !cfg.providers[providerId]
-        ) {
-          throw new Error(`Provider '${providerId}' not found in providers`);
-        }
-
-        return { providerId, model };
-      }
-    }
-  }
-
-  // Use default provider
-  // Determine providerId: explicit defaults -> 'default' -> only provider name if exactly one defined
-  const providers = cfg.providers || {};
-  const providerId = cfg.defaults?.providerId
-    ? cfg.defaults.providerId
-    : providers["default"]
-    ? "default"
-    : Object.keys(providers).length === 1
-    ? Object.keys(providers)[0]
-    : "default";
-  const model = cfg.defaults?.model || "gpt-4o-mini";
-  return { providerId, model };
+  return selectProvider(cfg, { toolNames, defaultModel: "gpt-4o-mini" });
 }
 
 // Create the execution plan (ordered steps) for a given tool and input
@@ -119,6 +83,11 @@ function extractToolNames(req: ClaudeMessageCreateParams): string[] {
     }
   }
   return result;
+}
+
+// Exported helper for external callers (Claude router) to unify extraction
+export function extractToolNamesFromClaude(req: ClaudeMessageCreateParams): string[] {
+  return extractToolNames(req);
 }
 
 type ToolUseShape = { type: "tool_use"; name: string };

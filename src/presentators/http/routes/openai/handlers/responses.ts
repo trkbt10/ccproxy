@@ -8,7 +8,8 @@ import type {
 import type { RoutingConfig } from "../../../../../config/types";
 import { buildOpenAICompatibleClient } from "../../../../../adapters/providers/openai-client";
 import { isOpenAIResponse, isResponseEventStream } from "../../../../../adapters/providers/openai-generic/guards";
-import { extractToolNamesFromResponses, selectProviderForOpenAI } from "../../../../../execution/openai-tool-model-selector";
+import { extractToolNamesFromResponses } from "../../../../../execution/openai-tool-model-selector";
+import { selectProvider } from "../../../../../execution/provider-selection";
 
 type Plan =
   | { type: "json"; getBody: () => Promise<OpenAIResponse> }
@@ -23,7 +24,11 @@ export function createResponsesHandler(routing: RoutingConfig) {
     console.log(`🟢 [Request ${requestId}] new /v1/responses stream=${stream}`);
 
     const toolNames = extractToolNamesFromResponses(req);
-    const { providerId, model } = selectProviderForOpenAI(routing, { model: req.model as string, toolNames });
+    const { providerId, model } = selectProvider(routing, {
+      explicitModel: req.model as string,
+      toolNames,
+      defaultModel: "gpt-4o-mini",
+    });
     const provider = routing.providers?.[providerId];
     if (!provider && providerId !== "default") {
       throw new Error(`Provider '${providerId}' not found`);

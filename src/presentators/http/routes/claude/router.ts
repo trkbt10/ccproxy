@@ -1,7 +1,8 @@
 import type { MessageCreateParams as ClaudeMessageCreateParams } from "@anthropic-ai/sdk/resources/messages";
 import { Hono } from "hono";
 import type { RoutingConfig } from "../../../../config/types";
-import { selectProviderForRequest } from "../../../../execution/tool-model-planner";
+import { extractToolNamesFromClaude } from "../../../../execution/tool-model-planner";
+import { selectProvider } from "../../../../execution/provider-selection";
 import { createResponseProcessor } from "./handlers/response-processor";
 import { countTokens } from "./handlers/token-counter";
 import { buildOpenAICompatibleClient } from "../../../../adapters/providers/openai-client";
@@ -19,7 +20,8 @@ export function createClaudeRouter(routingConfig: RoutingConfig) {
     const stream = method === "stream";
     const claudeReq = (await c.req.json()) as ClaudeMessageCreateParams;
 
-    const providerSelection = selectProviderForRequest(routingConfig, claudeReq);
+    const toolNames = extractToolNamesFromClaude(claudeReq);
+    const providerSelection = selectProvider(routingConfig, { toolNames, defaultModel: "gpt-4o-mini" });
     const provider = routingConfig.providers?.[providerSelection.providerId];
     if (!provider) {
       throw new Error(`Provider '${providerSelection.providerId}' not found`);

@@ -3,6 +3,18 @@ import type { RoutingConfig } from "../../../../config/types";
 import { createChatCompletionsHandler } from "./handlers/chat-completions";
 import { createModelsHandler } from "./handlers/models";
 import { createResponsesHandler } from "./handlers/responses";
+import { createTagsHandler } from "./handlers/tags";
+import {
+  createOllamaChatHandler,
+  createOllamaGenerateHandler,
+  createOllamaEmbeddingsHandler,
+  createOllamaPullHandler,
+  createOllamaCreateHandler,
+  createOllamaDeleteHandler,
+  createOllamaPsHandler,
+  createOllamaShowHandler,
+  createOllamaCopyHandler,
+} from "./handlers/ollama";
 import { isErrorWithStatus } from "../../utils/error-helpers";
 import { toErrorBody } from "../../../../adapters/errors/error-converter";
 
@@ -18,20 +30,39 @@ export const createOpenAIRouter = (routingConfig: RoutingConfig) => {
     const status = isErrorWithStatus(err) ? err.status : 500;
     const message = err instanceof Error ? err.message : "Internal server error";
     const code = (err as { code?: unknown })?.code;
-    const type = typeof code === 'string' && code.trim()
-      ? String(code)
-      : (status === 401 ? 'unauthorized'
-        : status === 403 ? 'forbidden'
-        : status === 404 ? 'not_found'
-        : status === 429 ? 'rate_limited'
-        : status >= 500 ? 'upstream_error'
-        : status >= 400 ? 'bad_request'
-        : 'api_error');
+    const type =
+      typeof code === "string" && code.trim()
+        ? String(code)
+        : status === 401
+        ? "unauthorized"
+        : status === 403
+        ? "forbidden"
+        : status === 404
+        ? "not_found"
+        : status === 429
+        ? "rate_limited"
+        : status >= 500
+        ? "upstream_error"
+        : status >= 400
+        ? "bad_request"
+        : "api_error";
     return c.json(toErrorBody("openai", message, type) as never, status as Parameters<typeof c.json>[1]);
   });
 
-  openaiRouter.post("/chat/completions", createChatCompletionsHandler(routingConfig));
-  openaiRouter.post("/responses", createResponsesHandler(routingConfig));
-  openaiRouter.get("/models", createModelsHandler(routingConfig));
+  // Unified routes: include /v1 prefix here and tags endpoint
+  openaiRouter.post("/v1/chat/completions", createChatCompletionsHandler(routingConfig));
+  openaiRouter.post("/v1/responses", createResponsesHandler(routingConfig));
+  openaiRouter.get("/v1/models", createModelsHandler(routingConfig));
+  openaiRouter.get("/api/tags", createTagsHandler(routingConfig));
+  // Ollama-major endpoints
+  openaiRouter.post("/api/generate", createOllamaGenerateHandler(routingConfig));
+  openaiRouter.post("/api/chat", createOllamaChatHandler(routingConfig));
+  openaiRouter.post("/api/embeddings", createOllamaEmbeddingsHandler(routingConfig));
+  openaiRouter.post("/api/pull", createOllamaPullHandler(routingConfig));
+  openaiRouter.post("/api/create", createOllamaCreateHandler(routingConfig));
+  openaiRouter.post("/api/delete", createOllamaDeleteHandler(routingConfig));
+  openaiRouter.post("/api/ps", createOllamaPsHandler(routingConfig));
+  openaiRouter.post("/api/show", createOllamaShowHandler(routingConfig));
+  openaiRouter.post("/api/copy", createOllamaCopyHandler(routingConfig));
   return openaiRouter;
 };

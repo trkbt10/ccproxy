@@ -1,14 +1,15 @@
 import type { Context } from "hono";
 import type { RoutingConfig } from "../../../../../config/types";
 import { buildOpenAICompatibleClient } from "../../../../../adapters/providers/openai-client";
+import { selectProvider } from "../../../../../execution/provider-selection";
 
 export const createModelsHandler = (routingConfig: RoutingConfig) => {
   return async (c: Context) => {
     const requestId = c.get("requestId");
     console.log(`[Request ${requestId}] Gemini models request`);
 
-    // Get the default provider
-    const providerId = routingConfig.defaults?.providerId || "default";
+    // Select provider via unified logic
+    const { providerId } = selectProvider(routingConfig, { defaultModel: "gpt-4o-mini" });
     const provider = routingConfig.providers?.[providerId];
     if (!provider) {
       // Return empty model list if no provider configured

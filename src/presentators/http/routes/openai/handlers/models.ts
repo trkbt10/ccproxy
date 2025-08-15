@@ -1,17 +1,11 @@
 import type { Context } from "hono";
-import type { RoutingConfig, Provider } from "../../../../../config/types";
+import type { RoutingConfig } from "../../../../../config/types";
 import { buildOpenAICompatibleClient } from "../../../../../adapters/providers/openai-client";
-
-function pickDefaultProvider(cfg: RoutingConfig): Provider | undefined {
-  const id = cfg.defaults?.providerId || "default";
-  const provider = cfg.providers?.[id];
-  if (provider) return provider;
-  const first = cfg.providers && Object.values(cfg.providers)[0];
-  return first;
-}
+import { selectProvider } from "../../../../../execution/provider-selection";
 
 export const createModelsHandler = (routingConfig: RoutingConfig) => async (c: Context) => {
-  const provider = pickDefaultProvider(routingConfig);
+  const { providerId } = selectProvider(routingConfig, { defaultModel: "gpt-4o-mini" });
+  const provider = routingConfig.providers?.[providerId];
   if (!provider) {
     return c.json({ object: "list", data: [] });
   }

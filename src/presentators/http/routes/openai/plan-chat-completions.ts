@@ -5,7 +5,8 @@ import type {
 } from "openai/resources/chat/completions";
 import type { RoutingConfig } from "../../../../config/types";
 import { buildOpenAICompatibleClient } from "../../../../adapters/providers/openai-client";
-import { extractToolNamesFromChat, selectProviderForOpenAI } from "../../../../execution/openai-tool-model-selector";
+import { extractToolNamesFromChat } from "../../../../execution/openai-tool-model-selector";
+import { selectProvider } from "../../../../execution/provider-selection";
 
 export type ChatCompletionsPlan =
   | { type: "json"; getBody: () => Promise<ChatCompletion> }
@@ -23,7 +24,11 @@ export async function planChatCompletions(
   opts: PlanOptions
 ): Promise<ChatCompletionsPlan> {
   const toolNames = extractToolNamesFromChat(chatRequest);
-  const { providerId, model } = selectProviderForOpenAI(routingConfig, { model: chatRequest.model as string, toolNames });
+  const { providerId, model } = selectProvider(routingConfig, {
+    explicitModel: chatRequest.model as string,
+    toolNames,
+    defaultModel: "gpt-4o-mini",
+  });
   const provider = routingConfig.providers?.[providerId];
   if (!provider && providerId !== "default") {
     throw new Error(`Provider '${providerId}' not found`);

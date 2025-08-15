@@ -5,6 +5,7 @@ import type { GeminiGenerateContentRequest } from "../../../../../adapters/messa
 import { buildOpenAICompatibleClient } from "../../../../../adapters/providers/openai-client";
 import { geminiToOpenAI } from "../../../../../adapters/message-converter/openai-to-gemini/request-converter";
 import { openAIStreamToGemini } from "../../../../../adapters/message-converter/openai-to-gemini/stream-converter";
+import { selectProvider } from "../../../../../execution/provider-selection";
 
 export const createStreamGenerateContentHandler = (routingConfig: RoutingConfig) => {
   return async (c: Context) => {
@@ -26,8 +27,8 @@ export const createStreamGenerateContentHandler = (routingConfig: RoutingConfig)
       const openAIReq = geminiToOpenAI(geminiReq, modelFromPath);
       console.log(`[Request ${requestId}] Converted to OpenAI format:`, JSON.stringify(openAIReq, null, 2));
 
-      // Select provider - use default provider for now
-      const providerId = routingConfig.defaults?.providerId || "default";
+      // Select provider via unified logic
+      const { providerId } = selectProvider(routingConfig, { explicitModel: modelFromPath, defaultModel: "gpt-4o-mini" });
       const provider = routingConfig.providers?.[providerId];
       if (!provider) {
         throw new Error(`Provider '${providerId}' not found`);

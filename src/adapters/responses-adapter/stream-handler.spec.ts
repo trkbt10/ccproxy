@@ -1,4 +1,4 @@
-import { StreamHandler } from "./stream-handler";
+import { StreamHandler } from "../providers/openai-generic/responses-adapter/stream-handler";
 import type { ChatCompletionChunk } from "openai/resources/chat/completions";
 
 describe("stream-handler (unit)", () => {

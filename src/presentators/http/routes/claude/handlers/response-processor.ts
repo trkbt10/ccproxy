@@ -154,17 +154,6 @@ async function processStreamingResponse(
 export function createResponseProcessor(config: ProcessorConfig) {
   async function process(c: Context): Promise<Response> {
     const openaiReq = claudeToResponsesLocal(config.claudeReq, config.model as ResponsesModel);
-    console.log(
-      JSON.stringify(
-        {
-          instructions: openaiReq.instructions,
-          input: openaiReq.input,
-          prompt: openaiReq.prompt,
-        },
-        null,
-        2
-      )
-    );
     logDebug("OpenAI Request Params", openaiReq, { requestId: config.requestId });
 
     // Tool interception is now handled at the OpenAI client level

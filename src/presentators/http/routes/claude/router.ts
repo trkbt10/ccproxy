@@ -17,8 +17,6 @@ export function createClaudeRouter(routingConfig: RoutingConfig) {
     const abortController = c.get("abortController");
     const method = c.req.header("x-stainless-helper-method");
     const stream = method === "stream";
-    console.log(`\n    🟢 [Request ${requestId}] new /v1/messages stream=${stream} at ${new Date().toISOString()}`);
-
     const claudeReq = (await c.req.json()) as ClaudeMessageCreateParams;
 
     const providerSelection = selectProviderForRequest(routingConfig, claudeReq);

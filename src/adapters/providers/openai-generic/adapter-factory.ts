@@ -27,20 +27,11 @@ function filterResponseParams(params: ResponseCreateParams): ResponseCreateParam
   return filteredParams;
 }
 
-
-export function buildOpenAIGenericAdapter(
-  provider: Provider,
-  modelHint?: string
-): OpenAICompatibleClient {
-  const baseURL =
-    provider.baseURL && provider.baseURL.trim().length > 0
-      ? provider.baseURL
-      : undefined;
+export function buildOpenAIGenericAdapter(provider: Provider, modelHint?: string): OpenAICompatibleClient {
+  const baseURL = provider.baseURL && provider.baseURL.trim().length > 0 ? provider.baseURL : undefined;
 
   if (!baseURL) {
-    throw new Error(
-      `Missing baseURL for provider '${provider.type}'. Set provider.baseURL in configuration.`
-    );
+    throw new Error(`Missing baseURL for provider '${provider.type}'. Set provider.baseURL in configuration.`);
   }
 
   // Keys: prefer configured; if missing and local base, use a dummy key
@@ -53,16 +44,33 @@ export function buildOpenAIGenericAdapter(
   });
   const shim = new ResponsesAPI(client);
 
-  // Wrapper for chat completions that filters o1 model parameters
-  const chatCompletionsCreate: ChatCompletionsCreateFn = async (params: any, options?: any) => {
-    const filteredParams = filterChatParams(params);
-    return client.chat.completions.create(filteredParams, options);
-  };
-
   const openAIClient: OpenAICompatibleClient = {
     chat: {
       completions: {
-        create: chatCompletionsCreate,
+        create: (async (params: ChatCompletionCreateParams, options?: { signal?: AbortSignal }) => {
+          // Filter parameters for o1 models before calling native API
+          const filteredParams = isO1Model(params.model) ? filterChatParams(params) : params;
+
+          try {
+            // Try native Chat Completions API first
+            const result = await client.chat.completions.create(filteredParams, options);
+
+            // Validate the response type matches what was requested
+            if (params.stream && !isResponseEventStream(result)) {
+              // Fallback if we got non-stream when stream was requested
+              return shim.create(params as ResponseCreateParamsStreaming);
+            }
+
+            return result;
+          } catch (error: unknown) {
+            // Fallback to responses via shim (shim already handles filtering)
+            if (params.stream) {
+              return shim.create(params as ResponseCreateParamsStreaming);
+            } else {
+              return shim.create(params as ResponseCreateParamsNonStreaming);
+            }
+          }
+        }) as ChatCompletionsCreateFn,
       },
     },
     responses: {
@@ -70,16 +78,16 @@ export function buildOpenAIGenericAdapter(
         try {
           // Filter parameters for o1 models before calling native API
           const filteredParams = filterResponseParams(params);
-          
+
           // Try native Responses API first
           const result = await client.responses.create(filteredParams, options);
-          
+
           // Validate the response type matches what was requested
           if (params.stream && !isResponseEventStream(result)) {
             // Fallback if we got non-stream when stream was requested
             return shim.create(params as ResponseCreateParamsStreaming);
           }
-          
+
           return result;
         } catch (error: unknown) {
           // Fallback to chat completions via shim (shim already handles filtering)
@@ -94,17 +102,17 @@ export function buildOpenAIGenericAdapter(
     models: {
       async list() {
         const res = await client.models.list();
-        return { 
-          data: res.data.map((m) => ({ 
+        return {
+          data: res.data.map((m) => ({
             id: m.id,
             object: m.object,
             created: m.created,
-            owned_by: m.owned_by
-          })) 
+            owned_by: m.owned_by,
+          })),
         };
       },
     },
   };
-  
+
   return openAIClient;
 }

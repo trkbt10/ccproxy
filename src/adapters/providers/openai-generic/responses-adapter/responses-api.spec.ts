@@ -1,5 +1,5 @@
 import OpenAI from "openai";
-import { ResponsesAPI } from "../providers/openai-generic/responses-adapter/responses-api";
+import { ResponsesAPI } from "./responses-api";
 import type {
   Response as OpenAIResponse,
   ResponseCreateParamsNonStreaming,

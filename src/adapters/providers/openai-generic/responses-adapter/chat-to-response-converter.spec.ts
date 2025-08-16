@@ -1,4 +1,4 @@
-import { convertChatCompletionToResponse } from "../providers/openai-generic/responses-adapter/chat-to-response-converter";
+import { convertChatCompletionToResponse } from "./chat-to-response-converter";
 import type { ChatCompletion } from "openai/resources/chat/completions";
 
 describe("chat-to-response-converter (unit)", () => {

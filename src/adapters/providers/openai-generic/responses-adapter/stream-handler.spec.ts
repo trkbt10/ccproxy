@@ -1,4 +1,4 @@
-import { StreamHandler } from "../providers/openai-generic/responses-adapter/stream-handler";
+import { StreamHandler } from "./stream-handler";
 import type { ChatCompletionChunk } from "openai/resources/chat/completions";
 
 describe("stream-handler (unit)", () => {
@@ -35,9 +35,7 @@ describe("stream-handler (unit)", () => {
           {
             index: 0,
             delta: {
-              tool_calls: [
-                { id: "c1", type: "function", function: { arguments: "{}" } },
-              ],
+              tool_calls: [{ id: "c1", type: "function", function: { arguments: "{}" } }],
             },
             finish_reason: null,
           },

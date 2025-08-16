@@ -30,37 +30,36 @@ export function buildOpenAIAdapter(provider: Provider, modelHint?: string): Open
     defaultHeaders: { "OpenAI-Beta": "responses-2025-06-21", ...provider.defaultHeaders },
   });
 
-  // Wrapper for chat completions that filters o1 model parameters
-  const chatCompletionsCreate: ChatCompletionsCreateFn = async (params: any, options?: any) => {
-    const filteredParams = filterChatParams(params);
-    return client.chat.completions.create(filteredParams, options);
-  };
-
-  // Wrapper for responses that filters o1 model parameters
-  const responsesCreate: ResponsesCreateFn = async (params: any, options?: any) => {
-    const filteredParams = filterResponseParams(params);
-    return client.responses.create(filteredParams, options);
-  };
-
   const openAIClient: OpenAICompatibleClient = {
     chat: {
       completions: {
-        create: chatCompletionsCreate,
+        create: (async (params: ChatCompletionCreateParams, options?: { signal?: AbortSignal }) => {
+          // Filter parameters for o1 models before calling native API
+          const filteredParams = isO1Model(params.model) ? filterChatParams(params) : params;
+
+          // Try native Chat Completions API first
+          return await client.chat.completions.create(filteredParams, options);
+        }) as ChatCompletionsCreateFn,
       },
     },
     responses: {
-      create: responsesCreate,
+      create: (async (params: ResponseCreateParams, options?: { signal?: AbortSignal }) => {
+        // Filter parameters for o1 models before calling native API
+        const filteredParams = filterResponseParams(params);
+
+        return await client.responses.create(filteredParams, options);
+      }) as ResponsesCreateFn,
     },
     models: {
       async list() {
         const res = await client.models.list();
-        return { 
-          data: res.data.map((m) => ({ 
+        return {
+          data: res.data.map((m) => ({
             id: m.id,
             object: m.object,
             created: m.created,
-            owned_by: m.owned_by
-          })) 
+            owned_by: m.owned_by,
+          })),
         };
       },
     },

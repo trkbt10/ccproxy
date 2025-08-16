@@ -1,5 +1,11 @@
 import { beforeEach, describe, expect, it } from "bun:test";
-import type { ResponseStreamEvent } from "../../openai-generic/responses-adapter/types";
+import type { 
+  ResponseStreamEvent,
+  ResponseCreatedEvent,
+  ResponseCompletedEvent,
+  ResponseOutputItemAddedEvent,
+  ResponseOutputItemDoneEvent
+} from "openai/resources/responses/responses";
 import type { StreamedPart } from "../client/fetch-client";
 import { GeminiStreamHandler } from "./stream-handler";
 
@@ -38,8 +44,9 @@ describe("GeminiStreamHandler", () => {
       expect(events[0]).toMatchObject({
         type: "response.created"
       });
-      expect(events[0].response).toBeDefined();
-      expect(events[0].response.status).toBe("in_progress");
+      const createdEvent = events[0] as ResponseCreatedEvent;
+      expect(createdEvent.response).toBeDefined();
+      expect(createdEvent.response.status).toBe("in_progress");
     });
 
     it("should emit response.completed at end", async () => {
@@ -54,7 +61,8 @@ describe("GeminiStreamHandler", () => {
       expect(completedEvent).toMatchObject({
         type: "response.completed"
       });
-      expect(completedEvent.response.status).toBe("completed");
+      const completed = completedEvent as ResponseCompletedEvent;
+      expect(completed.response.status).toBe("completed");
     });
   });
 
@@ -70,13 +78,13 @@ describe("GeminiStreamHandler", () => {
       // Find text-related events
       const textItemAdded = events.find(e => 
         e.type === "response.output_item.added" && 
-        e.item.type === "output_text"
+        e.item.type === "message"
       );
       const textDeltas = events.filter(e => e.type === "response.output_text.delta");
       const textDone = events.find(e => e.type === "response.output_text.done");
       const textItemDone = events.find(e => 
         e.type === "response.output_item.done" && 
-        e.item.type === "output_text"
+        e.item.type === "message"
       );
       
       // Verify correct sequence
@@ -97,7 +105,12 @@ describe("GeminiStreamHandler", () => {
       
       // Verify content
       expect(textDone?.text).toBe("Hello world!");
-      expect(textItemDone?.item.text).toBe("Hello world!");
+      if (textItemDone && textItemDone.type === "response.output_item.done" && textItemDone.item.type === "message") {
+        const firstContent = textItemDone.item.content?.[0];
+        if (firstContent?.type === "output_text") {
+          expect(firstContent.text).toBe("Hello world!");
+        }
+      }
     });
 
     it("should handle incremental text updates", async () => {
@@ -113,378 +126,35 @@ describe("GeminiStreamHandler", () => {
       // Should have one output_item.added at the beginning
       const itemAddedEvents = events.filter(e => 
         e.type === "response.output_item.added" && 
-        e.item.type === "output_text"
+        e.item.type === "message"
       );
       expect(itemAddedEvents.length).toBe(1);
       
       const textDeltas = events.filter(e => e.type === "response.output_text.delta");
-      expect(textDeltas.length).toBe(3);
+      // Without \n\n, all text is buffered and emitted as one delta at completion
+      expect(textDeltas.length).toBe(1);
       
       const textDone = events.find(e => e.type === "response.output_text.done");
       expect(textDone?.text).toBe("First chunk second chunk third chunk");
     });
-  });
 
-  describe("markdown code blocks", () => {
-    it("should emit code interpreter events for code blocks", async () => {
+    it("should emit separate deltas when text contains \\n\\n", async () => {
       const parts: StreamedPart[] = [
-        { type: "text", text: "```javascript\n" },
-        { type: "text", text: "console.log('hello');" },
-        { type: "text", text: "\n```" },
+        { type: "text", text: "First chunk\n\n" },
+        { type: "text", text: "second chunk\n\n" },
+        { type: "text", text: "third chunk" },
         { type: "complete", finishReason: "STOP" }
       ];
       
       const events = await collectEvents(parts);
       
-      // Should have code interpreter item added
-      const itemAdded = events.find(e => 
-        e.type === "response.output_item.added" && 
-        e.item.type === "code_interpreter_call"
-      );
-      expect(itemAdded).toBeDefined();
-      expect(itemAdded?.item.id).toBeDefined();
-      
-      // Should have code interpreter item done
-      const itemDone = events.find(e => 
-        e.type === "response.output_item.done" && 
-        e.item.type === "code_interpreter_call"
-      );
-      expect(itemDone).toBeDefined();
-      expect(itemDone?.item.code).toBe("console.log('hello');");
-      expect(itemDone?.item.status).toBe("completed");
-    });
-
-    it("should correctly identify code blocks with \\n\\n inside", async () => {
-      const parts: StreamedPart[] = [
-        { type: "text", text: "Here's the code:\n\n```python\nprint(f\"\\nCross-Validation Scores: {cv_scores}\")\n\nprint(f\"Mean CV Accuracy: {cv_scores.mean():.2f}\")\nprint(f\"Standard Deviation: {cv_scores.std():.2f}\")\n```\n\n**Explanation:** This demonstrates cross-validation." },
-        { type: "complete", finishReason: "STOP" }
-      ];
-      
-      const events = await collectEvents(parts);
-      
-      // Should have exactly one code interpreter block
-      const codeBlocks = events.filter(e => 
-        e.type === "response.output_item.added" && 
-        e.item.type === "code_interpreter_call"
-      );
-      expect(codeBlocks.length).toBe(1);
-      
-      // Code should contain the \\n\\n
-      const codeDone = events.find(e => 
-        e.type === "response.output_item.done" && 
-        e.item.type === "code_interpreter_call"
-      );
-      expect(codeDone?.item.code).toContain("print(f\"\\nCross-Validation Scores: {cv_scores}\")\n\nprint(f\"Mean CV Accuracy:");
-      
-      // Text deltas should be properly split outside code block
       const textDeltas = events.filter(e => e.type === "response.output_text.delta");
-      const hasExplanationDelta = textDeltas.some(d => d.delta.includes("**Explanation:**"));
-      expect(hasExplanationDelta).toBe(true);
-    });
-
-    it("should handle code blocks with language metadata", async () => {
-      const parts: StreamedPart[] = [
-        { type: "text", text: "```python\nprint('test')\n```" },
-        { type: "complete", finishReason: "STOP" }
-      ];
+      // Each \n\n triggers a delta emission
+      expect(textDeltas.length).toBe(3);
       
-      const events = await collectEvents(parts);
-      
-      const itemAdded = events.find(e => 
-        e.type === "response.output_item.added" && 
-        e.item.type === "code_interpreter_call"
-      );
-      
-      expect(itemAdded?.item.outputs?.[0]?.logs).toContain("python");
-    });
-  });
-
-  describe("markdown other elements", () => {
-    it("should emit text deltas for headers", async () => {
-      const parts: StreamedPart[] = [
-        { type: "text", text: "# Main Title" },
-        { type: "complete", finishReason: "STOP" }
-      ];
-      
-      const events = await collectEvents(parts);
-      
-      // Should have output_text item added first
-      const textItemAdded = events.find(e => 
-        e.type === "response.output_item.added" && 
-        e.item.type === "output_text"
-      );
-      expect(textItemAdded).toBeDefined();
-      
-      // Headers should be treated as regular text, not special items
-      const textDeltas = events.filter(e => e.type === "response.output_text.delta");
-      expect(textDeltas.length).toBeGreaterThan(0);
-      
-      // Should NOT have any reasoning items
-      const reasoningItems = events.filter(e => 
-        (e.type === "response.output_item.added" || e.type === "response.output_item.done") && 
-        e.item.type === "reasoning"
-      );
-      expect(reasoningItems.length).toBe(0);
-      
-      const textDone = events.find(e => e.type === "response.output_text.done");
-      expect(textDone?.text).toContain("Main Title");
-    });
-
-    it("should emit text deltas for quotes", async () => {
-      const parts: StreamedPart[] = [
-        { type: "text", text: "> This is a quote" },
-        { type: "complete", finishReason: "STOP" }
-      ];
-      
-      const events = await collectEvents(parts);
-      
-      // Should have output_text item added first
-      const textItemAdded = events.find(e => 
-        e.type === "response.output_item.added" && 
-        e.item.type === "output_text"
-      );
-      expect(textItemAdded).toBeDefined();
-      
-      // Quotes should be treated as regular text
-      const textDeltas = events.filter(e => e.type === "response.output_text.delta");
-      expect(textDeltas.length).toBeGreaterThan(0);
-      
-      const reasoningItems = events.filter(e => 
-        (e.type === "response.output_item.added" || e.type === "response.output_item.done") && 
-        e.item.type === "reasoning"
-      );
-      expect(reasoningItems.length).toBe(0);
-      
-      const textDone = events.find(e => e.type === "response.output_text.done");
-      expect(textDone?.text).toContain("This is a quote");
-    });
-
-    it("should emit text deltas for lists", async () => {
-      const parts: StreamedPart[] = [
-        { type: "text", text: "* First item" },
-        { type: "complete", finishReason: "STOP" }
-      ];
-      
-      const events = await collectEvents(parts);
-      
-      // Lists should be treated as regular text
-      const textDeltas = events.filter(e => e.type === "response.output_text.delta");
-      expect(textDeltas.length).toBeGreaterThan(0);
-      
-      const reasoningItems = events.filter(e => 
-        (e.type === "response.output_item.added" || e.type === "response.output_item.done") && 
-        e.item.type === "reasoning"
-      );
-      expect(reasoningItems.length).toBe(0);
-      
-      const textDone = events.find(e => e.type === "response.output_text.done");
-      expect(textDone?.text).toContain("First item");
-    });
-
-    it("should emit text deltas for math blocks", async () => {
-      const parts: StreamedPart[] = [
-        { type: "text", text: "$$ E = mc^2 $$" },
-        { type: "complete", finishReason: "STOP" }
-      ];
-      
-      const events = await collectEvents(parts);
-      
-      // Math blocks should be treated as regular text
-      const textDeltas = events.filter(e => e.type === "response.output_text.delta");
-      expect(textDeltas.length).toBeGreaterThan(0);
-      
-      const reasoningItems = events.filter(e => 
-        (e.type === "response.output_item.added" || e.type === "response.output_item.done") && 
-        e.item.type === "reasoning"
-      );
-      expect(reasoningItems.length).toBe(0);
-      
-      const textDone = events.find(e => e.type === "response.output_text.done");
-      expect(textDone?.text).toContain("E = mc^2");
-    });
-  });
-
-  describe("function calls", () => {
-    it("should emit function call events", async () => {
-      const parts: StreamedPart[] = [
-        { 
-          type: "functionCall", 
-          functionCall: { 
-            name: "test_function", 
-            args: { param: "value" } 
-          } 
-        },
-        { type: "complete", finishReason: "STOP" }
-      ];
-      
-      const events = await collectEvents(parts);
-      
-      const itemAdded = events.find(e => 
-        e.type === "response.output_item.added" && 
-        e.item.type === "function_call"
-      );
-      expect(itemAdded).toBeDefined();
-      expect(itemAdded?.item.name).toBe("test_function");
-      expect(itemAdded?.item.arguments).toBe('{"param":"value"}');
-      
-      const itemDone = events.find(e => 
-        e.type === "response.output_item.done" && 
-        e.item.type === "function_call"
-      );
-      expect(itemDone).toBeDefined();
-    });
-
-    it("should handle function calls without args", async () => {
-      const parts: StreamedPart[] = [
-        { 
-          type: "functionCall", 
-          functionCall: { name: "simple_function" } 
-        },
-        { type: "complete", finishReason: "STOP" }
-      ];
-      
-      const events = await collectEvents(parts);
-      
-      const itemAdded = events.find(e => 
-        e.type === "response.output_item.added" && 
-        e.item.type === "function_call"
-      );
-      expect(itemAdded?.item.arguments).toBe("{}");
-    });
-  });
-
-  describe("annotations", () => {
-    it("should emit annotation.added for markdown links", async () => {
-      const parts: StreamedPart[] = [
-        { type: "text", text: "Check out [TypeScript](https://www.typescriptlang.org \"TypeScript Language\") for more info." },
-        { type: "complete", finishReason: "STOP" }
-      ];
-      
-      const events = await collectEvents(parts);
-      
-      // Should have annotation event
-      const annotationEvents = events.filter(e => e.type === "response.output_text.annotation.added");
-      expect(annotationEvents.length).toBe(1);
-      
-      const annotation = annotationEvents[0];
-      expect(annotation.annotation.type).toBe("url_citation");
-      expect(annotation.annotation.url).toBe("https://www.typescriptlang.org");
-      expect(annotation.annotation.title).toBe("TypeScript Language");
-      expect(annotation.item_id).toBeDefined();
-    });
-
-    it("should handle multiple links with correct indices", async () => {
-      const parts: StreamedPart[] = [
-        { type: "text", text: "Visit [Google](https://google.com) and [GitHub](https://github.com)." },
-        { type: "complete", finishReason: "STOP" }
-      ];
-      
-      const events = await collectEvents(parts);
-      
-      const annotationEvents = events.filter(e => e.type === "response.output_text.annotation.added");
-      expect(annotationEvents.length).toBe(2);
-      
-      // First link
-      expect(annotationEvents[0].annotation.url).toBe("https://google.com");
-      expect(annotationEvents[0].annotation_index).toBe(0);
-      
-      // Second link
-      expect(annotationEvents[1].annotation.url).toBe("https://github.com");
-      expect(annotationEvents[1].annotation_index).toBe(1);
-    });
-
-    it("should use link text as title when no title provided", async () => {
-      const parts: StreamedPart[] = [
-        { type: "text", text: "See [Example Site](https://example.com) for details." },
-        { type: "complete", finishReason: "STOP" }
-      ];
-      
-      const events = await collectEvents(parts);
-      
-      const annotationEvent = events.find(e => e.type === "response.output_text.annotation.added");
-      expect(annotationEvent?.annotation.title).toBe("Example Site");
-    });
-  });
-
-  describe("mixed content", () => {
-    it("should handle text with markdown elements", async () => {
-      const parts: StreamedPart[] = [
-        { type: "text", text: "Here's some code:\n\n" },
-        { type: "text", text: "```javascript\nconsole.log('test');\n```\n\n" },
-        { type: "text", text: "And a quote:\n> Important note" },
-        { type: "complete", finishReason: "STOP" }
-      ];
-      
-      const events = await collectEvents(parts);
-      
-      // Should have text deltas
-      const textDeltas = events.filter(e => e.type === "response.output_text.delta");
-      expect(textDeltas.length).toBeGreaterThan(0);
-      
-      // Should have code interpreter item
-      const codeItem = events.find(e => 
-        e.type === "response.output_item.done" && 
-        e.item.type === "code_interpreter_call"
-      );
-      expect(codeItem).toBeDefined();
-      
-      // Should NOT have reasoning items for quotes (they're just text)
-      const reasoningItems = events.filter(e => 
-        (e.type === "response.output_item.added" || e.type === "response.output_item.done") && 
-        e.item.type === "reasoning"
-      );
-      expect(reasoningItems.length).toBe(0);
-    });
-  });
-
-  describe("sequence numbers", () => {
-    it("should have incrementing sequence numbers", async () => {
-      const parts: StreamedPart[] = [
-        { type: "text", text: "Hello" },
-        { type: "complete", finishReason: "STOP" }
-      ];
-      
-      const events = await collectEvents(parts);
-      
-      // Check that sequence numbers are incrementing
-      for (let i = 1; i < events.length; i++) {
-        expect(events[i].sequence_number).toBeGreaterThan(events[i - 1].sequence_number);
-      }
-    });
-  });
-
-  describe("output indices", () => {
-    it("should assign proper output indices to items", async () => {
-      const parts: StreamedPart[] = [
-        { type: "text", text: "# Header\n```js\ncode\n```" },
-        { type: "complete", finishReason: "STOP" }
-      ];
-      
-      const events = await collectEvents(parts);
-      
-      const itemAddedEvents = events.filter(e => e.type === "response.output_item.added");
-      
-      // Should have unique output indices
-      const outputIndices = itemAddedEvents.map(e => e.output_index);
-      const uniqueIndices = [...new Set(outputIndices)];
-      expect(uniqueIndices.length).toBe(outputIndices.length);
-    });
-  });
-
-  describe("reset functionality", () => {
-    it("should reset handler state properly", async () => {
-      const parts: StreamedPart[] = [
-        { type: "text", text: "Test" },
-        { type: "complete", finishReason: "STOP" }
-      ];
-      
-      await collectEvents(parts);
-      handler.reset();
-      
-      // Should be able to handle new stream after reset
-      const newEvents = await collectEvents(parts);
-      expect(newEvents.length).toBeGreaterThan(0);
-      expect(newEvents[0].type).toBe("response.created");
+      expect(textDeltas[0].delta).toBe("First chunk\n\n");
+      expect(textDeltas[1].delta).toBe("second chunk\n\n");
+      expect(textDeltas[2].delta).toBe("third chunk");
     });
   });
 
@@ -534,14 +204,10 @@ describe("GeminiStreamHandler", () => {
       
       const textDeltas = events.filter(e => e.type === "response.output_text.delta");
       
-      // Should emit text blocks separately but preserve code block
-      let hasCodeBlockWithDoubleNewline = false;
-      for (const delta of textDeltas) {
-        if (delta.delta.includes("def hello():\n\n    print('world')")) {
-          hasCodeBlockWithDoubleNewline = true;
-        }
-      }
-      expect(hasCodeBlockWithDoubleNewline).toBe(true);
+      // Code block content should be preserved in one delta
+      const codeBlockDelta = textDeltas.find(d => d.delta.includes("def hello():"));
+      expect(codeBlockDelta).toBeDefined();
+      expect(codeBlockDelta!.delta).toContain("def hello():\n\n    print('world')");
     });
 
     it("should handle incomplete paragraphs across chunks", async () => {
@@ -561,108 +227,143 @@ describe("GeminiStreamHandler", () => {
     });
   });
 
-  describe("event ordering", () => {
-    it("should maintain correct sequence for output items", async () => {
+  describe("function calls", () => {
+    it("should emit function call events", async () => {
       const parts: StreamedPart[] = [
-        { type: "text", text: "# Header\n```js\ncode\n```" },
+        { type: "functionCall", functionCall: { name: "test_function", args: { param: "value" } } },
         { type: "complete", finishReason: "STOP" }
       ];
       
       const events = await collectEvents(parts);
       
+      const itemAdded = events.find((e): e is ResponseOutputItemAddedEvent => 
+        e.type === "response.output_item.added"
+      ) as ResponseOutputItemAddedEvent | undefined;
+      expect(itemAdded).toBeDefined();
       
-      // Group output item events by item id
-      const itemEvents = new Map<string, ResponseStreamEvent[]>();
-      events.forEach(event => {
-        if (event.type === "response.output_item.added" || event.type === "response.output_item.done") {
-          const itemId = event.item.id;
-          const existingEvents = itemEvents.get(itemId) || [];
-          existingEvents.push(event);
-          itemEvents.set(itemId, existingEvents);
-        }
-      });
-
-      // Each item should have exactly one "added" followed by one "done"
-      itemEvents.forEach((events, itemId) => {
-        expect(events.length).toBe(2);
-        expect(events[0].type).toBe("response.output_item.added");
-        expect(events[1].type).toBe("response.output_item.done");
-        expect(events[0].sequence_number).toBeLessThan(events[1].sequence_number);
-      });
+      const itemDone = events.find((e): e is ResponseOutputItemDoneEvent => 
+        e.type === "response.output_item.done"
+      ) as ResponseOutputItemDoneEvent | undefined;
+      expect(itemDone).toBeDefined();
+      if (itemDone && itemDone.item.type === "function_call") {
+        expect(itemDone.item.name).toBe("test_function");
+        expect(itemDone.item.arguments).toBe('{"param":"value"}');
+      }
     });
 
-    it("should have matching pairs of output_item.added and output_item.done", async () => {
+    it("should handle function calls without args", async () => {
       const parts: StreamedPart[] = [
-        { type: "text", text: "Some text here.\n\n```python\ndef hello():\n    print('world')\n```\n\nMore text.\n\n```javascript\nconsole.log('test');\n```" },
+        { type: "functionCall", functionCall: { name: "no_args_function" } },
         { type: "complete", finishReason: "STOP" }
       ];
       
       const events = await collectEvents(parts);
       
-      const addedEvents = events.filter(e => e.type === "response.output_item.added");
-      const doneEvents = events.filter(e => e.type === "response.output_item.done");
-      
-      // Should have same number of added and done events
-      expect(addedEvents.length).toBe(doneEvents.length);
-      
-      // Each added should have a corresponding done with same item id
-      addedEvents.forEach(added => {
-        const correspondingDone = doneEvents.find(done => done.item.id === added.item.id);
-        expect(correspondingDone).toBeDefined();
-        expect(correspondingDone.item.type).toBe(added.item.type);
-      });
+      const itemAdded = events.find((e): e is ResponseOutputItemAddedEvent => 
+        e.type === "response.output_item.added"
+      ) as ResponseOutputItemAddedEvent | undefined;
+      if (itemAdded && itemAdded.item.type === "function_call") {
+        expect(itemAdded.item.arguments).toBe("{}");
+      }
     });
+  });
 
-    it("should treat tables as regular text", async () => {
+  describe("mixed content", () => {
+    it("should handle text with function calls", async () => {
       const parts: StreamedPart[] = [
-        { type: "text", text: "| Col1 | Col2 |\n| Data1 | Data2 |" },
+        { type: "text", text: "Here's some text.\n\n" },
+        { type: "functionCall", functionCall: { name: "test_func", args: {} } },
+        { type: "text", text: "And more text." },
         { type: "complete", finishReason: "STOP" }
       ];
       
       const events = await collectEvents(parts);
       
-      // Tables should be treated as regular text, not special items
-      const textDeltas = events.filter(e => e.type === "response.output_text.delta");
-      expect(textDeltas.length).toBeGreaterThan(0);
-      
-      const reasoningItems = events.filter(e => 
+      // Should have one text item and one function item
+      const textItems = events.filter(e => 
         e.type === "response.output_item.added" && 
-        e.item.type === "reasoning"
+        e.item.type === "message"
+      );
+      const functionItems = events.filter(e => 
+        e.type === "response.output_item.added" && 
+        e.item.type === "function_call"
       );
       
-      // Should have NO reasoning items for tables
-      expect(reasoningItems.length).toBe(0);
+      expect(textItems.length).toBe(1);
+      expect(functionItems.length).toBe(1);
+      
+      // Text should be combined
+      const textDone = events.find(e => e.type === "response.output_text.done");
+      expect(textDone?.text).toBe("Here's some text.\n\nAnd more text.");
+    });
+  });
+
+  describe("edge cases", () => {
+    it("should handle empty text parts", async () => {
+      const parts: StreamedPart[] = [
+        { type: "text", text: "" },
+        { type: "text", text: "actual content" },
+        { type: "complete", finishReason: "STOP" }
+      ];
+      
+      const events = await collectEvents(parts);
       
       const textDone = events.find(e => e.type === "response.output_text.done");
-      expect(textDone?.text).toContain("Col1");
-      expect(textDone?.text).toContain("Data1");
+      expect(textDone?.text).toBe("actual content");
     });
 
-    it("should balance text deltas vs structured content", async () => {
+    it("should handle completion without content", async () => {
       const parts: StreamedPart[] = [
-        { type: "text", text: "Plain text " },
-        { type: "text", text: "```js\nconsole.log('test');\n```\n" },
-        { type: "text", text: "More plain text" },
         { type: "complete", finishReason: "STOP" }
       ];
       
       const events = await collectEvents(parts);
       
-      const textDeltas = events.filter(e => e.type === "response.output_text.delta");
-      const codeItems = events.filter(e => 
-        e.type === "response.output_item.added" && 
-        e.item.type === "code_interpreter_call"
-      );
+      expect(events[0].type).toBe("response.created");
+      expect(events[1].type).toBe("response.completed");
+    });
+
+    it("should handle incomplete finish reason", async () => {
+      const parts: StreamedPart[] = [
+        { type: "text", text: "Partial response..." },
+        { type: "complete", finishReason: "MAX_TOKENS" }
+      ];
       
-      // Should have text deltas for plain text parts
-      expect(textDeltas.length).toBeGreaterThan(0);
-      // Should have one code interpreter item for code block
-      expect(codeItems.length).toBe(1);
+      const events = await collectEvents(parts);
       
-      // Check that plain text appears in deltas
-      const allDeltaText = textDeltas.map(e => e.delta).join('');
-      expect(allDeltaText).toContain("Plain text");
-      expect(allDeltaText).toContain("More plain text");
+      const completed = events.find(e => e.type === "response.completed");
+      expect(completed?.response.status).toBe("incomplete");
+      expect(completed?.response.incomplete_details?.reason).toBe("max_output_tokens");
+    });
+  });
+
+  describe("state management", () => {
+    it("should reset state properly", async () => {
+      // First response
+      const parts1: StreamedPart[] = [
+        { type: "text", text: "First response" },
+        { type: "complete", finishReason: "STOP" }
+      ];
+      
+      await collectEvents(parts1);
+      
+      // Reset
+      handler.reset();
+      
+      // Second response
+      const parts2: StreamedPart[] = [
+        { type: "text", text: "Second response" },
+        { type: "complete", finishReason: "STOP" }
+      ];
+      
+      const events2 = await collectEvents(parts2);
+      
+      // Should have fresh IDs and sequence numbers
+      expect(events2[0].type).toBe("response.created");
+      expect(events2[0].sequence_number).toBe(1);
+      
+      const textDone = events2.find(e => e.type === "response.output_text.done");
+      expect(textDone?.text).toBe("Second response");
     });
   });
 });

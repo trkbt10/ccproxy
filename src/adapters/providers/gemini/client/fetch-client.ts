@@ -4,6 +4,7 @@
  * Docs: https://ai.google.dev/api/rest/v1beta/models
  */
 import { httpErrorFromResponse } from "../../../errors/http-error";
+import { yieldSSEParts, streamText, yieldInnerJsonBlocks } from "./stream-in-block";
 
 export type GeminiClientOptions = {
   apiKey: string;
@@ -20,7 +21,6 @@ export type GeminiContent = {
   role?: "user" | "model" | "function";
   parts: GeminiPart[];
 };
-
 export type GenerateContentRequest = {
   contents: GeminiContent[];
   tools?: unknown[];
@@ -40,6 +40,21 @@ export type GenerateContentResponse = {
     content?: GeminiContent;
     finishReason?: string;
   }>;
+  usageMetadata?: {
+    promptTokenCount?: number;
+    candidatesTokenCount?: number;
+    totalTokenCount?: number;
+  };
+  modelVersion?: string;
+  responseId?: string;
+};
+
+export type StreamedPart = {
+  type: "text" | "functionCall" | "functionResponse" | "complete";
+  text?: string;
+  functionCall?: { name: string; args?: unknown };
+  functionResponse?: { name: string; response?: unknown };
+  finishReason?: string;
   usageMetadata?: {
     promptTokenCount?: number;
     candidatesTokenCount?: number;
@@ -93,7 +108,11 @@ export class GeminiFetchClient {
     this.f = opts.fetchImpl || fetch;
   }
 
-  async generateContent(model: string, body: GenerateContentRequest, abortSignal?: AbortSignal): Promise<GenerateContentResponse> {
+  async generateContent(
+    model: string,
+    body: GenerateContentRequest,
+    abortSignal?: AbortSignal
+  ): Promise<GenerateContentResponse> {
     const url = new URL(`${this.baseURL}/v1beta/models/${encodeURIComponent(model)}:generateContent`);
     url.searchParams.set("key", this.apiKey);
     const res = await this.f(url.toString(), {
@@ -111,7 +130,11 @@ export class GeminiFetchClient {
     return (await res.json()) as GenerateContentResponse;
   }
 
-  async *streamGenerateContent(model: string, body: GenerateContentRequest, abortSignal?: AbortSignal): AsyncGenerator<GenerateContentResponse, void, unknown> {
+  async *streamGenerateContent(
+    model: string,
+    body: GenerateContentRequest,
+    abortSignal?: AbortSignal
+  ): AsyncGenerator<GenerateContentResponse, void, unknown> {
     const url = new URL(`${this.baseURL}/v1beta/models/${encodeURIComponent(model)}:streamGenerateContent`);
     url.searchParams.set("key", this.apiKey);
     const res = await this.f(url.toString(), {
@@ -124,51 +147,65 @@ export class GeminiFetchClient {
       const text = await res.text().catch(() => "");
       throw httpErrorFromResponse(res as unknown as Response, text);
     }
-    const reader = (res.body as ReadableStream<Uint8Array>).getReader();
-    const decoder = new TextDecoder();
-    let buffer = "";
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      buffer += decoder.decode(value, { stream: true });
-      // Support either JSON per line or SSE-style "data: <json>\n\n"
-      let idx;
-      while ((idx = buffer.indexOf("\n\n")) >= 0) {
-        const chunk = buffer.slice(0, idx).trim();
-        buffer = buffer.slice(idx + 2);
-        const payload = parseStreamChunk(chunk);
-        if (payload) {
-          if (Array.isArray(payload)) {
-            for (const p of payload) yield p as GenerateContentResponse;
-          } else {
-            yield payload as GenerateContentResponse;
-          }
-        }
+    const ctype = (res.headers.get("content-type") || "").toLowerCase();
+    const mod = ctype.includes("text/event-stream") ? "sse" : "jsonl"; // GeminiはJSONLで返す実装もあるため既定はjsonl
+    const generator = mod === "jsonl" ? yieldInnerJsonBlocks : yieldSSEParts;
+    for await (const obj of generator(streamText(res.body))) {
+      yield JSON.parse(obj) as GenerateContentResponse;
+    }
+  }
+
+  async *streamGenerateParts(
+    model: string,
+    body: GenerateContentRequest,
+    abortSignal?: AbortSignal
+  ): AsyncGenerator<StreamedPart, void, unknown> {
+    for await (const response of this.streamGenerateContent(model, body, abortSignal)) {
+      const parts = this.parseResponseToParts(response);
+      for (const part of parts) {
+        yield part;
       }
-      // Also handle single newlines
-      const lines = buffer.split("\n");
-      buffer = lines.pop() ?? "";
-      for (const line of lines) {
-        const payload = parseStreamChunk(line);
-        if (payload) {
-          if (Array.isArray(payload)) {
-            for (const p of payload) yield p as GenerateContentResponse;
-          } else {
-            yield payload as GenerateContentResponse;
-          }
+    }
+  }
+
+  private parseResponseToParts(response: GenerateContentResponse): StreamedPart[] {
+    const parts: StreamedPart[] = [];
+    
+    // Check for completion first
+    const candidate = response.candidates?.[0];
+    if (candidate?.finishReason) {
+      parts.push({
+        type: "complete",
+        finishReason: candidate.finishReason,
+        usageMetadata: response.usageMetadata,
+      });
+      return parts;
+    }
+
+    // Parse content parts
+    const contentParts = candidate?.content?.parts;
+    if (contentParts) {
+      for (const part of contentParts) {
+        if ('text' in part && part.text) {
+          parts.push({
+            type: "text",
+            text: part.text,
+          });
+        } else if ('functionCall' in part && part.functionCall) {
+          parts.push({
+            type: "functionCall",
+            functionCall: part.functionCall,
+          });
+        } else if ('functionResponse' in part && part.functionResponse) {
+          parts.push({
+            type: "functionResponse",
+            functionResponse: part.functionResponse,
+          });
         }
       }
     }
-    if (buffer.trim().length > 0) {
-      const payload = parseStreamChunk(buffer.trim());
-      if (payload) {
-        if (Array.isArray(payload)) {
-          for (const p of payload) yield p as GenerateContentResponse;
-        } else {
-          yield payload as GenerateContentResponse;
-        }
-      }
-    }
+
+    return parts;
   }
 
   async listModels(): Promise<ListModelsResponse> {
@@ -211,7 +248,11 @@ export class GeminiFetchClient {
     return json;
   }
 
-  async embedContent(model: string, body: EmbedContentRequest, abortSignal?: AbortSignal): Promise<EmbedContentResponse> {
+  async embedContent(
+    model: string,
+    body: EmbedContentRequest,
+    abortSignal?: AbortSignal
+  ): Promise<EmbedContentResponse> {
     const url = new URL(`${this.baseURL}/v1beta/models/${encodeURIComponent(model)}:embedContent`);
     url.searchParams.set("key", this.apiKey);
     const res = await this.f(url.toString(), {
@@ -227,7 +268,11 @@ export class GeminiFetchClient {
     return (await res.json()) as EmbedContentResponse;
   }
 
-  async batchEmbedContents(model: string, body: BatchEmbedContentsRequest, abortSignal?: AbortSignal): Promise<BatchEmbedContentsResponse> {
+  async batchEmbedContents(
+    model: string,
+    body: BatchEmbedContentsRequest,
+    abortSignal?: AbortSignal
+  ): Promise<BatchEmbedContentsResponse> {
     const url = new URL(`${this.baseURL}/v1beta/models/${encodeURIComponent(model)}:batchEmbedContents`);
     url.searchParams.set("key", this.apiKey);
     const res = await this.f(url.toString(), {

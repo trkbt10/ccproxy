@@ -145,4 +145,3 @@ export class ResponsesAPI {
     return handler.handleStream(stream);
   }
 }
-

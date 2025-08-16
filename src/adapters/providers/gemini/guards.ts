@@ -1,4 +1,4 @@
-import type { GenerateContentResponse, GeminiContent, GeminiPart } from "./fetch-client";
+import type { GenerateContentResponse, GeminiContent, GeminiPart } from "./client/fetch-client";
 
 export function isGeminiResponse(v: unknown): v is GenerateContentResponse {
   if (typeof v !== "object" || v === null) return false;

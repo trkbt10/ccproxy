@@ -1,5 +1,5 @@
-import { geminiToOpenAIResponse } from "./openai-response-adapter";
-import type { GenerateContentResponse, GeminiPart } from "./fetch-client";
+import { geminiToOpenAIResponse } from "./chat-completion/openai-response-adapter";
+import type { GenerateContentResponse, GeminiPart } from "./client/fetch-client";
 
 describe("geminiToOpenAIResponse", () => {
   it("maps text parts to OpenAI Responses message", () => {

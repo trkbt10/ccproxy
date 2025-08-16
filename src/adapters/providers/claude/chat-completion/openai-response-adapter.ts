@@ -28,8 +28,8 @@ import {
   claudeHasContentArray,
   isResponseOutputText,
   isResponseOutputMessage,
-} from "./guards";
-import { toOpenAICallIdFromClaude } from "../../../utils/conversation/id-conversion";
+} from "../guards";
+import { toOpenAICallIdFromClaude } from "../../../../utils/conversation/id-conversion";
 
 /**
  * Claude -> OpenAI Responses (non-stream)

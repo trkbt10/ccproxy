@@ -1,5 +1,5 @@
-import { geminiToOpenAIStream } from "./openai-stream-adapter";
-import type { GenerateContentResponse, GeminiPart } from "./fetch-client";
+import { geminiToOpenAIStream } from "./chat-completion/openai-stream-adapter";
+import type { GenerateContentResponse, GeminiPart } from "./client/fetch-client";
 import type { ResponseStreamEvent } from "openai/resources/responses/responses";
 
 async function collect<T>(it: AsyncIterable<T>): Promise<T[]> {

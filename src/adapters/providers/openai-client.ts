@@ -1,5 +1,5 @@
 import type { Provider } from "../../config/types";
-import { buildOpenAICompatibleClientForClaude } from "./claude/openai-compatible";
+import { buildOpenAICompatibleClientForClaude } from "./claude/responses-api/openai-compatible";
 import { buildOpenAICompatibleClientForGemini } from "./gemini/openai-compatible";
 import { buildOpenAICompatibleClientForGrok } from "./grok/openai-compatible";
 import { buildOpenAIAdapter } from "./openai/adapter-factory";

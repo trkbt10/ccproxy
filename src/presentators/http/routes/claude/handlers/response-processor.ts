@@ -20,7 +20,7 @@ import {
   logPerformance,
 } from "../../../../../utils/logging/migrate-logger";
 import type { RoutingConfig } from "../../../../../config/types";
-import { claudeToResponsesLocal } from "../../../../../adapters/providers/claude/request-to-responses";
+import { claudeToResponsesLocal } from "../../../../../adapters/providers/claude/responses-api/request-to-responses";
 // ID manager no longer required; conversions are deterministic
 
 export type ProcessorConfig = {

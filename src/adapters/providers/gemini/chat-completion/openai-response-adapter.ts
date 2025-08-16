@@ -1,7 +1,7 @@
-import { OpenAICompatResponse } from "../openai-responses/compat";
-import { GenerateContentResponse } from "./fetch-client";
-import { getCandidateParts, isGeminiFunctionCallPart, isGeminiTextPart } from "./guards";
-import { generateOpenAICallId } from "../../../utils/conversation/id-conversion";
+import { OpenAICompatResponse } from "../../openai-responses/compat";
+import { GenerateContentResponse } from "../client/fetch-client";
+import { getCandidateParts, isGeminiFunctionCallPart, isGeminiTextPart } from "../guards";
+import { generateOpenAICallId } from "../../../../utils/conversation/id-conversion";
 
 function extractText(resp: GenerateContentResponse): string {
   let text = "";

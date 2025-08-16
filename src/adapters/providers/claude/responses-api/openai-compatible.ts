@@ -8,14 +8,14 @@ import type {
   ResponseInput,
   Tool,
 } from "openai/resources/responses/responses";
-import type { Provider } from "../../../config/types";
-import type { OpenAICompatibleClient } from "../openai-client-types";
-import { selectApiKey } from "../shared/select-api-key";
+import type { Provider } from "../../../../config/types";
+import type { OpenAICompatibleClient } from "../../openai-client-types";
+import { selectApiKey } from "../../shared/select-api-key";
 import {
   convertResponseInputToMessagesLocal,
   convertToolsForChatLocal,
   convertToolChoiceForChatLocal,
-} from "./input-converters";
+} from "../input-converters";
 import type {
   ChatCompletionCreateParams,
   ChatCompletionCreateParamsNonStreaming,
@@ -28,13 +28,13 @@ import {
   claudeToOpenAIStream,
   claudeToChatCompletion,
   claudeToChatCompletionStream,
-} from "./openai-response-adapter";
-import { chatCompletionToClaudeLocal } from "./request-converter";
+} from "../chat-completion/openai-response-adapter";
+import { chatCompletionToClaudeLocal } from "../chat-completion/request-converter";
 // Conversation state updates are handled by the HTTP response processor
 import type { Message as ClaudeMessage, MessageStreamEvent } from "@anthropic-ai/sdk/resources/messages";
-import { resolveModelForProvider } from "../shared/model-mapper";
-import type { ChatCompletionsCreateFn, ResponsesCreateFn } from "../openai-client-types";
-import { convertOpenAIChatToolToResponsesTool } from "../openai-generic/chat-request-converter";
+import { resolveModelForProvider } from "../../shared/model-mapper";
+import type { ChatCompletionsCreateFn, ResponsesCreateFn } from "../../openai-client-types";
+import { convertOpenAIChatToolToResponsesTool } from "../../openai-generic/chat-request-converter";
 
 function buildChatParams(params: ResponseCreateParams): ChatCompletionCreateParams {
   const messages: ChatCompletionCreateParams["messages"] = [];

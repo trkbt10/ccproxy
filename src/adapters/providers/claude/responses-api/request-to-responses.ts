@@ -2,8 +2,8 @@ import type { MessageCreateParams as ClaudeMessageCreateParams, Tool as ClaudeTo
 import type { ResponseCreateParams, Tool as OpenAITool, FunctionTool, ResponseInputItem, ToolChoiceOptions, ToolChoiceFunction } from "openai/resources/responses/responses";
 import type { ToolChoice as ClaudeToolChoice } from "@anthropic-ai/sdk/resources/messages";
 import type { ResponsesModel as OpenAIResponseModel } from "openai/resources/shared";
-import { convertClaudeMessage } from "./message-converters";
-import { normalizeJSONSchemaForOpenAI } from "./schema-normalizer";
+import { convertClaudeMessage } from "../message-converters";
+import { normalizeJSONSchemaForOpenAI } from "../schema-normalizer";
 
 export function claudeToResponsesLocal(
   req: ClaudeMessageCreateParams,

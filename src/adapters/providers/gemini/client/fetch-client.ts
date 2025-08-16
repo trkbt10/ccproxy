@@ -3,7 +3,7 @@
  * Targets Generative Language API v1beta endpoints.
  * Docs: https://ai.google.dev/api/rest/v1beta/models
  */
-import { httpErrorFromResponse } from "../../errors/http-error";
+import { httpErrorFromResponse } from "../../../errors/http-error";
 
 export type GeminiClientOptions = {
   apiKey: string;

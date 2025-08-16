@@ -1,7 +1,7 @@
 import { mkdir, writeFile } from "node:fs/promises";
 import { dirname } from "node:path";
-import { GeminiFetchClient } from "./fetch-client";
-import { geminiToOpenAIStream } from "./openai-stream-adapter";
+import { GeminiFetchClient } from "./client/fetch-client";
+import { geminiToOpenAIStream } from "./chat-completion/openai-stream-adapter";
 
 type ChunkSummary = {
   texts: number;

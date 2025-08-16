@@ -1,8 +1,8 @@
 import type { ChatCompletionCreateParams, ChatCompletionMessageParam, ChatCompletionTool } from "openai/resources/chat/completions";
 import type { MessageCreateParams as ClaudeMessageCreateParams, Tool as ClaudeTool } from "@anthropic-ai/sdk/resources/messages";
-import { isOpenAIChatFunctionTool, isOpenAIChatTextPart } from "../openai-generic/guards";
-import { mapModelToProvider } from "../shared/model-mapper";
-import { normalizeJSONSchemaForOpenAI } from "./schema-normalizer";
+import { isOpenAIChatFunctionTool, isOpenAIChatTextPart } from "../../openai-generic/guards";
+import { mapModelToProvider } from "../../shared/model-mapper";
+import { normalizeJSONSchemaForOpenAI } from "../schema-normalizer";
 
 function mapModel(model: string): string {
   return mapModelToProvider({ targetProviderType: "claude", sourceModel: model });

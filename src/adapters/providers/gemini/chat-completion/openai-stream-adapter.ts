@@ -1,7 +1,7 @@
 import type { ResponseStreamEvent as OpenAIResponseStreamEvent } from "openai/resources/responses/responses";
-import { GenerateContentResponse } from "./fetch-client";
-import { getCandidateParts, isGeminiFunctionCallPart, isGeminiTextPart } from "./guards";
-import { generateOpenAICallId } from "../../../utils/conversation/id-conversion";
+import { GenerateContentResponse } from "../client/fetch-client";
+import { getCandidateParts, isGeminiFunctionCallPart, isGeminiTextPart } from "../guards";
+import { generateOpenAICallId } from "../../../../utils/conversation/id-conversion";
 
 function extractText(resp: GenerateContentResponse): string {
   let text = "";

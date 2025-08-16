@@ -1,5 +1,5 @@
 import type { Provider } from "../../../config/types";
-import { GeminiFetchClient } from "./fetch-client";
+import { GeminiFetchClient } from "./client/fetch-client";
 import type {
   Response as OpenAIResponse,
   ResponseCreateParams,
@@ -7,13 +7,13 @@ import type {
 } from "openai/resources/responses/responses";
 import type { OpenAICompatibleClient } from "../openai-client-types";
 import { defineChatCompletionsCreate, defineResponsesCreate } from "../openai-client-types";
-import type { GenerateContentRequest } from "./fetch-client";
-import { ensureGeminiStream, isGeminiResponse } from "../gemini/guards";
-import { responsesToGeminiRequest } from "./request";
-import { geminiToOpenAIStream } from "./openai-stream-adapter";
-import { geminiToOpenAIResponse } from "./openai-response-adapter";
+import type { GenerateContentRequest } from "./client/fetch-client";
+import { ensureGeminiStream, isGeminiResponse } from "./guards";
+import { responsesToGeminiRequest } from "../../message-converter/openai-to-gemini/request-converter";
+import { geminiToOpenAIStream } from "./chat-completion/openai-stream-adapter";
+import { geminiToOpenAIResponse } from "./chat-completion/openai-response-adapter";
 import { resolveModelForProvider } from "../shared/model-mapper";
-import { geminiToChatCompletion, geminiToChatCompletionStream } from "./openai-chat-adapter";
+import { geminiToChatCompletion, geminiToChatCompletionStream } from "./chat-completion/openai-chat-adapter";
 import type {
   ChatCompletionCreateParams,
   ChatCompletion,

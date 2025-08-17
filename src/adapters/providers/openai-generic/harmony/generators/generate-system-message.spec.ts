@@ -43,8 +43,9 @@ describe('generateSystemMessage', () => {
   it('should add function tool routing when function tools present', () => {
     const params: ResponseCreateParamsBase = {
       tools: [
-        // @ts-ignore - Testing incomplete FunctionTool without required field 'parameters'
+        // Testing incomplete FunctionTool without required field 'parameters'
         // This tests the system's ability to handle minimal function tools at runtime
+        // @ts-ignore
         { type: 'function', name: 'test_func', strict: null }
       ]
     };
@@ -73,6 +74,9 @@ describe('generateSystemMessage', () => {
   it('should add python tool definition', () => {
     const params: ResponseCreateParamsBase = {
       tools: [
+        // Testing CodeInterpreter without required 'container' property
+        // This tests handling of incomplete code interpreter tool definitions
+        // @ts-ignore
         { type: 'code_interpreter' }
       ]
     };
@@ -88,8 +92,12 @@ describe('generateSystemMessage', () => {
     const params: ResponseCreateParamsBase = {
       tools: [
         { type: 'web_search_preview_2025_03_11' },
+        // Testing CodeInterpreter without required 'container' property
+        // This tests handling of incomplete code interpreter tool definitions
+        // @ts-ignore
         { type: 'code_interpreter' },
-        // @ts-ignore - Testing incomplete FunctionTool without required field 'parameters'
+        // Testing incomplete FunctionTool without required field 'parameters'
+        // @ts-ignore
         { type: 'function', name: 'custom_func', strict: null }
       ]
     };

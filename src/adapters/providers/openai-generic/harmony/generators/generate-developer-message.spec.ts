@@ -47,7 +47,10 @@ describe('generateDeveloperMessage', () => {
 
   it('should generate message with response format', () => {
     const params: ResponseCreateParamsBase = {
+      // Testing response_format nested incorrectly under 'text' property
+      // ResponseTextConfig expects response_format at root level, not nested
       text: {
+        // @ts-ignore
         response_format: {
           type: 'json_schema',
           json_schema: {
@@ -69,8 +72,9 @@ describe('generateDeveloperMessage', () => {
     const params: ResponseCreateParamsBase = {
       instructions: 'Use tools wisely.',
       tools: [
-        // @ts-ignore - Testing incomplete FunctionTool without required field 'parameters'
+        // Testing incomplete FunctionTool without required field 'parameters'
         // This tests handling of minimal function tool definitions at runtime
+        // @ts-ignore
         { type: 'function', name: 'test_func', strict: null }
       ]
     };
@@ -109,11 +113,15 @@ describe('generateDeveloperMessage', () => {
       instructions: 'Follow these rules.',
       tool_choice: 'none',
       tools: [
-        // @ts-ignore - Testing incomplete FunctionTool without required field 'parameters'
+        // Testing incomplete FunctionTool without required field 'parameters'
         // This tests handling of function tools with only name and description
+        // @ts-ignore
         { type: 'function', name: 'func1', description: 'Function 1', strict: null }
       ],
+      // Testing response_format nested incorrectly under 'text' property
+      // ResponseTextConfig expects response_format at root level, not nested
       text: {
+        // @ts-ignore
         response_format: {
           type: 'json_schema',
           json_schema: {

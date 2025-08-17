@@ -3,11 +3,11 @@
  * This is now a thin wrapper around the generic markdown parser
  */
 
-import { StreamingMarkdownParser as BaseMarkdownParser } from "../../../../utils/markdown";
-import type { MarkdownParseEvent, MarkdownElementType } from "../../../../utils/markdown";
+import { StreamingMarkdownParser as BaseMarkdownParser } from "../../../../utils/markdown/streaming-parser";
+import type { MarkdownParseEvent, MarkdownElementType } from "../../../../utils/markdown/types";
 
 // Re-export types for backward compatibility
-export type { MarkdownElementType, MarkdownParseEvent } from "../../../../utils/markdown";
+export type { MarkdownElementType, MarkdownParseEvent } from "../../../../utils/markdown/types";
 
 // Define configuration type
 export interface GeminiMarkdownConfig {

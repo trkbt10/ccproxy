@@ -19,8 +19,28 @@ import type {
 } from "./types";
 
 export class StreamingMarkdownParser {
-  *complete(): Generator<MarkdownParseEvent, never, unknown> | AsyncGenerator<MarkdownParseEvent, never, unknown> {
-    throw new Error("Method not implemented.");
+  async *complete(): AsyncGenerator<MarkdownParseEvent, void, unknown> {
+    // Process any remaining buffer content
+    if (this.buffer.trim()) {
+      // Force processing of incomplete elements
+      for await (const event of this.processChunk("")) {
+        yield event;
+      }
+    }
+    
+    // Close any remaining active states
+    for (const [elementId, state] of this.activeStates) {
+      if (!state.processed) {
+        yield {
+          type: "end",
+          elementId,
+          finalContent: state.buffer,
+        };
+      }
+    }
+    
+    // Clear state
+    this.reset();
   }
   protected buffer = "";
   protected activeStates: Map<string, ParsingState> = new Map();
@@ -33,7 +53,7 @@ export class StreamingMarkdownParser {
     // Code blocks have highest priority to avoid conflicts
     {
       type: "code",
-      regex: /```(\w+)?\n?([\s\S]*?)```/g,
+      regex: /```([\w-]+)?\n?([\s\S]*?)```/g,
       priority: 100,
       extractMetadata: (match) => ({ language: match[1] || "text" }),
       extractContent: (match) => match[2].trim(),

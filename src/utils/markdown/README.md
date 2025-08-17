@@ -7,7 +7,7 @@ This module provides a generic streaming markdown parser that can be used across
 ### Basic Usage
 
 ```typescript
-import { StreamingMarkdownParser } from './src/utils/markdown';
+import { StreamingMarkdownParser } from './src/utils/markdown/streaming-parser';
 
 const parser = new StreamingMarkdownParser();
 
@@ -20,8 +20,8 @@ for await (const event of parser.processChunk("# Hello\n```js\nconsole.log('test
 ### Provider-Specific Implementation
 
 ```typescript
-import { StreamingMarkdownParser } from './src/utils/markdown';
-import type { MarkdownParseEvent } from './src/utils/markdown';
+import { StreamingMarkdownParser } from './src/utils/markdown/streaming-parser';
+import type { MarkdownParseEvent } from './src/utils/markdown/types';
 
 // Create a provider-specific parser
 export class ClaudeMarkdownParser extends StreamingMarkdownParser {
@@ -64,7 +64,8 @@ const parser = new StreamingMarkdownParser({
 ### Using Plugins
 
 ```typescript
-import { StreamingMarkdownParser, MarkdownParserPlugin } from './src/utils/markdown';
+import { StreamingMarkdownParser } from './src/utils/markdown/streaming-parser';
+import type { MarkdownParserPlugin } from './src/utils/markdown/types';
 
 const citationPlugin: MarkdownParserPlugin = {
   name: 'citation-enhancer',
@@ -94,9 +95,9 @@ parser.addPlugin(citationPlugin);
 ### Testing
 
 ```typescript
-import { createTestParser } from './src/utils/markdown';
+import { createTestHelper } from './src/utils/markdown/test-helper';
 
-const { parser, helper } = createTestParser();
+const { parser, helper } = createTestHelper();
 
 // Test parsing
 const events = await helper.collectEvents('# Test\n```js\ncode\n```');

@@ -69,13 +69,3 @@ export function harmonizeResponseParams(
   return messages;
 }
 
-/**
- * Extract ChatCompletion-compatible parameters from Response API params
- * Re-export for convenience
- */
-export { extractChatCompletionParams } from './utils/extract-chat-params';
-
-/**
- * Export types for external use
- */
-export type { ResponseCreateParamsBase, ChatCompletionMessageParam, ExtractedChatParams } from './types';

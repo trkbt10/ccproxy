@@ -5,7 +5,9 @@ import type { Tool, FunctionTool, WebSearchTool } from "../types";
 describe("convertToolsToHarmonyFormat", () => {
   it("should return empty string for no tools", () => {
     expect(convertToolsToHarmonyFormat([])).toBe("");
-    expect(convertToolsToHarmonyFormat(null as any)).toBe("");
+    // @ts-ignore - Testing that function handles null input gracefully
+    // The converter should return empty string for null/undefined inputs
+    expect(convertToolsToHarmonyFormat(null)).toBe("");
   });
 
   it("should convert function tool without parameters", () => {

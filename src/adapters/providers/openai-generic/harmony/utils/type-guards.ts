@@ -90,7 +90,7 @@ export function hasValidTools(params: unknown): params is { tools: Tool[] } {
 
 // Tool type guards
 export function isFunctionTool(tool: Tool): tool is FunctionTool {
-  return isObject(tool) && 'function' in tool && isObject(tool.function);
+  return isObject(tool) && 'type' in tool && tool.type === 'function';
 }
 
 export function isFileSearchTool(tool: Tool): tool is FileSearchTool {
@@ -142,10 +142,8 @@ export function isToolChoiceFunction(tc: unknown): tc is ToolChoiceFunction {
   return isObject(tc) && 
     'type' in tc && 
     tc.type === 'function' && 
-    'function' in tc &&
-    isObject(tc.function) &&
-    'name' in tc.function &&
-    typeof tc.function.name === 'string';
+    'name' in tc &&
+    typeof tc.name === 'string';
 }
 
 export function isToolChoiceCustom(tc: unknown): tc is ToolChoiceCustom {

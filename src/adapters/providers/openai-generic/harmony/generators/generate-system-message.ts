@@ -25,7 +25,7 @@ export function generateSystemMessage(
 
   // Check if we have tools
   const hasTools = params.tools && params.tools.length > 0;
-  const hasFunctionTools = hasTools && params.tools!.some(t => 'function' in t);
+  const hasFunctionTools = hasTools && params.tools!.some(t => t.type === 'function');
   const builtinTools = hasTools ? getBuiltinToolTypes(params.tools!) : [];
 
   // Add built-in tools section if needed

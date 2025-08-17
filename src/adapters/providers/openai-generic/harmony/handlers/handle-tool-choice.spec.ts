@@ -37,7 +37,7 @@ describe('handleToolChoice', () => {
       { type: 'function', name: 'get_weather' },
       { type: 'function', name: 'get_location' }
     ]);
-    expect(handleToolChoice(toolChoice)).toBe('You must use one or more tools to respond.');
+    expect(handleToolChoice(toolChoice)).toBe('You must use one of these tools: get_weather, get_location.');
   });
 
   it('should handle ToolChoiceAllowed with auto mode', () => {

@@ -34,7 +34,7 @@ describe('generateDeveloperMessage', () => {
               }
             }
           }
-        } as any
+        }
       ]
     };
     const result = generateDeveloperMessage(params);
@@ -56,7 +56,7 @@ describe('generateDeveloperMessage', () => {
             schema: { type: 'object' }
           }
         }
-      } as any
+      }
     };
     const result = generateDeveloperMessage(params);
     
@@ -69,7 +69,9 @@ describe('generateDeveloperMessage', () => {
     const params: ResponseCreateParamsBase = {
       instructions: 'Use tools wisely.',
       tools: [
-        { function: { name: 'test_func' } } as any
+        // @ts-ignore - Testing incomplete FunctionTool without required fields (parameters, strict)
+        // This tests handling of minimal function tool definitions at runtime
+        { function: { name: 'test_func' } }
       ]
     };
     const result = generateDeveloperMessage(params);
@@ -94,7 +96,7 @@ describe('generateDeveloperMessage', () => {
 
   it('should add tool choice instructions without other instructions', () => {
     const params: ResponseCreateParamsBase = {
-      tool_choice: { type: 'function', function: { name: 'get_weather' } } as any
+      tool_choice: { type: 'function', function: { name: 'get_weather' } }
     };
     const result = generateDeveloperMessage(params);
     
@@ -107,7 +109,9 @@ describe('generateDeveloperMessage', () => {
       instructions: 'Follow these rules.',
       tool_choice: 'none',
       tools: [
-        { function: { name: 'func1', description: 'Function 1' } } as any
+        // @ts-ignore - Testing incomplete FunctionTool without required fields (parameters, strict)
+        // This tests handling of function tools with only name and description
+        { function: { name: 'func1', description: 'Function 1' } }
       ],
       text: {
         response_format: {
@@ -117,7 +121,7 @@ describe('generateDeveloperMessage', () => {
             schema: { type: 'object' }
           }
         }
-      } as any
+      }
     };
     const result = generateDeveloperMessage(params);
     

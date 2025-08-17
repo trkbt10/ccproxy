@@ -1,6 +1,16 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { harmonizeResponseParams, extractChatCompletionParams } from './harmonizer';
-import type { ResponseCreateParamsBase } from './types';
+import { harmonizeResponseParams } from './harmonizer';
+import { extractChatCompletionParams } from './utils/extract-chat-params';
+import type { ResponseCreateParamsBase, Tool, WebSearchTool } from './types';
+import { 
+  createFunctionTool,
+  webSearchTool,
+  codeInterpreterTool,
+  createMessageInput,
+  createResponseTextConfig,
+  createToolChoiceFunction,
+  createInvalidParams
+} from './test-fixtures';
 
 describe('harmonizeResponseParams', () => {
   beforeEach(() => {
@@ -61,19 +71,17 @@ describe('harmonizeResponseParams', () => {
     const params: ResponseCreateParamsBase = {
       instructions: 'Use tools when needed.',
       tools: [
-        {
-          function: {
-            name: 'get_weather',
-            description: 'Gets the current weather',
-            parameters: {
-              type: 'object',
-              properties: {
-                location: { type: 'string' }
-              },
-              required: ['location']
-            }
+        createFunctionTool({
+          name: 'get_weather',
+          description: 'Gets the current weather',
+          parameters: {
+            type: 'object',
+            properties: {
+              location: { type: 'string' }
+            },
+            required: ['location']
           }
-        } as any
+        })
       ],
       input: 'What is the weather in Tokyo?'
     };
@@ -93,8 +101,8 @@ describe('harmonizeResponseParams', () => {
   it('should handle built-in tools', () => {
     const params: ResponseCreateParamsBase = {
       tools: [
-        { type: 'web_search' } as any,
-        { type: 'code_interpreter' } as any
+        webSearchTool,
+        codeInterpreterTool
       ]
     };
     const messages = harmonizeResponseParams(params);
@@ -119,7 +127,7 @@ describe('harmonizeResponseParams', () => {
   it('should handle tool choice', () => {
     const params: ResponseCreateParamsBase = {
       tool_choice: 'required',
-      tools: [{ function: { name: 'test' } } as any]
+      tools: [createFunctionTool({ name: 'test' })]
     };
     const messages = harmonizeResponseParams(params);
     
@@ -129,22 +137,17 @@ describe('harmonizeResponseParams', () => {
 
   it('should handle response format', () => {
     const params: ResponseCreateParamsBase = {
-      text: {
-        response_format: {
-          type: 'json_schema',
-          json_schema: {
-            name: 'user_data',
-            description: 'User information',
-            schema: {
-              type: 'object',
-              properties: {
-                name: { type: 'string' },
-                age: { type: 'number' }
-              }
-            }
+      text: createResponseTextConfig(
+        'user_data',
+        {
+          type: 'object',
+          properties: {
+            name: { type: 'string' },
+            age: { type: 'number' }
           }
-        }
-      } as any
+        },
+        'User information'
+      )
     };
     const messages = harmonizeResponseParams(params);
     
@@ -157,9 +160,9 @@ describe('harmonizeResponseParams', () => {
   it('should handle complex conversation with multiple inputs', () => {
     const params: ResponseCreateParamsBase = {
       input: [
-        { type: 'message', role: 'user', content: 'Hello' } as any,
-        { type: 'message', role: 'assistant', content: 'Hi there!' } as any,
-        { type: 'message', role: 'user', content: 'What can you do?' } as any
+        createMessageInput('user', 'Hello'),
+        createMessageInput('assistant', 'Hi there!'),
+        createMessageInput('user', 'What can you do?')
       ]
     };
     const messages = harmonizeResponseParams(params);
@@ -178,7 +181,7 @@ describe('harmonizeResponseParams', () => {
   });
 
   it('should validate params', () => {
-    const invalidParams = { temperature: 3 } as any;
+    const invalidParams = createInvalidParams({ temperature: 3 }) as ResponseCreateParamsBase;
     
     expect(() => harmonizeResponseParams(invalidParams))
       .toThrow('Temperature must be a number between 0 and 2');
@@ -189,26 +192,19 @@ describe('harmonizeResponseParams', () => {
       model: 'gpt-4o',
       instructions: 'Be helpful and use tools wisely.',
       reasoning: { effort: 'high' },
-      tool_choice: { type: 'function', function: { name: 'search' } } as any,
+      tool_choice: createToolChoiceFunction('search'),
       tools: [
-        { type: 'web_search' } as any,
-        {
-          function: {
-            name: 'search',
-            description: 'Search for information',
-            parameters: { type: 'object', properties: { query: { type: 'string' } } }
-          }
-        } as any
+        webSearchTool,
+        createFunctionTool({
+          name: 'search',
+          description: 'Search for information',
+          parameters: { type: 'object', properties: { query: { type: 'string' } } }
+        })
       ],
-      text: {
-        response_format: {
-          type: 'json_schema',
-          json_schema: {
-            name: 'search_results',
-            schema: { type: 'array', items: { type: 'object' } }
-          }
-        }
-      } as any,
+      text: createResponseTextConfig(
+        'search_results',
+        { type: 'array', items: { type: 'object' } }
+      ),
       input: 'Search for information about Harmony format'
     };
     
@@ -226,6 +222,7 @@ describe('harmonizeResponseParams', () => {
     // Developer message checks
     const devMsg = messages[1].content;
     expect(devMsg).toContain('Be helpful and use tools wisely.');
+    // Tool choice instruction should be included
     expect(devMsg).toContain('You must use the search function.');
     expect(devMsg).toContain('type search = (_: {');
     expect(devMsg).toContain('## search_results');

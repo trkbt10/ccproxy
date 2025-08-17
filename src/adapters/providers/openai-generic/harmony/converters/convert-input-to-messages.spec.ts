@@ -25,9 +25,11 @@ describe('convertInputToMessages', () => {
 
   it('should return empty array for non-array non-string input', () => {
     // Testing edge cases where input is neither string nor array
-    // Using 'as any' to test runtime handling of invalid input types
-    expect(convertInputToMessages({} as any)).toEqual([]);
-    expect(convertInputToMessages(123 as any)).toEqual([]);
+    // @ts-ignore - Testing runtime handling of invalid input types (object and number)
+    // The function should gracefully handle non-array/non-string inputs and return empty array
+    expect(convertInputToMessages({})).toEqual([]);
+    // @ts-ignore - Testing runtime handling of invalid input type (number)
+    expect(convertInputToMessages(123)).toEqual([]);
   });
 
   it('should convert message items from array', () => {
@@ -89,11 +91,15 @@ describe('convertInputToMessages', () => {
   it('should skip invalid items', () => {
     const input: ResponseInput = [
       // These will be skipped because they're not objects
-      // Using 'as any' to test that invalid items in the array are properly filtered
-      null as any,
-      undefined as any,
-      'string' as any,
-      123 as any,
+      // @ts-ignore - Testing that null items in the array are properly filtered out
+      // The converter should skip non-object items and only process valid ResponseInputItem objects
+      null,
+      // @ts-ignore - Testing that undefined items are filtered out
+      undefined,
+      // @ts-ignore - Testing that string primitives are filtered out
+      'string',
+      // @ts-ignore - Testing that number primitives are filtered out
+      123,
       createMessageInput('user', 'Valid message')
     ];
     

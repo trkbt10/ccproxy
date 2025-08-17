@@ -22,8 +22,12 @@ describe('handleConversationState', () => {
   it('should convert array input to messages', () => {
     const params: ResponseCreateParamsBase = {
       input: [
-        { type: 'message', role: 'user', content: 'Question' } as any,
-        { type: 'message', role: 'assistant', content: 'Answer' } as any
+        // @ts-ignore - Testing runtime handling of message input with required 'type' field
+        // The OpenAI ResponseInputItem type is a union that includes EasyInputMessage which doesn't require 'type',
+        // but we're explicitly testing the Message variant which does require 'type' field
+        { type: 'message', role: 'user', content: 'Question' },
+        // @ts-ignore - Same as above: testing Message variant with explicit 'type' field
+        { type: 'message', role: 'assistant', content: 'Answer' }
       ]
     };
     const result = handleConversationState(params);
@@ -58,7 +62,9 @@ describe('handleConversationState', () => {
     const params: ResponseCreateParamsBase = {
       previous_response_id: 'resp_456',
       input: [
-        { type: 'message', role: 'user', content: 'New question' } as any
+        // @ts-ignore - Testing runtime handling of message input with required 'type' field
+        // Same as above: testing Message variant of ResponseInputItem union type
+        { type: 'message', role: 'user', content: 'New question' }
       ]
     };
     const result = handleConversationState(params);

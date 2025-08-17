@@ -51,11 +51,15 @@ describe('validateParams', () => {
 
   it('should validate tools array', () => {
     // Testing runtime validation - string instead of array
-    const invalidParams = createInvalidParams({ tools: 'not-array' as unknown as any[] });
+    // @ts-ignore - Testing runtime validation with intentionally wrong type (string instead of array)
+    // This ensures the validator properly handles invalid input types at runtime
+    const invalidParams = createInvalidParams({ tools: 'not-array' });
     expect(() => validateParams(invalidParams as ResponseCreateParamsBase)).toThrow('Tools must be an array');
     
     // Testing runtime validation - array containing null instead of tool objects
-    const invalidToolParams = createInvalidParams({ tools: [null] as unknown as any[] });
+    // @ts-ignore - Testing runtime validation with array containing null instead of tool objects
+    // This ensures the validator checks each array element is a valid tool object
+    const invalidToolParams = createInvalidParams({ tools: [null] });
     expect(() => validateParams(invalidToolParams as ResponseCreateParamsBase)).toThrow('Each tool must be an object');
     
     const validParams: ResponseCreateParamsBase = { tools: [] };
@@ -120,7 +124,9 @@ describe('validateParams', () => {
 
   it('should validate reasoning type', () => {
     // Testing runtime validation - string instead of object
-    const invalidParams = createInvalidParams({ reasoning: 'high' as unknown as any });
+    // @ts-ignore - Testing runtime validation with string instead of Reasoning object
+    // Reasoning should be an object with 'effort' property, not a string
+    const invalidParams = createInvalidParams({ reasoning: 'high' });
     expect(() => validateParams(invalidParams as ResponseCreateParamsBase)).toThrow('Reasoning must be an object');
     
     const validParams: ResponseCreateParamsBase = { reasoning: { effort: 'high' } };

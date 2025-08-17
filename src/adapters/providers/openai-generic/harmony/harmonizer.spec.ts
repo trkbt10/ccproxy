@@ -10,7 +10,7 @@ import {
   createResponseTextConfig,
   createToolChoiceFunction,
   createInvalidParams
-} from './test-fixtures';
+} from './fixtures.test.support';
 
 describe('harmonizeResponseParams', () => {
   beforeEach(() => {

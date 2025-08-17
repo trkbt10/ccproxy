@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { validateParams, ValidationError } from './validate-params';
 import type { ResponseCreateParamsBase, Tool } from '../types';
-import { createInvalidParams, createFunctionTool, createInvalidFunctionTool } from '../test-fixtures';
+import { createInvalidParams, createFunctionTool, createInvalidFunctionTool } from '../fixtures.test.support';
 
 describe('validateParams', () => {
   it('should throw when params are not provided', () => {

@@ -1,6 +1,14 @@
 /**
- * Test fixtures for Harmony tests
- * These provide properly typed test data without using 'as any'
+ * @fileoverview Test fixtures for Harmony tests
+ * 
+ * ⚠️ WARNING: This file is intended for TEST FILES ONLY!
+ * DO NOT import this file in production code.
+ * 
+ * This file contains test helpers and fixtures that provide properly typed test data.
+ * The fixtures are designed to test edge cases and error conditions that should not
+ * occur in production code.
+ * 
+ * @module fixtures.test.support
  */
 
 import type { 

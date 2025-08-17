@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { handleResponseFormat } from './handle-response-format';
 import type { ResponseTextConfig } from '../types';
-import { createResponseTextConfig } from '../test-fixtures';
+import { createResponseTextConfig } from '../fixtures.test.support';
 
 describe('handleResponseFormat', () => {
   it('should return null when no text config provided', () => {

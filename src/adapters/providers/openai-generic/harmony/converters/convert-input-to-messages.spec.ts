@@ -8,7 +8,7 @@ import {
   createFunctionCallOutput,
   createTextContentPart,
   createImageContentPart
-} from '../test-fixtures';
+} from '../fixtures.test.support';
 
 describe('convertInputToMessages', () => {
   it('should return empty array for no input', () => {

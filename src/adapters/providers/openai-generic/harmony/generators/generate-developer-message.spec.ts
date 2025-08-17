@@ -24,16 +24,16 @@ describe('generateDeveloperMessage', () => {
     const params: ResponseCreateParamsBase = {
       tools: [
         {
-          function: {
-            name: 'get_weather',
-            description: 'Get weather info',
-            parameters: {
-              type: 'object',
-              properties: {
-                location: { type: 'string' }
-              }
+          type: 'function',
+          name: 'get_weather',
+          description: 'Get weather info',
+          parameters: {
+            type: 'object',
+            properties: {
+              location: { type: 'string' }
             }
-          }
+          },
+          strict: null
         }
       ]
     };
@@ -69,9 +69,9 @@ describe('generateDeveloperMessage', () => {
     const params: ResponseCreateParamsBase = {
       instructions: 'Use tools wisely.',
       tools: [
-        // @ts-ignore - Testing incomplete FunctionTool without required fields (parameters, strict)
+        // @ts-ignore - Testing incomplete FunctionTool without required field 'parameters'
         // This tests handling of minimal function tool definitions at runtime
-        { function: { name: 'test_func' } }
+        { type: 'function', name: 'test_func', strict: null }
       ]
     };
     const result = generateDeveloperMessage(params);
@@ -96,7 +96,7 @@ describe('generateDeveloperMessage', () => {
 
   it('should add tool choice instructions without other instructions', () => {
     const params: ResponseCreateParamsBase = {
-      tool_choice: { type: 'function', function: { name: 'get_weather' } }
+      tool_choice: { type: 'function', name: 'get_weather' }
     };
     const result = generateDeveloperMessage(params);
     
@@ -109,9 +109,9 @@ describe('generateDeveloperMessage', () => {
       instructions: 'Follow these rules.',
       tool_choice: 'none',
       tools: [
-        // @ts-ignore - Testing incomplete FunctionTool without required fields (parameters, strict)
+        // @ts-ignore - Testing incomplete FunctionTool without required field 'parameters'
         // This tests handling of function tools with only name and description
-        { function: { name: 'func1', description: 'Function 1' } }
+        { type: 'function', name: 'func1', description: 'Function 1', strict: null }
       ],
       text: {
         response_format: {

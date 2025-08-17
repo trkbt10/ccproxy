@@ -8,7 +8,7 @@ import {
   createToolChoiceFunction,
   createToolChoiceCustom,
   createToolChoiceAllowed
-} from '../test-fixtures';
+} from '../fixtures.test.support';
 
 describe('handleToolChoice', () => {
   it('should return null when no tool choice provided', () => {

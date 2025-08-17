@@ -43,9 +43,9 @@ describe('generateSystemMessage', () => {
   it('should add function tool routing when function tools present', () => {
     const params: ResponseCreateParamsBase = {
       tools: [
-        // @ts-ignore - Testing incomplete FunctionTool object without required fields
-        // This tests the system's ability to handle malformed tool objects at runtime
-        { function: { name: 'test_func' } }
+        // @ts-ignore - Testing incomplete FunctionTool without required field 'parameters'
+        // This tests the system's ability to handle minimal function tools at runtime
+        { type: 'function', name: 'test_func', strict: null }
       ]
     };
     const result = generateSystemMessage(params);
@@ -56,9 +56,7 @@ describe('generateSystemMessage', () => {
   it('should add browser tool definition', () => {
     const params: ResponseCreateParamsBase = {
       tools: [
-        // @ts-ignore - Testing invalid tool type that doesn't exist in Tool union
-        // This ensures the system gracefully handles unknown tool types
-        { type: 'web_search' }
+        { type: 'web_search_preview_2025_03_11' }
       ]
     };
     const result = generateSystemMessage(params);
@@ -89,11 +87,10 @@ describe('generateSystemMessage', () => {
   it('should add both browser and python tools', () => {
     const params: ResponseCreateParamsBase = {
       tools: [
-        // @ts-ignore - Testing invalid tool type 'web_search' not in Tool union
-        { type: 'web_search' },
+        { type: 'web_search_preview_2025_03_11' },
         { type: 'code_interpreter' },
-        // @ts-ignore - Testing incomplete FunctionTool without required fields
-        { function: { name: 'custom_func' } }
+        // @ts-ignore - Testing incomplete FunctionTool without required field 'parameters'
+        { type: 'function', name: 'custom_func', strict: null }
       ]
     };
     const result = generateSystemMessage(params);

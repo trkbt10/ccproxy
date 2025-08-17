@@ -309,15 +309,19 @@ Would you like me to show you the recursive version as well?`;
       );
       const functionItems = events.filter(e => 
         e.type === "response.output_item.added" && 
-        e.item.type === "function"
+        e.item.type === "function_call"
       );
       
       expect(textItems.length).toBe(1);
       expect(functionItems.length).toBe(2);
       
       // Verify function calls
-      expect(functionItems[0].item.function?.name).toBe("web_search");
-      expect(functionItems[1].item.function?.name).toBe("get_code_example");
+      if (functionItems[0].item.type === "function_call") {
+        expect(functionItems[0].item.name).toBe("web_search");
+      }
+      if (functionItems[1].item.type === "function_call") {
+        expect(functionItems[1].item.name).toBe("get_code_example");
+      }
       
       // Verify text is properly combined
       const textDone = events.find(e => e.type === "response.output_text.done");

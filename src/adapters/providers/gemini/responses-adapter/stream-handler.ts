@@ -277,64 +277,86 @@ const streamReducer = (state: StreamState, action: StreamAction): StreamState =>
   return newState;
 };
 
-// ===== Stream Handler Class =====
+// ===== Stream Handler Functions =====
 
+export interface GeminiStreamHandlerState {
+  state: StreamState;
+}
+
+export const createGeminiStreamHandler = (model: string = "gemini-pro"): GeminiStreamHandlerState => {
+  return {
+    state: createInitialState(model),
+  };
+};
+
+const createInitialState = (model: string): StreamState => {
+  return {
+    responseId: "",
+    model,
+    created: 0,
+    sequenceNumber: 1,
+    outputIndex: 0,
+    contentIndex: 0,
+    isInitialized: false,
+    currentTextItem: null,
+    textBuffer: "",
+    inCodeBlock: false,
+    pendingEvents: [],
+  };
+};
+
+export async function* handleStream(
+  handler: GeminiStreamHandlerState,
+  stream: AsyncIterable<StreamedPart>
+): AsyncGenerator<ResponseStreamEvent, void, unknown> {
+  for await (const part of stream) {
+    // Initialize on first part
+    if (!handler.state.isInitialized) {
+      handler.state = streamReducer(handler.state, { type: "INIT" });
+      yield* handler.state.pendingEvents;
+    }
+
+    // Map part to action
+    let action: StreamAction | null = null;
+    switch (part.type) {
+      case "text":
+        if (part.text) {
+          action = { type: "TEXT", text: part.text };
+        }
+        break;
+      case "functionCall":
+        action = { type: "FUNCTION_CALL", functionCall: part.functionCall || {} };
+        break;
+      case "complete":
+        action = { type: "COMPLETE", finishReason: part.finishReason };
+        break;
+    }
+
+    // Process action
+    if (action) {
+      handler.state = streamReducer(handler.state, action);
+      yield* handler.state.pendingEvents;
+    }
+  }
+}
+
+export const resetHandler = (handler: GeminiStreamHandlerState): void => {
+  handler.state = createInitialState(handler.state.model);
+};
+
+// For backward compatibility, export a class that wraps the functional implementation
 export class GeminiStreamHandler {
-  private state: StreamState;
+  private handler: GeminiStreamHandlerState;
 
   constructor(model: string = "gemini-pro") {
-    this.state = this.createInitialState(model);
-  }
-
-  private createInitialState(model: string): StreamState {
-    return {
-      responseId: "",
-      model,
-      created: 0,
-      sequenceNumber: 1,
-      outputIndex: 0,
-      contentIndex: 0,
-      isInitialized: false,
-      currentTextItem: null,
-      textBuffer: "",
-      inCodeBlock: false,
-      pendingEvents: [],
-    };
+    this.handler = createGeminiStreamHandler(model);
   }
 
   async *handleStream(stream: AsyncIterable<StreamedPart>): AsyncGenerator<ResponseStreamEvent, void, unknown> {
-    for await (const part of stream) {
-      // Initialize on first part
-      if (!this.state.isInitialized) {
-        this.state = streamReducer(this.state, { type: "INIT" });
-        yield* this.state.pendingEvents;
-      }
-
-      // Map part to action
-      let action: StreamAction | null = null;
-      switch (part.type) {
-        case "text":
-          if (part.text) {
-            action = { type: "TEXT", text: part.text };
-          }
-          break;
-        case "functionCall":
-          action = { type: "FUNCTION_CALL", functionCall: part.functionCall || {} };
-          break;
-        case "complete":
-          action = { type: "COMPLETE", finishReason: part.finishReason };
-          break;
-      }
-
-      // Process action
-      if (action) {
-        this.state = streamReducer(this.state, action);
-        yield* this.state.pendingEvents;
-      }
-    }
+    yield* handleStream(this.handler, stream);
   }
 
   reset(): void {
-    this.state = this.createInitialState(this.state.model);
+    resetHandler(this.handler);
   }
 }

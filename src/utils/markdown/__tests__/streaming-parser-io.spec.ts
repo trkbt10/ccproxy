@@ -1,12 +1,12 @@
 import { describe, expect, it, beforeEach } from "bun:test";
-import { StreamingMarkdownParser } from "../streaming-parser";
+import { createStreamingMarkdownParser } from "../streaming-parser";
 import type { MarkdownParseEvent } from "../types";
 
 describe("StreamingMarkdownParser - IO Operations", () => {
-  let parser: StreamingMarkdownParser;
+  let parser: ReturnType<typeof createStreamingMarkdownParser>;
 
   beforeEach(() => {
-    parser = new StreamingMarkdownParser();
+    parser = createStreamingMarkdownParser();
   });
 
   describe("basic IO operations", () => {

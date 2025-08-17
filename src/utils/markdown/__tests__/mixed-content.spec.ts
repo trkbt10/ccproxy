@@ -1,7 +1,7 @@
 import { describe, expect, it } from "bun:test";
 import { readFile } from "fs/promises";
 import path from "path";
-import { StreamingMarkdownParser } from "../streaming-parser";
+import { createStreamingMarkdownParser } from "../streaming-parser";
 import type { MarkdownParseEvent, BeginEvent } from "../types";
 
 const SAMPLE_PATH = path.join(__dirname, "..", "__mocks__", "markdown-samples", "mixed-content.md");
@@ -9,7 +9,7 @@ const SAMPLE_PATH = path.join(__dirname, "..", "__mocks__", "markdown-samples", 
 describe("StreamingMarkdownParser - mixed-content.md", () => {
   it("should detect multiple markdown element types", async () => {
     const content = await readFile(SAMPLE_PATH, "utf-8");
-    const parser = new StreamingMarkdownParser();
+    const parser = createStreamingMarkdownParser();
     const events: MarkdownParseEvent[] = [];
     
     for await (const event of parser.processChunk(content)) {
@@ -30,7 +30,7 @@ describe("StreamingMarkdownParser - mixed-content.md", () => {
 
   it("should detect all headers with correct levels", async () => {
     const content = await readFile(SAMPLE_PATH, "utf-8");
-    const parser = new StreamingMarkdownParser();
+    const parser = createStreamingMarkdownParser();
     const events: MarkdownParseEvent[] = [];
     
     for await (const event of parser.processChunk(content)) {
@@ -55,7 +55,7 @@ describe("StreamingMarkdownParser - mixed-content.md", () => {
 
   it("should detect code blocks including nested markdown", async () => {
     const content = await readFile(SAMPLE_PATH, "utf-8");
-    const parser = new StreamingMarkdownParser();
+    const parser = createStreamingMarkdownParser();
     const events: MarkdownParseEvent[] = [];
     
     for await (const event of parser.processChunk(content)) {
@@ -74,7 +74,7 @@ describe("StreamingMarkdownParser - mixed-content.md", () => {
 
   it("should detect links", async () => {
     const content = await readFile(SAMPLE_PATH, "utf-8");
-    const parser = new StreamingMarkdownParser();
+    const parser = createStreamingMarkdownParser();
     const events: MarkdownParseEvent[] = [];
     
     for await (const event of parser.processChunk(content)) {
@@ -98,7 +98,7 @@ describe("StreamingMarkdownParser - mixed-content.md", () => {
 
   it("should handle multiple consecutive newlines correctly", async () => {
     const content = await readFile(SAMPLE_PATH, "utf-8");
-    const parser = new StreamingMarkdownParser();
+    const parser = createStreamingMarkdownParser();
     const events: MarkdownParseEvent[] = [];
     
     for await (const event of parser.processChunk(content)) {

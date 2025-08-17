@@ -3,11 +3,8 @@
  * This is now a thin wrapper around the generic markdown parser
  */
 
-import { StreamingMarkdownParser as BaseMarkdownParser } from "../../../../utils/markdown/streaming-parser";
-import type { MarkdownParseEvent, MarkdownElementType } from "../../../../utils/markdown/types";
-
-// Re-export types for backward compatibility
-export type { MarkdownElementType, MarkdownParseEvent } from "../../../../utils/markdown/types";
+import { createStreamingMarkdownParser } from "../../../../utils/markdown/streaming-parser";
+import type { MarkdownParseEvent, MarkdownElementType, MarkdownParserConfig } from "../../../../utils/markdown/types";
 
 // Define configuration type
 export interface GeminiMarkdownConfig {
@@ -25,7 +22,7 @@ const defaultGeminiConfig: GeminiMarkdownConfig = {
 
 // Functional interface for the parser
 export interface GeminiMarkdownParser {
-  parser: BaseMarkdownParser;
+  parser: ReturnType<typeof createStreamingMarkdownParser>;
   config: GeminiMarkdownConfig;
 }
 
@@ -33,7 +30,7 @@ export interface GeminiMarkdownParser {
 export const createGeminiMarkdownParser = (config?: Partial<GeminiMarkdownConfig>): GeminiMarkdownParser => {
   const finalConfig = { ...defaultGeminiConfig, ...config };
   return {
-    parser: new BaseMarkdownParser(finalConfig),
+    parser: createStreamingMarkdownParser(finalConfig),
     config: finalConfig,
   };
 };
@@ -63,23 +60,3 @@ export const resetMarkdownParser = (parser: GeminiMarkdownParser): void => {
   parser.parser.reset();
 };
 
-// For backward compatibility, export a class that wraps the functional implementation
-export class StreamingMarkdownParser extends BaseMarkdownParser {
-  private functionalParser: GeminiMarkdownParser;
-
-  constructor() {
-    // Initialize with Gemini-specific configuration
-    super(defaultGeminiConfig);
-    this.functionalParser = createGeminiMarkdownParser();
-  }
-
-  // Override to use functional implementation
-  async *processChunk(text: string): AsyncGenerator<MarkdownParseEvent, void, unknown> {
-    yield* processMarkdownChunk(this.functionalParser, text);
-  }
-
-  reset(): void {
-    super.reset();
-    resetMarkdownParser(this.functionalParser);
-  }
-}

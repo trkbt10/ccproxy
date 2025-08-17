@@ -2,8 +2,8 @@
  * Test helper utilities for markdown parser testing
  */
 
-import type { MarkdownParseEvent } from './types';
-import { StreamingMarkdownParser } from './streaming-parser';
+import type { MarkdownParseEvent, MarkdownParserConfig } from './types';
+import { createStreamingMarkdownParser } from './streaming-parser';
 
 export interface TestHelperOptions {
   chunkSize?: number;
@@ -13,7 +13,7 @@ export interface TestHelperOptions {
 /**
  * Create a test helper for markdown parser testing
  */
-export function createTestHelper(parser: StreamingMarkdownParser) {
+export function createTestHelper(parser: ReturnType<typeof createStreamingMarkdownParser>) {
   return {
     /**
      * Collect all events from parsing a string
@@ -156,11 +156,11 @@ export function createTestHelper(parser: StreamingMarkdownParser) {
 /**
  * Create a simple test parser instance
  */
-export function createTestParser(config?: ConstructorParameters<typeof StreamingMarkdownParser>[0]): {
-  parser: StreamingMarkdownParser;
+export function createTestParser(config?: MarkdownParserConfig): {
+  parser: ReturnType<typeof createStreamingMarkdownParser>;
   helper: ReturnType<typeof createTestHelper>;
 } {
-  const parser = new StreamingMarkdownParser(config);
+  const parser = createStreamingMarkdownParser(config);
   const helper = createTestHelper(parser);
   
   return { parser, helper };

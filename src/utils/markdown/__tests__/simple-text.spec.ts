@@ -1,7 +1,7 @@
 import { describe, expect, it } from "bun:test";
 import { readFile } from "fs/promises";
 import path from "path";
-import { StreamingMarkdownParser } from "../streaming-parser";
+import { createStreamingMarkdownParser } from "../streaming-parser";
 import type { MarkdownParseEvent } from "../types";
 
 const SAMPLE_PATH = path.join(__dirname, "..", "__mocks__", "markdown-samples", "simple-text.md");
@@ -9,7 +9,7 @@ const SAMPLE_PATH = path.join(__dirname, "..", "__mocks__", "markdown-samples", 
 describe("StreamingMarkdownParser - simple-text.md", () => {
   it("should not emit any events for plain text", async () => {
     const content = await readFile(SAMPLE_PATH, "utf-8");
-    const parser = new StreamingMarkdownParser();
+    const parser = createStreamingMarkdownParser();
     const events: MarkdownParseEvent[] = [];
     
     for await (const event of parser.processChunk(content)) {
@@ -22,7 +22,7 @@ describe("StreamingMarkdownParser - simple-text.md", () => {
 
   it("should handle the content without errors", async () => {
     const content = await readFile(SAMPLE_PATH, "utf-8");
-    const parser = new StreamingMarkdownParser();
+    const parser = createStreamingMarkdownParser();
     
     // Should process without throwing
     let processed = false;

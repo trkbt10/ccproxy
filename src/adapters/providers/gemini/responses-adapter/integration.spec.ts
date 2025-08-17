@@ -4,7 +4,7 @@ import path from "path";
 import type { ResponseStreamEvent } from "../../openai-generic/responses-adapter/types";
 import type { StreamedPart } from "../client/fetch-client";
 import { GeminiStreamHandler } from "./stream-handler";
-import { StreamingMarkdownParser } from "./markdown-parser";
+import { createGeminiMarkdownParser, processMarkdownChunk, completeMarkdownParsing } from "./markdown-parser";
 
 const MARKDOWN_SAMPLES_DIR = path.join(__dirname, "__mocks__", "markdown-samples");
 
@@ -19,7 +19,7 @@ describe("Integration Tests - Markdown Parser & Stream Handler", () => {
   }> {
     const content = await readFile(filePath, "utf-8");
     const handler = new GeminiStreamHandler();
-    const parser = new StreamingMarkdownParser();
+    const parser = createGeminiMarkdownParser();
     
     // Collect stream handler events
     const events: ResponseStreamEvent[] = [];
@@ -44,7 +44,10 @@ describe("Integration Tests - Markdown Parser & Stream Handler", () => {
     
     // Also collect markdown parser events
     const markdownEvents: any[] = [];
-    for await (const event of parser.processChunk(content)) {
+    for await (const event of processMarkdownChunk(parser, content)) {
+      markdownEvents.push(event);
+    }
+    for await (const event of completeMarkdownParsing(parser)) {
       markdownEvents.push(event);
     }
     

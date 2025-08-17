@@ -1,7 +1,7 @@
 import { describe, expect, it } from "bun:test";
 import { readFile } from "fs/promises";
 import path from "path";
-import { StreamingMarkdownParser } from "../streaming-parser";
+import { createStreamingMarkdownParser } from "../streaming-parser";
 import type { MarkdownParseEvent, BeginEvent } from "../types";
 
 const SAMPLE_PATH = path.join(__dirname, "..", "__mocks__", "markdown-samples", "edge-cases.md");
@@ -9,7 +9,7 @@ const SAMPLE_PATH = path.join(__dirname, "..", "__mocks__", "markdown-samples", 
 describe("StreamingMarkdownParser - edge-cases.md", () => {
   it("should handle code block at the very start", async () => {
     const content = await readFile(SAMPLE_PATH, "utf-8");
-    const parser = new StreamingMarkdownParser();
+    const parser = createStreamingMarkdownParser();
     const events: MarkdownParseEvent[] = [];
     
     for await (const event of parser.processChunk(content)) {
@@ -23,7 +23,7 @@ describe("StreamingMarkdownParser - edge-cases.md", () => {
 
   it("should handle code blocks without language specification", async () => {
     const content = await readFile(SAMPLE_PATH, "utf-8");
-    const parser = new StreamingMarkdownParser();
+    const parser = createStreamingMarkdownParser();
     const events: MarkdownParseEvent[] = [];
     
     for await (const event of parser.processChunk(content)) {
@@ -43,7 +43,7 @@ describe("StreamingMarkdownParser - edge-cases.md", () => {
 
   it("should handle incomplete code block at end", async () => {
     const content = await readFile(SAMPLE_PATH, "utf-8");
-    const parser = new StreamingMarkdownParser();
+    const parser = createStreamingMarkdownParser();
     const events: MarkdownParseEvent[] = [];
     
     for await (const event of parser.processChunk(content)) {
@@ -67,7 +67,7 @@ describe("StreamingMarkdownParser - edge-cases.md", () => {
 
   it("should have at least 2 complete code blocks", async () => {
     const content = await readFile(SAMPLE_PATH, "utf-8");
-    const parser = new StreamingMarkdownParser();
+    const parser = createStreamingMarkdownParser();
     const events: MarkdownParseEvent[] = [];
     
     for await (const event of parser.processChunk(content)) {

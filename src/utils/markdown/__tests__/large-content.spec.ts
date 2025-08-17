@@ -1,7 +1,7 @@
 import { describe, expect, it } from "bun:test";
 import { readFile } from "fs/promises";
 import path from "path";
-import { StreamingMarkdownParser } from "../streaming-parser";
+import { createStreamingMarkdownParser } from "../streaming-parser";
 import type { MarkdownParseEvent, BeginEvent } from "../types";
 
 const SAMPLE_PATH = path.join(__dirname, "..", "__mocks__", "markdown-samples", "large-content.md");
@@ -9,7 +9,7 @@ const SAMPLE_PATH = path.join(__dirname, "..", "__mocks__", "markdown-samples", 
 describe("StreamingMarkdownParser - large-content.md", () => {
   it("should handle large content efficiently", async () => {
     const content = await readFile(SAMPLE_PATH, "utf-8");
-    const parser = new StreamingMarkdownParser();
+    const parser = createStreamingMarkdownParser();
     const events: MarkdownParseEvent[] = [];
     
     const startTime = Date.now();
@@ -27,7 +27,7 @@ describe("StreamingMarkdownParser - large-content.md", () => {
 
   it("should detect headers at different levels", async () => {
     const content = await readFile(SAMPLE_PATH, "utf-8");
-    const parser = new StreamingMarkdownParser();
+    const parser = createStreamingMarkdownParser();
     const events: MarkdownParseEvent[] = [];
     
     for await (const event of parser.processChunk(content)) {
@@ -45,7 +45,7 @@ describe("StreamingMarkdownParser - large-content.md", () => {
 
   it("should detect large code blocks", async () => {
     const content = await readFile(SAMPLE_PATH, "utf-8");
-    const parser = new StreamingMarkdownParser();
+    const parser = createStreamingMarkdownParser();
     const events: MarkdownParseEvent[] = [];
     
     for await (const event of parser.processChunk(content)) {
@@ -68,7 +68,7 @@ describe("StreamingMarkdownParser - large-content.md", () => {
 
   it("should handle streaming of large content", async () => {
     const content = await readFile(SAMPLE_PATH, "utf-8");
-    const parser = new StreamingMarkdownParser();
+    const parser = createStreamingMarkdownParser();
     const events: MarkdownParseEvent[] = [];
     
     // Stream in smaller chunks
@@ -96,7 +96,7 @@ describe("StreamingMarkdownParser - large-content.md", () => {
 
   it("should maintain correct element relationships", async () => {
     const content = await readFile(SAMPLE_PATH, "utf-8");
-    const parser = new StreamingMarkdownParser();
+    const parser = createStreamingMarkdownParser();
     const events: MarkdownParseEvent[] = [];
     
     for await (const event of parser.processChunk(content)) {

@@ -49,7 +49,18 @@ export {
   HARMONY_ROLES,
   HARMONY_CHANNELS,
   HARMONY_TOKENS,
-  DEFAULT_KNOWLEDGE_CUTOFF,
-  DEFAULT_REASONING_EFFORT,
-  REASONING_EFFORT_MAP
+  HARMONY_TOKEN_IDS,
+  REASONING_LEVELS,
+  BUILTIN_TOOLS,
+  FUNCTION_NAMESPACE,
+  CONSTRAINT_TYPES
+} from './constants';
+
+export type {
+  HarmonyToken,
+  HarmonyChannel,
+  HarmonyRole,
+  ReasoningLevel,
+  BuiltinTool,
+  ConstraintType
 } from './constants';

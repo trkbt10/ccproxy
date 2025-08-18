@@ -3,7 +3,7 @@ import { buildOpenAICompatibleClientForClaude } from "./claude/responses-api/ope
 import { buildOpenAICompatibleClientForGemini } from "./gemini/openai-compatible";
 import { buildOpenAICompatibleClientForGrok } from "./grok/openai-compatible";
 import { buildOpenAIAdapter } from "./openai/adapter-factory";
-import { buildOpenAIGenericAdapter } from "./openai-generic/adapter-factory";
+import { buildOpenAIGenericAdapter } from "./openai-generic";
 import type { OpenAICompatibleClient } from "./openai-client-types";
 
 export function buildOpenAICompatibleClient(provider: Provider, modelHint?: string): OpenAICompatibleClient {

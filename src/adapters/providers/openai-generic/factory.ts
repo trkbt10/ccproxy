@@ -1,3 +1,11 @@
+/**
+ * @fileoverview Factory for creating OpenAI-compatible API clients
+ *
+ * Why: Provides a unified factory function that creates clients compatible with
+ * both Chat Completions and Responses APIs, handling fallback logic and model-specific
+ * parameter filtering.
+ */
+
 import OpenAI from "openai";
 import type { Provider } from "../../../config/types";
 import type { OpenAICompatibleClient, ChatCompletionsCreateFn, ResponsesCreateFn } from "../openai-client-types";
@@ -9,24 +17,39 @@ import type {
 import type { ChatCompletionCreateParams } from "openai/resources/chat/completions";
 import { selectApiKey } from "../shared/select-api-key";
 import { ResponsesAPI } from "./responses-adapter/responses-api";
-import { isResponseEventStream } from "./guards";
+import { isResponseEventStream } from "./responses/guards";
+import { convertChatParamsToResponseParams } from "./chat/params/chat-to-responses-converter";
+import { isChatParamsStreaming, isChatParamsNonStreaming } from "./chat/guards/params";
+import { isResponseParamsStreaming, isResponseParamsNonStreaming } from "./responses/guards/params";
 
+/**
+ * Check if a model is an O1-series model
+ */
 function isO1Model(model: string): boolean {
   return model.startsWith("o1") || model.startsWith("o3") || model.startsWith("o4");
 }
 
+/**
+ * Filter chat parameters for model compatibility
+ */
 function filterChatParams(params: ChatCompletionCreateParams): ChatCompletionCreateParams {
   // Always remove temperature and top_p for all models
   const { temperature, top_p, ...filteredParams } = params;
   return filteredParams;
 }
 
+/**
+ * Filter response parameters for model compatibility
+ */
 function filterResponseParams(params: ResponseCreateParams): ResponseCreateParams {
   // Always remove temperature and top_p for all models
   const { temperature, top_p, ...filteredParams } = params;
   return filteredParams;
 }
 
+/**
+ * Build an OpenAI-compatible client with fallback logic between APIs
+ */
 export function buildOpenAIGenericAdapter(provider: Provider, modelHint?: string): OpenAICompatibleClient {
   const baseURL = provider.baseURL && provider.baseURL.trim().length > 0 ? provider.baseURL : undefined;
 
@@ -58,17 +81,22 @@ export function buildOpenAIGenericAdapter(provider: Provider, modelHint?: string
             // Validate the response type matches what was requested
             if (params.stream && !isResponseEventStream(result)) {
               // Fallback if we got non-stream when stream was requested
-              return shim.create(params as ResponseCreateParamsStreaming);
+              const responseParams = convertChatParamsToResponseParams(params);
+              return shim.create(responseParams);
             }
 
             return result;
           } catch (error: unknown) {
             // Fallback to responses via shim (shim already handles filtering)
-            if (params.stream) {
-              return shim.create(params as ResponseCreateParamsStreaming);
-            } else {
-              return shim.create(params as ResponseCreateParamsNonStreaming);
+            if (isChatParamsStreaming(params)) {
+              const responseParams = convertChatParamsToResponseParams(params);
+              return shim.create(responseParams);
+            } else if (isChatParamsNonStreaming(params)) {
+              const responseParams = convertChatParamsToResponseParams(params);
+              return shim.create(responseParams);
             }
+            // This should never happen as params must be either streaming or non-streaming
+            throw new Error("Invalid chat completion parameters");
           }
         }) as ChatCompletionsCreateFn,
       },
@@ -85,17 +113,19 @@ export function buildOpenAIGenericAdapter(provider: Provider, modelHint?: string
           // Validate the response type matches what was requested
           if (params.stream && !isResponseEventStream(result)) {
             // Fallback if we got non-stream when stream was requested
-            return shim.create(params as ResponseCreateParamsStreaming);
+            return shim.create(params);
           }
 
           return result;
         } catch (error: unknown) {
           // Fallback to chat completions via shim (shim already handles filtering)
-          if (params.stream) {
-            return shim.create(params as ResponseCreateParamsStreaming);
-          } else {
-            return shim.create(params as ResponseCreateParamsNonStreaming);
+          if (isResponseParamsStreaming(params)) {
+            return shim.create(params);
+          } else if (isResponseParamsNonStreaming(params)) {
+            return shim.create(params);
           }
+          // This should never happen as params must be either streaming or non-streaming
+          throw new Error("Invalid response parameters");
         }
       }) as ResponsesCreateFn,
     },

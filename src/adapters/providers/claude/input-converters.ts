@@ -1,6 +1,6 @@
 import type { ResponseInput, Tool, ToolChoiceOptions, ToolChoiceFunction } from "openai/resources/responses/responses";
 import { isEasyInputMessage } from "./guards";
-import { isOpenAIResponsesFunctionTool } from "../openai-generic/guards";
+import { isOpenAIResponsesFunctionTool } from "../openai-generic/responses/guards";
 import type { ChatCompletionMessageParam, ChatCompletionTool, ChatCompletionToolChoiceOption } from "openai/resources/chat/completions";
 import type { FunctionDefinition } from "openai/resources/shared";
 

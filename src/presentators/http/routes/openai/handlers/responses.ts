@@ -7,7 +7,7 @@ import type {
 } from "openai/resources/responses/responses";
 import type { RoutingConfig } from "../../../../../config/types";
 import { buildOpenAICompatibleClient } from "../../../../../adapters/providers/openai-client";
-import { isOpenAIResponse, isResponseEventStream } from "../../../../../adapters/providers/openai-generic/guards";
+import { isOpenAIResponse, isResponseEventStream } from "../../../../../adapters/providers/openai-generic/responses/guards";
 import { extractToolNamesFromResponses } from "../../../../../execution/openai-tool-model-selector";
 import { selectProvider } from "../../../../../execution/provider-selection";
 

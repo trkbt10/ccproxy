@@ -2,7 +2,8 @@ import type {
   Responses as OpenAIResponsesNS,
 } from "openai/resources/responses/responses";
 import type { ChatCompletionToolChoiceOption } from "openai/resources/chat/completions";
-import { isOpenAIResponsesFunctionTool, isOpenAIChatFunctionToolChoice } from "../openai-generic/guards";
+import { isOpenAIResponsesFunctionTool } from "../openai-generic/responses/guards";
+import { isOpenAIChatFunctionToolChoice } from "../openai-generic/chat/guards";
 
 export type GrokFunction = { name: string; arguments?: string };
 export type GrokToolCall = { id?: string; type: "function"; function: GrokFunction };

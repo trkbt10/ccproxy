@@ -1,7 +1,13 @@
+/**
+ * @fileoverview Converts Chat Completions API parameters to Responses API format
+ * 
+ * Why: Provides translation layer between OpenAI Chat Completions API parameters
+ * and Responses API parameters to enable compatibility between different API styles.
+ */
+
 import type {
   ChatCompletionCreateParams,
   ChatCompletionContentPart,
-  ChatCompletionContentPartText,
   ChatCompletionTool,
 } from "openai/resources/chat/completions";
 import type {
@@ -10,13 +16,16 @@ import type {
   Tool,
 } from "openai/resources/responses/responses";
 import {
-  isObject,
   isOpenAIChatTextPart,
   isOpenAIChatFunctionTool,
   isOpenAIChatFunctionToolChoice,
   isOpenAIChatBasicRole,
-} from "./guards";
+} from "../guards";
+import { isObject } from "../../shared/type-guards";
 
+/**
+ * Extract text content from various chat message content formats
+ */
 export function extractTextFromContent(
   content: ChatCompletionCreateParams["messages"][number]["content"]
 ): string {
@@ -30,6 +39,9 @@ export function extractTextFromContent(
   return "";
 }
 
+/**
+ * Convert chat tools array to responses tools format
+ */
 export function mapChatToolsToResponses(
   tools: ChatCompletionCreateParams["tools"] | undefined
 ): Tool[] | undefined {
@@ -56,7 +68,9 @@ export function mapChatToolsToResponses(
   return out.length ? out : undefined;
 }
 
-// Single tool converter for reuse in other providers
+/**
+ * Convert a single chat tool to responses tool format
+ */
 export function convertOpenAIChatToolToResponsesTool(
   chatTool: ChatCompletionTool
 ): Tool | null {
@@ -76,6 +90,9 @@ export function convertOpenAIChatToolToResponsesTool(
   };
 }
 
+/**
+ * Convert chat tool choice to responses tool choice format
+ */
 export function mapChatToolChoiceToResponses(
   tc: ChatCompletionCreateParams["tool_choice"] | undefined
 ): ResponseCreateParams["tool_choice"] | undefined {
@@ -89,6 +106,9 @@ export function mapChatToolChoiceToResponses(
   return undefined;
 }
 
+/**
+ * Build response input items from chat messages
+ */
 export function buildResponseInputFromChatMessages(
   messages: ChatCompletionCreateParams["messages"] | undefined
 ): ResponseInputItem[] {

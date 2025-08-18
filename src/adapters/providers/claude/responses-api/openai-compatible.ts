@@ -34,7 +34,7 @@ import { chatCompletionToClaudeLocal } from "../chat-completion/request-converte
 import type { Message as ClaudeMessage, MessageStreamEvent } from "@anthropic-ai/sdk/resources/messages";
 import { resolveModelForProvider } from "../../shared/model-mapper";
 import type { ChatCompletionsCreateFn, ResponsesCreateFn } from "../../openai-client-types";
-import { convertOpenAIChatToolToResponsesTool } from "../../openai-generic/chat-request-converter";
+import { convertOpenAIChatToolToResponsesTool } from "../../openai-generic/chat/params/converter";
 
 function buildChatParams(params: ResponseCreateParams): ChatCompletionCreateParams {
   const messages: ChatCompletionCreateParams["messages"] = [];

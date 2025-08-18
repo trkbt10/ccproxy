@@ -12,7 +12,7 @@ import type {
   ChatCompletionTool,
   ChatCompletionToolChoiceOption 
 } from "openai/resources/chat/completions";
-import { isOpenAIResponsesFunctionTool } from "../guards";
+import { isOpenAIResponsesFunctionTool } from "../responses/guards";
 
 /**
  * Converts Responses API tools to Chat Completion tools

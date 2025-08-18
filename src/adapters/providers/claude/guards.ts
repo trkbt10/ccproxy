@@ -36,8 +36,10 @@ import type {
 import {
   isOpenAIChatTextPart,
   isOpenAIChatFunctionTool,
+} from "../openai-generic/chat/guards";
+import {
   isOpenAIResponsesFunctionTool,
-} from "../openai-generic/guards";
+} from "../openai-generic/responses/guards";
 
 // Claude content block guards
 export function isClaudeTextBlock(block: ContentBlock | unknown): block is TextBlock {

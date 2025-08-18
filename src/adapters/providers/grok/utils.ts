@@ -1,7 +1,7 @@
 import type { Responses as OpenAIResponsesNS } from "openai/resources/responses/responses";
 import type { ChatCompletionMessageParam } from "openai/resources/chat/completions";
 import { isObject, isEasyInputMessage, isResponseInputMessageItem } from "./guards";
-import { isOpenAIResponsesFunctionTool } from "../openai-generic/guards";
+import { isOpenAIResponsesFunctionTool } from "../openai-generic/responses/guards";
 import type { GrokChatMessage, GrokFunctionTool, GrokToolChoice } from "./guards";
 
 export function extractTextFromContent(content: unknown): string {

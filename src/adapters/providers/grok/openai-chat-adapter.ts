@@ -6,7 +6,7 @@ import type {
   ChatCompletionToolChoiceOption,
 } from "openai/resources/chat/completions";
 import type { ChatCompletionMessage, ChatCompletionMessageToolCall } from "openai/resources/chat/completions";
-import { isOpenAIChatFunctionToolChoice } from "../openai-generic/guards";
+import { isOpenAIChatFunctionToolChoice } from "../openai-generic/chat/guards";
 import { textFromMessages, generateId as id } from "./utils";
 
 export function grokToChatCompletion(params: ChatCompletionCreateParams): ChatCompletion {

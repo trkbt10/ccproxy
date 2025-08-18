@@ -24,12 +24,12 @@ describe('handleToolChoice', () => {
   });
 
   it('should handle string option "required"', () => {
-    expect(handleToolChoice(toolChoiceRequired)).toBe('You must use one or more tools to respond.');
+    expect(handleToolChoice(toolChoiceRequired)).toBe('You MUST call at least one tool function. Do not respond directly without using tools.');
   });
 
   it('should handle ToolChoiceAllowed with required mode', () => {
     const toolChoice = createToolChoiceAllowed('required');
-    expect(handleToolChoice(toolChoice)).toBe('You must use one or more tools to respond.');
+    expect(handleToolChoice(toolChoice)).toBe('You MUST call at least one tool function. Do not respond directly without using tools.');
   });
 
   it('should handle ToolChoiceAllowed with required mode and allowed list', () => {

@@ -16,7 +16,7 @@ export function handleToolChoice(toolChoice?: ToolChoice): string | null {
       case 'auto':
         return null; // Default behavior, no special instruction needed
       case 'required':
-        return 'You must use one or more tools to respond.';
+        return 'You MUST call at least one tool function. Do not respond directly without using tools.';
       default:
         return null;
     }
@@ -36,7 +36,7 @@ export function handleToolChoice(toolChoice?: ToolChoice): string | null {
             return `You must use one of these tools: ${toolNames}.`;
           }
         }
-        return 'You must use one or more tools to respond.';
+        return 'You MUST call at least one tool function. Do not respond directly without using tools.';
       }
       return null; // auto mode is default
     }

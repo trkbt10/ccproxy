@@ -50,6 +50,17 @@ export function generateSystemMessage(
   // Add tool channel routing if function tools present
   if (hasFunctionTools) {
     lines.push(`Calls to these tools must go to the commentary channel: '${FUNCTION_NAMESPACE}'.`);
+    
+    // Add guidance for multiple tools if more than one function tool is available
+    const functionToolCount = params.tools!.filter(t => t.type === 'function').length;
+    if (functionToolCount > 1) {
+      lines.push('You can call multiple tools in sequence if needed to fully address the user\'s request.');
+    }
+    
+    // Handle parallel_tool_calls if specified
+    if ('parallel_tool_calls' in params && params.parallel_tool_calls === true) {
+      lines.push('You may call multiple tools in parallel when appropriate.');
+    }
   }
 
   const content = lines.join('\n');

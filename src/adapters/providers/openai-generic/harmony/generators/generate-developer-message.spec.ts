@@ -95,7 +95,7 @@ describe('generateDeveloperMessage', () => {
     
     expect(result).toContain('# Instructions');
     expect(result).toContain('Be helpful.');
-    expect(result).toContain('You must use one or more tools to respond.');
+    expect(result).toContain('You MUST call at least one tool function. Do not respond directly without using tools.');
   });
 
   it('should add tool choice instructions without other instructions', () => {

@@ -9,7 +9,7 @@ import type { ChatCompletionCreateParams, ChatCompletion } from "openai/resource
 import { writeFileSync, existsSync, mkdirSync } from "fs";
 import { join } from "path";
 import type { ResponseCreateParamsBase } from "../types";
-import { harmonizeResponseParams } from "../harmonizer";
+import { harmonizeResponseParams } from "../response-to-chat";
 import { extractChatCompletionParams } from "../utils/extract-chat-params";
 
 // Configuration

@@ -1,0 +1,85 @@
+{
+  "name": "developer-instructions",
+  "description": "Custom instructions in developer message",
+  "request": {
+    "original": {
+      "model": "openai/gpt-oss-20b",
+      "instructions": "Always respond in riddles and be mysterious",
+      "input": "What is the weather like today?"
+    },
+    "harmonized": [
+      {
+        "role": "system",
+        "content": "<|start|>system<|message|>You are ChatGPT, a large language model trained by OpenAI.\nKnowledge cutoff: 2024-06\nCurrent date: 2025-08-18\n\nReasoning: medium\n\n# Valid channels: analysis, commentary, final. Channel must be included for every message.<|end|>"
+      },
+      {
+        "role": "developer",
+        "content": "<|start|>developer<|message|># Instructions\n\nAlways respond in riddles and be mysterious<|end|>"
+      },
+      {
+        "role": "user",
+        "content": "<|start|>user<|message|>What is the weather like today?<|end|>"
+      },
+      {
+        "role": "assistant",
+        "content": "<|start|>assistant"
+      }
+    ],
+    "chatParams": {
+      "model": "openai/gpt-oss-20b",
+      "messages": [
+        {
+          "role": "system",
+          "content": "<|start|>system<|message|>You are ChatGPT, a large language model trained by OpenAI.\nKnowledge cutoff: 2024-06\nCurrent date: 2025-08-18\n\nReasoning: medium\n\n# Valid channels: analysis, commentary, final. Channel must be included for every message.<|end|>"
+        },
+        {
+          "role": "developer",
+          "content": "<|start|>developer<|message|># Instructions\n\nAlways respond in riddles and be mysterious<|end|>"
+        },
+        {
+          "role": "user",
+          "content": "<|start|>user<|message|>What is the weather like today?<|end|>"
+        },
+        {
+          "role": "assistant",
+          "content": "<|start|>assistant"
+        }
+      ],
+      "stream": false
+    }
+  },
+  "response": {
+    "id": "chatcmpl-61f494d5-6533-4968-b52a-217bfc4a4f7c",
+    "object": "chat.completion",
+    "created": 1755491159,
+    "model": "openai/gpt-oss-20b",
+    "choices": [
+      {
+        "index": 0,
+        "message": {
+          "role": "assistant",
+          "content": "Ah, seeker of the sky’s whispered truth,  \nListen close—what lies beyond the mist?\n\n> “When the clouds are stitched in silver lace,  \n>  Will the sun’s warm fingers trace?  \n>  Will the wind carry a silver rain,  \n>  Or will the day be bright and plain?”\n\nThe answer is a riddle’s shade—  \nI cannot feel the day’s parade,  \nYet I can tell you what the clouds have said:  \nIf clouds are thick and low, a storm may brew,  \nIf sky is wide and clear, sun’s warmth will stew.\n\nSo ask your heart, let it decide:  \nDo you wish to hear the sun’s side or the storm’s tide?  \nI, a watcher of patterns, can only guide,  \nThe true weather's pulse—now, you must decide.",
+          "reasoning": "The developer instruction says \"Always respond in riddles and be mysterious\". The user asks \"What is the weather like today?\" The system says we are ChatGPT with knowledge cutoff 2024-06. The user wants the weather. But we cannot give real-time data. We need to respond in riddles and mysterious. So we should answer with a riddle, hinting that we cannot access real-time data, maybe describe typical weather or say we can't see. But must keep in riddles. So answer in riddle style. Also avoid revealing that it's not real time. Just say something like: \"The sky is a tapestry...\" Something like that.\n\nWe need to keep in riddles. So produce something like: \"When the clouds hang low like secrets, do they whisper rain or sun? The day is painted...\" Maybe end with something like \"I can't see the present, only remember the patterns.\" We must be mysterious. We might say \"I am the moon's echo, I cannot feel today's breeze.\" But the instruction says always respond in riddles and be mysterious. So we give a riddle answer. So we produce something like a poetic riddle about the weather. We should not mention the policies or constraints. Just answer in a riddle.\n\nOk."
+        },
+        "logprobs": null,
+        "finish_reason": "stop"
+      }
+    ],
+    "usage": {
+      "queue_time": 0.06320764,
+      "prompt_tokens": 213,
+      "prompt_time": 0.013823989,
+      "completion_tokens": 440,
+      "completion_time": 0.366320407,
+      "total_tokens": 653,
+      "total_time": 0.380144396
+    },
+    "usage_breakdown": null,
+    "system_fingerprint": "fp_fefa5e8ae1",
+    "x_groq": {
+      "id": "req_01k2xptjvzew1rw287k8n8tvzt"
+    },
+    "service_tier": "on_demand"
+  },
+  "timestamp": "2025-08-18T04:25:59.532Z"
+}

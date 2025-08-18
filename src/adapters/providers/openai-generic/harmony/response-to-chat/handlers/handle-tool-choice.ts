@@ -2,8 +2,8 @@
  * Handle tool choice parameter
  */
 
-import type { ToolChoice } from '../types';
-import { isToolChoiceFunction, isToolChoiceCustom, isToolChoiceAllowed } from '../utils/type-guards';
+import type { ToolChoice } from '../../types';
+import { isToolChoiceFunction, isToolChoiceCustom, isToolChoiceAllowed } from '../../utils/type-guards';
 
 export function handleToolChoice(toolChoice?: ToolChoice): string | null {
   if (!toolChoice) return null;

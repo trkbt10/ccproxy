@@ -2,14 +2,14 @@
  * Convert OpenAI tools to Harmony TypeScript-like format
  */
 
-import type { Tool } from '../types';
+import type { Tool } from '../../types';
 import { convertJsonSchemaToTypeScript } from './convert-json-schema';
 import { 
   isFunctionTool, 
   isBuiltinTool,
   isWebSearchTool,
   isCodeInterpreterTool
-} from '../utils/type-guards';
+} from '../../utils/type-guards';
 
 export function convertToolsToHarmonyFormat(tools: Tool[]): string {
   if (!tools || tools.length === 0) return '';

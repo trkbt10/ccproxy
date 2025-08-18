@@ -1,0 +1,110 @@
+{
+  "name": "multi-turn-conversation",
+  "description": "Conversation with multiple turns",
+  "request": {
+    "original": {
+      "model": "openai/gpt-oss-20b",
+      "input": [
+        {
+          "type": "message",
+          "role": "user",
+          "content": "My name is Alice"
+        },
+        {
+          "type": "message",
+          "role": "assistant",
+          "content": "Nice to meet you, Alice!"
+        },
+        {
+          "type": "message",
+          "role": "user",
+          "content": "What is my name?"
+        }
+      ],
+      "max_output_tokens": 100
+    },
+    "harmonized": [
+      {
+        "role": "system",
+        "content": "<|start|>system<|message|>You are ChatGPT, a large language model trained by OpenAI.\nKnowledge cutoff: 2024-06\nCurrent date: 2025-08-18\n\nReasoning: medium\n\n# Valid channels: analysis, commentary, final. Channel must be included for every message.<|end|>"
+      },
+      {
+        "role": "user",
+        "content": "<|start|>user<|message|>My name is Alice<|end|>"
+      },
+      {
+        "role": "assistant",
+        "content": "<|start|>assistant<|message|>Nice to meet you, Alice!<|end|>"
+      },
+      {
+        "role": "user",
+        "content": "<|start|>user<|message|>What is my name?<|end|>"
+      },
+      {
+        "role": "assistant",
+        "content": "<|start|>assistant"
+      }
+    ],
+    "chatParams": {
+      "model": "openai/gpt-oss-20b",
+      "max_tokens": 100,
+      "messages": [
+        {
+          "role": "system",
+          "content": "<|start|>system<|message|>You are ChatGPT, a large language model trained by OpenAI.\nKnowledge cutoff: 2024-06\nCurrent date: 2025-08-18\n\nReasoning: medium\n\n# Valid channels: analysis, commentary, final. Channel must be included for every message.<|end|>"
+        },
+        {
+          "role": "user",
+          "content": "<|start|>user<|message|>My name is Alice<|end|>"
+        },
+        {
+          "role": "assistant",
+          "content": "<|start|>assistant<|message|>Nice to meet you, Alice!<|end|>"
+        },
+        {
+          "role": "user",
+          "content": "<|start|>user<|message|>What is my name?<|end|>"
+        },
+        {
+          "role": "assistant",
+          "content": "<|start|>assistant"
+        }
+      ],
+      "stream": false
+    }
+  },
+  "response": {
+    "id": "chatcmpl-451852ba-da26-4421-90f8-3a36fab26459",
+    "object": "chat.completion",
+    "created": 1755491166,
+    "model": "openai/gpt-oss-20b",
+    "choices": [
+      {
+        "index": 0,
+        "message": {
+          "role": "assistant",
+          "content": "Your name is Alice.",
+          "reasoning": "The user says \"What is my name?\" They previously introduced themselves as Alice. The assistant should answer \"Your name is Alice.\" The user likely wants the assistant to recall that. There's no policy violation. It's straightforward."
+        },
+        "logprobs": null,
+        "finish_reason": "stop"
+      }
+    ],
+    "usage": {
+      "queue_time": 0.063676903,
+      "prompt_tokens": 231,
+      "prompt_time": 0.014976102,
+      "completion_tokens": 59,
+      "completion_time": 0.049051597,
+      "total_tokens": 290,
+      "total_time": 0.064027699
+    },
+    "usage_breakdown": null,
+    "system_fingerprint": "fp_1bc37bc380",
+    "x_groq": {
+      "id": "req_01k2xptsq8eszsmtgqgrj56nfe"
+    },
+    "service_tier": "on_demand"
+  },
+  "timestamp": "2025-08-18T04:26:06.137Z"
+}

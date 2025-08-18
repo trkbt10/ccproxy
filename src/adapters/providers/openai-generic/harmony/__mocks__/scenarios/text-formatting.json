@@ -1,0 +1,87 @@
+{
+  "name": "text-formatting",
+  "description": "Response with specific text formatting",
+  "request": {
+    "original": {
+      "model": "openai/gpt-oss-20b",
+      "input": "List 3 programming languages with their key features",
+      "instructions": "Format your response as a structured list with clear headings",
+      "max_output_tokens": 500
+    },
+    "harmonized": [
+      {
+        "role": "system",
+        "content": "<|start|>system<|message|>You are ChatGPT, a large language model trained by OpenAI.\nKnowledge cutoff: 2024-06\nCurrent date: 2025-08-18\n\nReasoning: medium\n\n# Valid channels: analysis, commentary, final. Channel must be included for every message.<|end|>"
+      },
+      {
+        "role": "developer",
+        "content": "<|start|>developer<|message|># Instructions\n\nFormat your response as a structured list with clear headings<|end|>"
+      },
+      {
+        "role": "user",
+        "content": "<|start|>user<|message|>List 3 programming languages with their key features<|end|>"
+      },
+      {
+        "role": "assistant",
+        "content": "<|start|>assistant"
+      }
+    ],
+    "chatParams": {
+      "model": "openai/gpt-oss-20b",
+      "max_tokens": 500,
+      "messages": [
+        {
+          "role": "system",
+          "content": "<|start|>system<|message|>You are ChatGPT, a large language model trained by OpenAI.\nKnowledge cutoff: 2024-06\nCurrent date: 2025-08-18\n\nReasoning: medium\n\n# Valid channels: analysis, commentary, final. Channel must be included for every message.<|end|>"
+        },
+        {
+          "role": "developer",
+          "content": "<|start|>developer<|message|># Instructions\n\nFormat your response as a structured list with clear headings<|end|>"
+        },
+        {
+          "role": "user",
+          "content": "<|start|>user<|message|>List 3 programming languages with their key features<|end|>"
+        },
+        {
+          "role": "assistant",
+          "content": "<|start|>assistant"
+        }
+      ],
+      "stream": false
+    }
+  },
+  "response": {
+    "id": "chatcmpl-1d58818d-00c8-493e-9a39-4c7379551286",
+    "object": "chat.completion",
+    "created": 1755491164,
+    "model": "openai/gpt-oss-20b",
+    "choices": [
+      {
+        "index": 0,
+        "message": {
+          "role": "assistant",
+          "content": "**Programming Languages and Their Key Features**\n\n1. **Python**\n   - **Dynamic Typing:** Variables inferred at runtime.\n   - **Extensive Standard Library:** Built‑in modules for most common tasks.\n   - **Readable Syntax:** Emphasis on code readability and simplicity.\n\n2. **Rust**\n   - **Ownership & Borrowing:** Guarantees memory safety without garbage collector.\n   - **Zero‑Cost Abstractions:** Compile‑time checks with no runtime overhead.\n   - **Concurrent Programming:** Safe concurrency primitives by default.\n\n3. **Go (Golang)**\n   - **Lightweight Goroutines:** Efficient concurrency model.\n   - **Static Typing with Simplified Syntax:** Fast compile times and clear semantics.\n   - **Built‑in Toolchain:** Includes formatting, linting, and testing utilities.",
+          "reasoning": "We need to comply: Structured list with clear headings. Provide 3 programming languages and key features. Probably headings like \"Language 1: ...\", or maybe bullet list. Format as structured list with clear headings. So maybe:\n\n- Language: Python\n  - Feature1\n  - Feature2\n- Language: Rust\n  - Feature1\n- Language: Go\n  - Feature1\n\nOk."
+        },
+        "logprobs": null,
+        "finish_reason": "stop"
+      }
+    ],
+    "usage": {
+      "queue_time": 0.064183123,
+      "prompt_tokens": 218,
+      "prompt_time": 0.014071201,
+      "completion_tokens": 259,
+      "completion_time": 0.215140954,
+      "total_tokens": 477,
+      "total_time": 0.229212155
+    },
+    "usage_breakdown": null,
+    "system_fingerprint": "fp_1bc37bc380",
+    "x_groq": {
+      "id": "req_01k2xptraeesys523hz3bbdms8"
+    },
+    "service_tier": "on_demand"
+  },
+  "timestamp": "2025-08-18T04:26:04.866Z"
+}

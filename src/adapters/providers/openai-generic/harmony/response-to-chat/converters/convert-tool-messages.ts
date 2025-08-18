@@ -2,10 +2,10 @@
  * Convert tool-related messages to Harmony format
  */
 
-import type { ChatCompletionMessageParam } from '../types';
-import { HARMONY_ROLES } from '../constants';
-import { formatHarmonyMessage } from '../utils/format-harmony-message';
-import { formatToolResponse, parseToolRecipient } from '../utils/tool-message-utils';
+import type { ChatCompletionMessageParam } from '../../types';
+import { HARMONY_ROLES } from '../../constants';
+import { formatHarmonyMessage } from '../../utils/format-harmony-message';
+import { formatToolResponse, parseToolRecipient } from '../../utils/tool-message-utils';
 
 /**
  * Convert a tool call result to Harmony format

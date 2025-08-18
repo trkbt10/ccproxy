@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { generateDeveloperMessage } from './generate-developer-message';
-import type { ResponseCreateParamsBase } from '../types';
+import type { ResponseCreateParamsBase } from '../../types';
 
 describe('generateDeveloperMessage', () => {
   it('should return null when no relevant params', () => {

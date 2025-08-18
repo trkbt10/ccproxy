@@ -2,9 +2,9 @@
  * Generate Harmony developer message
  */
 
-import type { ResponseCreateParamsBase } from '../types';
-import { HARMONY_ROLES } from '../constants';
-import { formatHarmonyMessage } from '../utils/format-harmony-message';
+import type { ResponseCreateParamsBase } from '../../types';
+import { HARMONY_ROLES } from '../../constants';
+import { formatHarmonyMessage } from '../../utils/format-harmony-message';
 import { convertToolsToHarmonyFormat } from '../converters/convert-tools';
 import { handleResponseFormat } from '../handlers/handle-response-format';
 import { handleToolChoice } from '../handlers/handle-tool-choice';

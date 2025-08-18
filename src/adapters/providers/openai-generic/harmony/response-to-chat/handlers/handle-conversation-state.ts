@@ -2,7 +2,7 @@
  * Handle conversation state for multi-turn conversations
  */
 
-import type { ResponseCreateParamsBase, ChatCompletionMessageParam } from '../types';
+import type { ResponseCreateParamsBase, ChatCompletionMessageParam } from '../../types';
 import { convertInputToMessages } from '../converters/convert-input-to-messages';
 
 export function handleConversationState(params: ResponseCreateParamsBase): ChatCompletionMessageParam[] {

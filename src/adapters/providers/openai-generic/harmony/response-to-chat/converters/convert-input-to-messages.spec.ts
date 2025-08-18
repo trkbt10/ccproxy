@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { convertInputToMessages } from './convert-input-to-messages';
-import type { ResponseInput } from '../types';
+import type { ResponseInput } from '../../types';
 import { 
   createMessageInput, 
   createTextInput,
@@ -8,7 +8,7 @@ import {
   createFunctionCallOutput,
   createTextContentPart,
   createImageContentPart
-} from '../fixtures.test.support';
+} from '../../fixtures.test.support';
 
 describe('convertInputToMessages', () => {
   it('should return empty array for no input', () => {

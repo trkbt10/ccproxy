@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { handleToolChoice } from './handle-tool-choice';
-import type { ToolChoice, ToolChoiceFunction } from '../types';
+import type { ToolChoice, ToolChoiceFunction } from '../../types';
 import { 
   toolChoiceNone, 
   toolChoiceAuto, 
@@ -8,7 +8,7 @@ import {
   createToolChoiceFunction,
   createToolChoiceCustom,
   createToolChoiceAllowed
-} from '../fixtures.test.support';
+} from '../../fixtures.test.support';
 
 describe('handleToolChoice', () => {
   it('should return null when no tool choice provided', () => {

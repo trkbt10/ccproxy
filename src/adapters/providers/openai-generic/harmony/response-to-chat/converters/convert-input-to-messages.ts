@@ -2,9 +2,9 @@
  * Convert Response API input to ChatCompletion messages
  */
 
-import type { ResponseInput, ResponseInputItem, ChatCompletionMessageParam } from '../types';
-import { formatHarmonyMessage } from '../utils/format-harmony-message';
-import { isObject, isResponseInputMessage, isResponseInputToolCall, isMessageInput, isTextInput, isTextContentPart } from '../utils/type-guards';
+import type { ResponseInput, ResponseInputItem, ChatCompletionMessageParam } from '../../types';
+import { formatHarmonyMessage } from '../../utils/format-harmony-message';
+import { isObject, isResponseInputMessage, isResponseInputToolCall, isMessageInput, isTextInput, isTextContentPart } from '../../utils/type-guards';
 
 export function convertInputToMessages(input?: string | ResponseInput): ChatCompletionMessageParam[] {
   if (!input) return [];

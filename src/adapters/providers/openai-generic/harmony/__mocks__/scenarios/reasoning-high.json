@@ -1,0 +1,79 @@
+{
+  "name": "reasoning-high",
+  "description": "High reasoning effort for complex problem",
+  "request": {
+    "original": {
+      "model": "openai/gpt-oss-20b",
+      "input": "Explain why the sky is blue in detail",
+      "reasoning": {
+        "effort": "high"
+      }
+    },
+    "harmonized": [
+      {
+        "role": "system",
+        "content": "<|start|>system<|message|>You are ChatGPT, a large language model trained by OpenAI.\nKnowledge cutoff: 2024-06\nCurrent date: 2025-08-18\n\nReasoning: high\n\n# Valid channels: analysis, commentary, final. Channel must be included for every message.<|end|>"
+      },
+      {
+        "role": "user",
+        "content": "<|start|>user<|message|>Explain why the sky is blue in detail<|end|>"
+      },
+      {
+        "role": "assistant",
+        "content": "<|start|>assistant"
+      }
+    ],
+    "chatParams": {
+      "model": "openai/gpt-oss-20b",
+      "messages": [
+        {
+          "role": "system",
+          "content": "<|start|>system<|message|>You are ChatGPT, a large language model trained by OpenAI.\nKnowledge cutoff: 2024-06\nCurrent date: 2025-08-18\n\nReasoning: high\n\n# Valid channels: analysis, commentary, final. Channel must be included for every message.<|end|>"
+        },
+        {
+          "role": "user",
+          "content": "<|start|>user<|message|>Explain why the sky is blue in detail<|end|>"
+        },
+        {
+          "role": "assistant",
+          "content": "<|start|>assistant"
+        }
+      ],
+      "stream": false
+    }
+  },
+  "response": {
+    "id": "chatcmpl-292fcf2b-8e3b-4c01-9348-f6dc71d20540",
+    "object": "chat.completion",
+    "created": 1755491156,
+    "model": "openai/gpt-oss-20b",
+    "choices": [
+      {
+        "index": 0,
+        "message": {
+          "role": "assistant",
+          "content": "**The sky appears blue because the short‑wavelength (blue) part of sunlight is scattered far more efficiently than the long‑wavelength (red, orange) part by the molecules and tiny particles that fill the atmosphere.**  \nBelow is a detailed, step‑by‑step explanation, covering the physics, the relevant equations, and the observable consequences.\n\n---\n\n## 1. What is being scattered?\n\n| Entity | Size | Typical wavelength | Relevant scattering process |\n|-------|------|-------------------|---------------------------|\n| Atmospheric **molecules** (N₂, O₂, Ar, CO₂, etc.) | 0.1 – 0.3 nm | Comparable to air’s refractive index | **Rayleigh scattering** (size ≪ λ) |\n| **Small aerosol particles** (dust, sea‑salt, volcanic ash) | 10 – 100 nm | Comparable to UV/visible | **Mie scattering** (size ≈ λ) |\n\nBecause the average molecular diameter (~ 0.3 nm) is far smaller than visible wavelengths (≈ 400–700 nm), Rayleigh scattering dominates in the clean, clear air we usually see.\n\n---\n\n## 2. Rayleigh scattering fundamentals\n\nFor a particle much smaller than the wavelength, the scattering cross‑section σ is\n\n\\[\n\\sigma(\\lambda) = \\frac{8\\pi^{3}}{3}\\,\\frac{(n^{2}-1)^{2}}{N^{2}\\lambda^{4}}\\;,\n\\]\n\nwhere  \n\n* **λ** is wavelength,  \n* **n** is the refractive index of the gas (~ 1.0003 for air at STP),  \n* **N** is the number density of molecules.\n\nKey points:\n\n1. **∝ 1/λ⁴** – the scattering probability rises steeply for shorter wavelengths.  \n   - Blue (≈ 450 nm) scatters ~ (550/450)⁴ ≈ 3.7 × more than green (550 nm).  \n   - Violet (≈ 400 nm) scatters ~ (550/400)⁴ ≈ 6 × more than blue.  \n\n2. **Multiple scattering**: In a single pass through the atmosphere, a photon may be scattered many times before reaching an eye, but the *overall* bias toward shorter wavelengths persists.\n\n3. **Polarization**: Rayleigh scattering also polarizes light, a fact exploited by instruments that measure atmospheric composition.\n\n---\n\n## 3. Why we see “blue”\n\n* **Solar spectrum**: Sunlight is nearly white; it contains roughly equal power at all visible wavelengths.  \n* **Atmospheric filtering**: As sunlight traverses the atmosphere, blue photons are preferentially scattered in all directions.  \n* **Observer’s eye**: The scattered blue light arrives from all parts of the sky, giving it a uniform hue.  \n* **Eye sensitivity**: The human eye is most sensitive to green but responds strongly to blue; violet is under‑represented because our cones are less sensitive to it and because the atmosphere scatters it even more, causing it to be absorbed or scattered away before it reaches us.\n\n---\n\n## 4. Variations in sky color\n\n| Situation | Dominant process | Resulting color |\n|----------|-----------------|----------------|\n| **Clear midday** | Rayleigh scattering of blue | Bright sky‑blue |\n| **Near horizon** | Longer optical path → more scattering | Slightly lighter blue/white |\n| **Twilight (sun low)** | Sun’s light passes through more air; blue is scattered out; longer wavelengths (red, orange) reach us | Red/orange sunset |\n| **Hazy, polluted** | Mie scattering by aerosols (size ~ λ) | White/grayish sky |\n| **Violet‑rich** (rare, e.g., in a clean, low‑altitude atmosphere with strong Rayleigh) | Blue and violet both scattered | Very faint violet haze |\n\n---\n\n## 5. Why we don’t see violet\n\nEven though violet light (≈ 400 nm) scatters most efficiently, it isn’t seen as violet for two reasons:\n\n1. **Eye response**: Our cones are less sensitive to violet/UV (the “blue” cone peaks near 500 nm).  \n2. **Atmospheric absorption**: UV below ~ 315 nm is absorbed by ozone, reducing the violet component before it reaches the ground.  \n3. **Atmospheric scattering**: The extra scattering of violet photons results in them being more diffusely spread; only a tiny fraction reaches the eye directly.\n\n---\n\n## 6. Summary\n\n1. Sunlight is white, containing all visible wavelengths.  \n2. Atmospheric molecules scatter blue light ≈ 3–6× more efficiently than red due to the λ⁻⁴ dependence of Rayleigh scattering.  \n3. The scattered blue light fills the sky; it reaches us from all directions, so the sky appears blue.  \n4. Variations in particle size, atmospheric composition, and sunlight angle alter the precise hue.\n\n---\n\n**Takeaway:** The sky’s blue color is a beautiful demonstration of how light interacts with matter on a microscopic level—short‑wavelength photons being deflected in all directions by countless molecules, turning our day into a soft, diffuse blue.",
+          "reasoning": "We need to explain why the sky is blue in detail. The user just wants a detailed explanation. It's straightforward, we should give scientific explanation: Rayleigh scattering, wavelengths, scattering, why blue dominates, also mention Mie scattering, aerosol scattering, the effect of Sun's angle, twilight colors, etc. Provide details. Also mention that the sky is blue because of scattering of shorter wavelengths. Also mention that the sky appears blue because of scattering, absorption etc. Provide some formulas, Rayleigh scattering cross section ~ λ^(-4). Provide references to atmospheric physics. Also mention why the sky can be white, grey, orange etc. The user wants an explanation. Provide thorough details. Also mention that the sky appears blue not because the sun is blue, but due to scattering. Also mention why the sky appears white near clouds or over clouds, due to multiple scattering. Also mention twilight colors: red sunsets because blue photons are scattered out. Also mention that the sky is bluish because of Rayleigh scattering, and the wavelength-dependent scattering cross-section. Provide physical reasoning. Also mention that Rayleigh scattering occurs when particle size is much smaller than wavelength. Provide formula: scattering intensity ∝ 1/λ^4. Provide also mention the composition of air (N2, O2). Provide also mention the optical depth. Provide also mention that in the visible spectrum, blue is at ~440 nm, violet at ~400 nm. Human eye sensitivity. Provide mention of Mie scattering causing hazy blue, etc. Provide mention of aerosol scattering and why the sky near horizon is orange/red. Provide mention of atmospheric optical thickness. Provide mention of how scattering leads to blue color. Provide mention of Rayleigh scattering coefficient. Provide mention of the effect of multiple scattering. Provide mention of sky color variations. Provide mention of the scattering cross-section formula: σ = (8π^3/3) * (n^2-1)^2/(N^2 λ^4). Provide mention of refractive index. Provide mention of how the sky appears white during sunrise/sunset due to scattering. Also mention that the sky is blue because the blue component of sunlight is scattered in all directions by air molecules, making sky appear blue. Provide mention of the scattering of sunlight. Provide mention that the sun's light is white. Provide mention that the sky is blue because blue light is scattered. Provide mention of scattering. Provide mention of human vision. Provide mention of why violet is not as blue. Provide mention of eye sensitivity. Provide mention that violet light is scattered more but is not perceived as violet. Provide mention of the ozone absorption in UV. Provide mention of ozone absorption in UV. Provide mention of how the sky appears violet sometimes. Provide mention that the sky is blue because Rayleigh scattering. Provide mention of \"Rayleigh scattering\" is named after Lord Rayleigh. Provide mention of Rayleigh's formula. Provide mention of the \"Rayleigh criterion\". Provide mention of the atmospheric composition. Provide mention of why we see blue sky. Provide mention of the physics. Provide mention of scattering cross-section. Provide mention of the Earth's atmosphere. Provide mention of the scattering length. Provide mention of the effect of altitude. Provide mention of \"blue sky\". Provide mention of the phenomenon known as \"Rayleigh scattering\". Provide mention of the scattering coefficient. Provide mention of the optical depth. Provide mention of \"blue light\" wavelengths. Provide mention of the \"spectral radiance\". Provide mention of the \"optical path length\". Provide mention of the \"scattering cross-section\". Provide mention of the \"Mie scattering\". Provide mention of the difference between Rayleigh and Mie scattering. Provide mention of \"blue haze\". Provide mention of \"Rayleigh scattering\" being more efficient for shorter wavelengths. Provide mention of \"Rayleigh scattering\". Provide mention of the \"Rayleigh scattering\" cross-section. Provide mention of the \"scattering\" mechanism.\n\nWe should produce an answer: probably a 3-5 paragraphs. Provide details. Mention formulas. Provide references.\n\nWe need to adhere to policy: no policy violation. The user wants an explanation. That's fine. Provide thorough explanation."
+        },
+        "logprobs": null,
+        "finish_reason": "stop"
+      }
+    ],
+    "usage": {
+      "queue_time": 0.063188998,
+      "prompt_tokens": 182,
+      "prompt_time": 0.011901886,
+      "completion_tokens": 1957,
+      "completion_time": 1.6212338929999999,
+      "total_tokens": 2139,
+      "total_time": 1.6331357789999998
+    },
+    "usage_breakdown": null,
+    "system_fingerprint": "fp_6cc3862274",
+    "x_groq": {
+      "id": "req_01k2xptem3esnaadz9cxds27bh"
+    },
+    "service_tier": "on_demand"
+  },
+  "timestamp": "2025-08-18T04:25:56.339Z"
+}

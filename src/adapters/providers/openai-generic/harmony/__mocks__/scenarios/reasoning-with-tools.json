@@ -1,0 +1,117 @@
+{
+  "name": "reasoning-with-tools",
+  "description": "High reasoning with function tools",
+  "request": {
+    "original": {
+      "model": "openai/gpt-oss-20b",
+      "input": "Compare the weather in Tokyo and London, and recommend which city to visit",
+      "reasoning": {
+        "effort": "high"
+      },
+      "tools": [
+        {
+          "type": "function",
+          "name": "get_weather",
+          "description": "Get weather data",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "city": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "city"
+            ]
+          },
+          "strict": false
+        }
+      ],
+      "max_output_tokens": 600
+    },
+    "harmonized": [
+      {
+        "role": "system",
+        "content": "<|start|>system<|message|>You are ChatGPT, a large language model trained by OpenAI.\nKnowledge cutoff: 2024-06\nCurrent date: 2025-08-18\n\nReasoning: high\n\n# Valid channels: analysis, commentary, final. Channel must be included for every message.\nCalls to these tools must go to the commentary channel: 'functions'.<|end|>"
+      },
+      {
+        "role": "developer",
+        "content": "<|start|>developer<|message|># Tools\n\n## functions\n\nnamespace functions {\n\n// Get weather data\ntype get_weather = (_: {\ncity: string,\n}) => any;\n\n} // namespace functions<|end|>"
+      },
+      {
+        "role": "user",
+        "content": "<|start|>user<|message|>Compare the weather in Tokyo and London, and recommend which city to visit<|end|>"
+      },
+      {
+        "role": "assistant",
+        "content": "<|start|>assistant"
+      }
+    ],
+    "chatParams": {
+      "model": "openai/gpt-oss-20b",
+      "max_tokens": 600,
+      "messages": [
+        {
+          "role": "system",
+          "content": "<|start|>system<|message|>You are ChatGPT, a large language model trained by OpenAI.\nKnowledge cutoff: 2024-06\nCurrent date: 2025-08-18\n\nReasoning: high\n\n# Valid channels: analysis, commentary, final. Channel must be included for every message.\nCalls to these tools must go to the commentary channel: 'functions'.<|end|>"
+        },
+        {
+          "role": "developer",
+          "content": "<|start|>developer<|message|># Tools\n\n## functions\n\nnamespace functions {\n\n// Get weather data\ntype get_weather = (_: {\ncity: string,\n}) => any;\n\n} // namespace functions<|end|>"
+        },
+        {
+          "role": "user",
+          "content": "<|start|>user<|message|>Compare the weather in Tokyo and London, and recommend which city to visit<|end|>"
+        },
+        {
+          "role": "assistant",
+          "content": "<|start|>assistant"
+        }
+      ],
+      "stream": false
+    }
+  },
+  "response": {
+    "id": "chatcmpl-b25ba086-6048-4b5e-bf99-9eabb455307c",
+    "object": "chat.completion",
+    "created": 1755491167,
+    "model": "openai/gpt-oss-20b",
+    "choices": [
+      {
+        "index": 0,
+        "message": {
+          "role": "assistant",
+          "reasoning": "We need to compare weather in Tokyo and London. The user wants a recommendation. We can call get_weather for Tokyo and London.",
+          "tool_calls": [
+            {
+              "id": "fc_466ae1ae-eaa6-486b-a69b-613084788da8",
+              "type": "function",
+              "function": {
+                "name": "get_weather",
+                "arguments": "{\"city\":\"Tokyo\"}"
+              }
+            }
+          ]
+        },
+        "logprobs": null,
+        "finish_reason": "tool_calls"
+      }
+    ],
+    "usage": {
+      "queue_time": 0.062771033,
+      "prompt_tokens": 257,
+      "prompt_time": 0.016534506,
+      "completion_tokens": 50,
+      "completion_time": 0.042052741,
+      "total_tokens": 307,
+      "total_time": 0.058587247
+    },
+    "usage_breakdown": null,
+    "system_fingerprint": "fp_c3147c3a64",
+    "x_groq": {
+      "id": "req_01k2xpttz2ewaaezj3afgk440g"
+    },
+    "service_tier": "on_demand"
+  },
+  "timestamp": "2025-08-18T04:26:07.403Z"
+}

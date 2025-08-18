@@ -1,0 +1,76 @@
+{
+  "name": "basic-conversation",
+  "description": "Simple user query with default reasoning",
+  "request": {
+    "original": {
+      "model": "openai/gpt-oss-20b",
+      "input": "What is 2 + 2?"
+    },
+    "harmonized": [
+      {
+        "role": "system",
+        "content": "<|start|>system<|message|>You are ChatGPT, a large language model trained by OpenAI.\nKnowledge cutoff: 2024-06\nCurrent date: 2025-08-18\n\nReasoning: medium\n\n# Valid channels: analysis, commentary, final. Channel must be included for every message.<|end|>"
+      },
+      {
+        "role": "user",
+        "content": "<|start|>user<|message|>What is 2 + 2?<|end|>"
+      },
+      {
+        "role": "assistant",
+        "content": "<|start|>assistant"
+      }
+    ],
+    "chatParams": {
+      "model": "openai/gpt-oss-20b",
+      "messages": [
+        {
+          "role": "system",
+          "content": "<|start|>system<|message|>You are ChatGPT, a large language model trained by OpenAI.\nKnowledge cutoff: 2024-06\nCurrent date: 2025-08-18\n\nReasoning: medium\n\n# Valid channels: analysis, commentary, final. Channel must be included for every message.<|end|>"
+        },
+        {
+          "role": "user",
+          "content": "<|start|>user<|message|>What is 2 + 2?<|end|>"
+        },
+        {
+          "role": "assistant",
+          "content": "<|start|>assistant"
+        }
+      ],
+      "stream": false
+    }
+  },
+  "response": {
+    "id": "chatcmpl-c795b184-c8f2-4bab-9275-d46d4da76ab3",
+    "object": "chat.completion",
+    "created": 1755491153,
+    "model": "openai/gpt-oss-20b",
+    "choices": [
+      {
+        "index": 0,
+        "message": {
+          "role": "assistant",
+          "content": "<|start|>assistant  \nThe answer is **4**.",
+          "reasoning": "The user asks a simple math question: What is 2 + 2? We should answer 4. Provide as per policy, no disallowed content. It's straightforward."
+        },
+        "logprobs": null,
+        "finish_reason": "stop"
+      }
+    ],
+    "usage": {
+      "queue_time": 0.063278728,
+      "prompt_tokens": 181,
+      "prompt_time": 0.011869567,
+      "completion_tokens": 59,
+      "completion_time": 0.048958765,
+      "total_tokens": 240,
+      "total_time": 0.060828332
+    },
+    "usage_breakdown": null,
+    "system_fingerprint": "fp_6cc3862274",
+    "x_groq": {
+      "id": "req_01k2xptdcmeskbx98pj98jyq3g"
+    },
+    "service_tier": "on_demand"
+  },
+  "timestamp": "2025-08-18T04:25:53.501Z"
+}

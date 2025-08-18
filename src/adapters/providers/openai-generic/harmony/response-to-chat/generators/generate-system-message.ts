@@ -2,11 +2,11 @@
  * Generate Harmony system message
  */
 
-import type { ResponseCreateParamsBase } from '../types';
-import { HARMONY_ROLES, FUNCTION_NAMESPACE } from '../constants';
-import { formatCurrentDate } from '../utils/format-current-date';
-import { mapReasoningEffort } from '../utils/map-reasoning-effort';
-import { formatHarmonyMessage } from '../utils/format-harmony-message';
+import type { ResponseCreateParamsBase } from '../../types';
+import { HARMONY_ROLES, FUNCTION_NAMESPACE } from '../../constants';
+import { formatCurrentDate } from '../../utils/format-current-date';
+import { mapReasoningEffort } from '../../utils/map-reasoning-effort';
+import { formatHarmonyMessage } from '../../utils/format-harmony-message';
 import { getBuiltinToolTypes } from '../converters/convert-tools';
 
 export function generateSystemMessage(

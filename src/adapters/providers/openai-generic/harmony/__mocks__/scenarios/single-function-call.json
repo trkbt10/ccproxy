@@ -1,0 +1,121 @@
+{
+  "name": "single-function-call",
+  "description": "Simple function tool call",
+  "request": {
+    "original": {
+      "model": "openai/gpt-oss-20b",
+      "input": "What is the weather in Tokyo?",
+      "tools": [
+        {
+          "type": "function",
+          "name": "get_weather",
+          "description": "Get current weather for a location",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "location": {
+                "type": "string",
+                "description": "City name"
+              },
+              "unit": {
+                "type": "string",
+                "enum": [
+                  "celsius",
+                  "fahrenheit"
+                ]
+              }
+            },
+            "required": [
+              "location"
+            ]
+          },
+          "strict": false
+        }
+      ],
+      "tool_choice": "auto"
+    },
+    "harmonized": [
+      {
+        "role": "system",
+        "content": "<|start|>system<|message|>You are ChatGPT, a large language model trained by OpenAI.\nKnowledge cutoff: 2024-06\nCurrent date: 2025-08-18\n\nReasoning: medium\n\n# Valid channels: analysis, commentary, final. Channel must be included for every message.\nCalls to these tools must go to the commentary channel: 'functions'.<|end|>"
+      },
+      {
+        "role": "developer",
+        "content": "<|start|>developer<|message|># Tools\n\n## functions\n\nnamespace functions {\n\n// Get current weather for a location\ntype get_weather = (_: {\n// City name\nlocation: string,\nunit?: \"celsius\" | \"fahrenheit\",\n}) => any;\n\n} // namespace functions<|end|>"
+      },
+      {
+        "role": "user",
+        "content": "<|start|>user<|message|>What is the weather in Tokyo?<|end|>"
+      },
+      {
+        "role": "assistant",
+        "content": "<|start|>assistant"
+      }
+    ],
+    "chatParams": {
+      "model": "openai/gpt-oss-20b",
+      "messages": [
+        {
+          "role": "system",
+          "content": "<|start|>system<|message|>You are ChatGPT, a large language model trained by OpenAI.\nKnowledge cutoff: 2024-06\nCurrent date: 2025-08-18\n\nReasoning: medium\n\n# Valid channels: analysis, commentary, final. Channel must be included for every message.\nCalls to these tools must go to the commentary channel: 'functions'.<|end|>"
+        },
+        {
+          "role": "developer",
+          "content": "<|start|>developer<|message|># Tools\n\n## functions\n\nnamespace functions {\n\n// Get current weather for a location\ntype get_weather = (_: {\n// City name\nlocation: string,\nunit?: \"celsius\" | \"fahrenheit\",\n}) => any;\n\n} // namespace functions<|end|>"
+        },
+        {
+          "role": "user",
+          "content": "<|start|>user<|message|>What is the weather in Tokyo?<|end|>"
+        },
+        {
+          "role": "assistant",
+          "content": "<|start|>assistant"
+        }
+      ],
+      "stream": false
+    }
+  },
+  "response": {
+    "id": "chatcmpl-aa2fdd95-02c7-4586-81df-dc66032dfe96",
+    "object": "chat.completion",
+    "created": 1755491160,
+    "model": "openai/gpt-oss-20b",
+    "choices": [
+      {
+        "index": 0,
+        "message": {
+          "role": "assistant",
+          "reasoning": "User asks for weather in Tokyo. We need to call function get_weather with location \"Tokyo\". Use default unit.",
+          "tool_calls": [
+            {
+              "id": "fc_ab976bcd-c77f-48bf-81ef-006526b835f4",
+              "type": "function",
+              "function": {
+                "name": "get_weather",
+                "arguments": "{\"location\":\"Tokyo\"}"
+              }
+            }
+          ]
+        },
+        "logprobs": null,
+        "finish_reason": "tool_calls"
+      }
+    ],
+    "usage": {
+      "queue_time": 0.059129471,
+      "prompt_tokens": 266,
+      "prompt_time": 0.017047048,
+      "completion_tokens": 47,
+      "completion_time": 0.039169403,
+      "total_tokens": 313,
+      "total_time": 0.056216451
+    },
+    "usage_breakdown": null,
+    "system_fingerprint": "fp_ab31407964",
+    "x_groq": {
+      "id": "req_01k2xptmgeew390qety1ssvqtz"
+    },
+    "service_tier": "on_demand"
+  },
+  "timestamp": "2025-08-18T04:26:00.789Z"
+}

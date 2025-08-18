@@ -1,0 +1,115 @@
+{
+  "name": "required-tool-use",
+  "description": "Force model to use tools",
+  "request": {
+    "original": {
+      "model": "openai/gpt-oss-20b",
+      "input": "Tell me about Paris",
+      "tools": [
+        {
+          "type": "function",
+          "name": "search_info",
+          "description": "Search for information",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "query": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "query"
+            ]
+          },
+          "strict": false
+        }
+      ],
+      "tool_choice": "required",
+      "max_output_tokens": 300
+    },
+    "harmonized": [
+      {
+        "role": "system",
+        "content": "<|start|>system<|message|>You are ChatGPT, a large language model trained by OpenAI.\nKnowledge cutoff: 2024-06\nCurrent date: 2025-08-18\n\nReasoning: medium\n\n# Valid channels: analysis, commentary, final. Channel must be included for every message.\nCalls to these tools must go to the commentary channel: 'functions'.<|end|>"
+      },
+      {
+        "role": "developer",
+        "content": "<|start|>developer<|message|># Instructions\n\nYou MUST call at least one tool function. Do not respond directly without using tools.\n\n# Tools\n\n## functions\n\nnamespace functions {\n\n// Search for information\ntype search_info = (_: {\nquery: string,\n}) => any;\n\n} // namespace functions<|end|>"
+      },
+      {
+        "role": "user",
+        "content": "<|start|>user<|message|>Tell me about Paris<|end|>"
+      },
+      {
+        "role": "assistant",
+        "content": "<|start|>assistant"
+      }
+    ],
+    "chatParams": {
+      "model": "openai/gpt-oss-20b",
+      "max_tokens": 300,
+      "messages": [
+        {
+          "role": "system",
+          "content": "<|start|>system<|message|>You are ChatGPT, a large language model trained by OpenAI.\nKnowledge cutoff: 2024-06\nCurrent date: 2025-08-18\n\nReasoning: medium\n\n# Valid channels: analysis, commentary, final. Channel must be included for every message.\nCalls to these tools must go to the commentary channel: 'functions'.<|end|>"
+        },
+        {
+          "role": "developer",
+          "content": "<|start|>developer<|message|># Instructions\n\nYou MUST call at least one tool function. Do not respond directly without using tools.\n\n# Tools\n\n## functions\n\nnamespace functions {\n\n// Search for information\ntype search_info = (_: {\nquery: string,\n}) => any;\n\n} // namespace functions<|end|>"
+        },
+        {
+          "role": "user",
+          "content": "<|start|>user<|message|>Tell me about Paris<|end|>"
+        },
+        {
+          "role": "assistant",
+          "content": "<|start|>assistant"
+        }
+      ],
+      "stream": false
+    }
+  },
+  "response": {
+    "id": "chatcmpl-bd1cac38-3daa-4117-9eb6-44c64942df89",
+    "object": "chat.completion",
+    "created": 1755491163,
+    "model": "openai/gpt-oss-20b",
+    "choices": [
+      {
+        "index": 0,
+        "message": {
+          "role": "assistant",
+          "reasoning": "User wants info about Paris. Must call tool. Use search_info.",
+          "tool_calls": [
+            {
+              "id": "fc_d592b9c8-1248-40a3-a5a6-738e9f91e1d6",
+              "type": "function",
+              "function": {
+                "name": "search_info",
+                "arguments": "{\"query\":\"Paris information\"}"
+              }
+            }
+          ]
+        },
+        "logprobs": null,
+        "finish_reason": "tool_calls"
+      }
+    ],
+    "usage": {
+      "queue_time": 0.062921079,
+      "prompt_tokens": 267,
+      "prompt_time": 0.017169735,
+      "completion_tokens": 39,
+      "completion_time": 0.032424071,
+      "total_tokens": 306,
+      "total_time": 0.049593806
+    },
+    "usage_breakdown": null,
+    "system_fingerprint": "fp_1bc37bc380",
+    "x_groq": {
+      "id": "req_01k2xptq0pesw94hj9y1eva6fk"
+    },
+    "service_tier": "on_demand"
+  },
+  "timestamp": "2025-08-18T04:26:03.421Z"
+}

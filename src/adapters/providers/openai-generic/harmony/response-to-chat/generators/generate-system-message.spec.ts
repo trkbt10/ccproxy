@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { generateSystemMessage } from './generate-system-message';
-import type { ResponseCreateParamsBase } from '../types';
+import type { ResponseCreateParamsBase } from '../../types';
 
 describe('generateSystemMessage', () => {
   beforeEach(() => {

@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { harmonizeResponseParams } from "./harmonizer";
-import { extractChatCompletionParams } from "./utils/extract-chat-params";
-import type { ResponseCreateParamsBase, Tool, WebSearchTool } from "./types";
+import { extractChatCompletionParams } from "../utils/extract-chat-params";
+import type { ResponseCreateParamsBase, Tool, WebSearchTool } from "../types";
 import {
   createFunctionTool,
   webSearchTool,
@@ -10,7 +10,7 @@ import {
   createResponseTextConfig,
   createToolChoiceFunction,
   createInvalidParams,
-} from "./fixtures.test.support";
+} from "../fixtures.test.support";
 
 describe("harmonizeResponseParams", () => {
   beforeEach(() => {
@@ -174,7 +174,7 @@ describe("harmonizeResponseParams", () => {
 
   it("should use custom knowledge cutoff", () => {
     const params: ResponseCreateParamsBase = {};
-    const messages = harmonizeResponseParams(params, "2025-01");
+    const messages = harmonizeResponseParams(params, { knowledgeCutoff: "2025-01" });
 
     expect(messages[0].content).toContain("Knowledge cutoff: 2025-01");
   });

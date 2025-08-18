@@ -1,0 +1,147 @@
+{
+  "name": "multiple-tools",
+  "description": "Multiple function tools available",
+  "request": {
+    "original": {
+      "model": "openai/gpt-oss-20b",
+      "input": "Find the weather in Paris and convert 25C to Fahrenheit",
+      "tools": [
+        {
+          "type": "function",
+          "name": "get_weather",
+          "description": "Get weather for location",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "location": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "location"
+            ]
+          },
+          "strict": false
+        },
+        {
+          "type": "function",
+          "name": "convert_temperature",
+          "description": "Convert temperature between units",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "value": {
+                "type": "number"
+              },
+              "from_unit": {
+                "type": "string",
+                "enum": [
+                  "celsius",
+                  "fahrenheit"
+                ]
+              },
+              "to_unit": {
+                "type": "string",
+                "enum": [
+                  "celsius",
+                  "fahrenheit"
+                ]
+              }
+            },
+            "required": [
+              "value",
+              "from_unit",
+              "to_unit"
+            ]
+          },
+          "strict": false
+        }
+      ],
+      "max_output_tokens": 400
+    },
+    "harmonized": [
+      {
+        "role": "system",
+        "content": "<|start|>system<|message|>You are ChatGPT, a large language model trained by OpenAI.\nKnowledge cutoff: 2024-06\nCurrent date: 2025-08-18\n\nReasoning: medium\n\n# Valid channels: analysis, commentary, final. Channel must be included for every message.\nCalls to these tools must go to the commentary channel: 'functions'.\nYou can call multiple tools in sequence if needed to fully address the user's request.<|end|>"
+      },
+      {
+        "role": "developer",
+        "content": "<|start|>developer<|message|># Tools\n\n## functions\n\nnamespace functions {\n\n// Get weather for location\ntype get_weather = (_: {\nlocation: string,\n}) => any;\n\n// Convert temperature between units\ntype convert_temperature = (_: {\nvalue: number,\nfrom_unit: \"celsius\" | \"fahrenheit\",\nto_unit: \"celsius\" | \"fahrenheit\",\n}) => any;\n\n} // namespace functions<|end|>"
+      },
+      {
+        "role": "user",
+        "content": "<|start|>user<|message|>Find the weather in Paris and convert 25C to Fahrenheit<|end|>"
+      },
+      {
+        "role": "assistant",
+        "content": "<|start|>assistant"
+      }
+    ],
+    "chatParams": {
+      "model": "openai/gpt-oss-20b",
+      "max_tokens": 400,
+      "messages": [
+        {
+          "role": "system",
+          "content": "<|start|>system<|message|>You are ChatGPT, a large language model trained by OpenAI.\nKnowledge cutoff: 2024-06\nCurrent date: 2025-08-18\n\nReasoning: medium\n\n# Valid channels: analysis, commentary, final. Channel must be included for every message.\nCalls to these tools must go to the commentary channel: 'functions'.\nYou can call multiple tools in sequence if needed to fully address the user's request.<|end|>"
+        },
+        {
+          "role": "developer",
+          "content": "<|start|>developer<|message|># Tools\n\n## functions\n\nnamespace functions {\n\n// Get weather for location\ntype get_weather = (_: {\nlocation: string,\n}) => any;\n\n// Convert temperature between units\ntype convert_temperature = (_: {\nvalue: number,\nfrom_unit: \"celsius\" | \"fahrenheit\",\nto_unit: \"celsius\" | \"fahrenheit\",\n}) => any;\n\n} // namespace functions<|end|>"
+        },
+        {
+          "role": "user",
+          "content": "<|start|>user<|message|>Find the weather in Paris and convert 25C to Fahrenheit<|end|>"
+        },
+        {
+          "role": "assistant",
+          "content": "<|start|>assistant"
+        }
+      ],
+      "stream": false
+    }
+  },
+  "response": {
+    "id": "chatcmpl-318ea800-c8ba-4e3e-a5b0-ee3ee8506de5",
+    "object": "chat.completion",
+    "created": 1755491161,
+    "model": "openai/gpt-oss-20b",
+    "choices": [
+      {
+        "index": 0,
+        "message": {
+          "role": "assistant",
+          "reasoning": "We need to call get_weather for Paris, and convert_temperature for 25C to Fahrenheit. Use functions.",
+          "tool_calls": [
+            {
+              "id": "fc_d705bba5-1bb7-4bbb-ac00-f73519fd43fb",
+              "type": "function",
+              "function": {
+                "name": "get_weather",
+                "arguments": "{\"location\":\"Paris\"}"
+              }
+            }
+          ]
+        },
+        "logprobs": null,
+        "finish_reason": "tool_calls"
+      }
+    ],
+    "usage": {
+      "queue_time": 0.059046139,
+      "prompt_tokens": 315,
+      "prompt_time": 0.020045105,
+      "completion_tokens": 46,
+      "completion_time": 0.038308295,
+      "total_tokens": 361,
+      "total_time": 0.0583534
+    },
+    "usage_breakdown": null,
+    "system_fingerprint": "fp_ab31407964",
+    "x_groq": {
+      "id": "req_01k2xptnrcesvt49vmn6k2qb6d"
+    },
+    "service_tier": "on_demand"
+  },
+  "timestamp": "2025-08-18T04:26:02.092Z"
+}

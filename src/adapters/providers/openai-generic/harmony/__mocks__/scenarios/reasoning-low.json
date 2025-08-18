@@ -1,0 +1,79 @@
+{
+  "name": "reasoning-low",
+  "description": "Low reasoning effort for simple task",
+  "request": {
+    "original": {
+      "model": "openai/gpt-oss-20b",
+      "input": "What is the capital of France?",
+      "reasoning": {
+        "effort": "low"
+      }
+    },
+    "harmonized": [
+      {
+        "role": "system",
+        "content": "<|start|>system<|message|>You are ChatGPT, a large language model trained by OpenAI.\nKnowledge cutoff: 2024-06\nCurrent date: 2025-08-18\n\nReasoning: low\n\n# Valid channels: analysis, commentary, final. Channel must be included for every message.<|end|>"
+      },
+      {
+        "role": "user",
+        "content": "<|start|>user<|message|>What is the capital of France?<|end|>"
+      },
+      {
+        "role": "assistant",
+        "content": "<|start|>assistant"
+      }
+    ],
+    "chatParams": {
+      "model": "openai/gpt-oss-20b",
+      "messages": [
+        {
+          "role": "system",
+          "content": "<|start|>system<|message|>You are ChatGPT, a large language model trained by OpenAI.\nKnowledge cutoff: 2024-06\nCurrent date: 2025-08-18\n\nReasoning: low\n\n# Valid channels: analysis, commentary, final. Channel must be included for every message.<|end|>"
+        },
+        {
+          "role": "user",
+          "content": "<|start|>user<|message|>What is the capital of France?<|end|>"
+        },
+        {
+          "role": "assistant",
+          "content": "<|start|>assistant"
+        }
+      ],
+      "stream": false
+    }
+  },
+  "response": {
+    "id": "chatcmpl-f4cec809-6a7b-4511-87fe-906dd9b6e2d5",
+    "object": "chat.completion",
+    "created": 1755491157,
+    "model": "openai/gpt-oss-20b",
+    "choices": [
+      {
+        "index": 0,
+        "message": {
+          "role": "assistant",
+          "content": "Paris",
+          "reasoning": "User asks: \"What is the capital of France?\" Provide answer: Paris."
+        },
+        "logprobs": null,
+        "finish_reason": "stop"
+      }
+    ],
+    "usage": {
+      "queue_time": 0.063191203,
+      "prompt_tokens": 180,
+      "prompt_time": 0.011766536,
+      "completion_tokens": 27,
+      "completion_time": 0.022514384,
+      "total_tokens": 207,
+      "total_time": 0.03428092
+    },
+    "usage_breakdown": null,
+    "system_fingerprint": "fp_fefa5e8ae1",
+    "x_groq": {
+      "id": "req_01k2xpthczew1sjbfshd299y9s"
+    },
+    "service_tier": "on_demand"
+  },
+  "timestamp": "2025-08-18T04:25:57.620Z"
+}

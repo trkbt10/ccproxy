@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { convertToolsToHarmonyFormat, getBuiltinToolTypes } from "./convert-tools";
-import type { Tool, FunctionTool, WebSearchTool } from "../types";
+import type { Tool, FunctionTool, WebSearchTool } from "../../types";
 
 describe("convertToolsToHarmonyFormat", () => {
   it("should return empty string for no tools", () => {

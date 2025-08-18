@@ -13,13 +13,13 @@
  * 5. Manage tool definitions and function calling setup
  */
 
-import type { ResponseCreateParamsBase, ChatCompletionMessageParam } from "./types";
-import { HARMONY_ROLES } from "./constants";
-import { validateParams } from "./utils/validate-params";
+import type { ResponseCreateParamsBase, ChatCompletionMessageParam } from "../types";
+import { HARMONY_ROLES } from "../constants";
+import { validateParams } from "../utils/validate-params";
 import { generateSystemMessage } from "./generators/generate-system-message";
 import { generateDeveloperMessage } from "./generators/generate-developer-message";
 import { handleConversationState } from "./handlers/handle-conversation-state";
-import { formatPartialHarmonyMessage } from "./utils/format-harmony-message";
+import { formatPartialHarmonyMessage } from "../utils/format-harmony-message";
 
 /**
  * Options for harmonizing Response API parameters

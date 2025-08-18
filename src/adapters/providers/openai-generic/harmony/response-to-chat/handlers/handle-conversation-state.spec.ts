@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import { handleConversationState, processAssistantMessage } from './handle-conversation-state';
-import type { ResponseCreateParamsBase } from '../types';
+import type { ResponseCreateParamsBase } from '../../types';
 
 describe('handleConversationState', () => {
   it('should return empty array when no input', () => {

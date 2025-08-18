@@ -1,0 +1,129 @@
+{
+  "name": "specific-tool-choice",
+  "description": "Force specific function call",
+  "request": {
+    "original": {
+      "model": "openai/gpt-oss-20b",
+      "input": "What time is it?",
+      "tools": [
+        {
+          "type": "function",
+          "name": "get_time",
+          "description": "Get current time",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "timezone": {
+                "type": "string"
+              }
+            }
+          },
+          "strict": false
+        },
+        {
+          "type": "function",
+          "name": "get_date",
+          "description": "Get current date",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "format": {
+                "type": "string"
+              }
+            }
+          },
+          "strict": false
+        }
+      ],
+      "tool_choice": {
+        "type": "function",
+        "name": "get_time"
+      },
+      "max_output_tokens": 200
+    },
+    "harmonized": [
+      {
+        "role": "system",
+        "content": "<|start|>system<|message|>You are ChatGPT, a large language model trained by OpenAI.\nKnowledge cutoff: 2024-06\nCurrent date: 2025-08-18\n\nReasoning: medium\n\n# Valid channels: analysis, commentary, final. Channel must be included for every message.\nCalls to these tools must go to the commentary channel: 'functions'.\nYou can call multiple tools in sequence if needed to fully address the user's request.<|end|>"
+      },
+      {
+        "role": "developer",
+        "content": "<|start|>developer<|message|># Instructions\n\nYou must use the get_time function.\n\n# Tools\n\n## functions\n\nnamespace functions {\n\n// Get current time\ntype get_time = (_: {\ntimezone?: string,\n}) => any;\n\n// Get current date\ntype get_date = (_: {\nformat?: string,\n}) => any;\n\n} // namespace functions<|end|>"
+      },
+      {
+        "role": "user",
+        "content": "<|start|>user<|message|>What time is it?<|end|>"
+      },
+      {
+        "role": "assistant",
+        "content": "<|start|>assistant"
+      }
+    ],
+    "chatParams": {
+      "model": "openai/gpt-oss-20b",
+      "max_tokens": 200,
+      "messages": [
+        {
+          "role": "system",
+          "content": "<|start|>system<|message|>You are ChatGPT, a large language model trained by OpenAI.\nKnowledge cutoff: 2024-06\nCurrent date: 2025-08-18\n\nReasoning: medium\n\n# Valid channels: analysis, commentary, final. Channel must be included for every message.\nCalls to these tools must go to the commentary channel: 'functions'.\nYou can call multiple tools in sequence if needed to fully address the user's request.<|end|>"
+        },
+        {
+          "role": "developer",
+          "content": "<|start|>developer<|message|># Instructions\n\nYou must use the get_time function.\n\n# Tools\n\n## functions\n\nnamespace functions {\n\n// Get current time\ntype get_time = (_: {\ntimezone?: string,\n}) => any;\n\n// Get current date\ntype get_date = (_: {\nformat?: string,\n}) => any;\n\n} // namespace functions<|end|>"
+        },
+        {
+          "role": "user",
+          "content": "<|start|>user<|message|>What time is it?<|end|>"
+        },
+        {
+          "role": "assistant",
+          "content": "<|start|>assistant"
+        }
+      ],
+      "stream": false
+    }
+  },
+  "response": {
+    "id": "chatcmpl-8131bbe4-8843-4e02-8e26-e178b6d926a4",
+    "object": "chat.completion",
+    "created": 1755491168,
+    "model": "openai/gpt-oss-20b",
+    "choices": [
+      {
+        "index": 0,
+        "message": {
+          "role": "assistant",
+          "reasoning": "The user asks \"What time is it?\" We need to use get_time function. We'll call it.",
+          "tool_calls": [
+            {
+              "id": "fc_26515662-76e7-4cbd-ae2c-ba8e2465c586",
+              "type": "function",
+              "function": {
+                "name": "get_time",
+                "arguments": "{\"timezone\":\"UTC\"}"
+              }
+            }
+          ]
+        },
+        "logprobs": null,
+        "finish_reason": "tool_calls"
+      }
+    ],
+    "usage": {
+      "queue_time": 0.062885497,
+      "prompt_tokens": 292,
+      "prompt_time": 0.018525066,
+      "completion_tokens": 45,
+      "completion_time": 0.037529426,
+      "total_tokens": 337,
+      "total_time": 0.056054492
+    },
+    "usage_breakdown": null,
+    "system_fingerprint": "fp_faa5eb46a4",
+    "x_groq": {
+      "id": "req_01k2xptw6me67vhr2wwqg07djy"
+    },
+    "service_tier": "on_demand"
+  },
+  "timestamp": "2025-08-18T04:26:08.746Z"
+}

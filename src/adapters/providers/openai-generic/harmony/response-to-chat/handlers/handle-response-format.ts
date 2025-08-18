@@ -2,8 +2,8 @@
  * Handle response format for structured outputs
  */
 
-import type { ResponseTextConfig } from '../types';
-import { hasResponseFormat } from '../utils/type-guards';
+import type { ResponseTextConfig } from '../../types';
+import { hasResponseFormat } from '../../utils/type-guards';
 
 export function handleResponseFormat(text?: ResponseTextConfig): string | null {
   if (!text) return null;

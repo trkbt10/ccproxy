@@ -1,5 +1,5 @@
-import { GeminiFetchClient } from "../../src/adapters/providers/gemini/fetch-client";
-import type { GenerateContentRequest, GenerateContentResponse } from "../../src/adapters/providers/gemini/fetch-client";
+import { GeminiFetchClient } from "../../src/adapters/providers/gemini/client/fetch-client";
+import type { GenerateContentRequest, GenerateContentResponse } from "../../src/adapters/providers/gemini/client/fetch-client";
 import { Line, Mode, ProviderFactory, ProviderInstance, NativeCase } from "./types";
 
 function env(key: string, dflt?: string): string | undefined {

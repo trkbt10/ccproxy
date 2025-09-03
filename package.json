@@ -3,6 +3,9 @@
   "version": "0.0.0",
   "description": "",
   "main": "index.js",
+  "bin": {
+    "ccproxy": "./bin/cli.js"
+  },
   "scripts": {
     "serve": "bun run ./src/server.ts",
     "serve:openai": "bun run ./src/server-openai.ts",
@@ -23,21 +26,21 @@
   "keywords": [],
   "author": "",
   "license": "ISC",
-  "packageManager": "pnpm@10.6.4",
   "dependencies": {
-    "@hono/node-server": "^1.18.1",
-    "hono": "^4.9.0",
+    "@hono/node-server": "^1.19.0",
+    "hono": "^4.9.2",
     "openai": "^5.12.2",
+    "streaming-json-reader": "^1.4.1",
     "tiktoken": "^1.0.22"
   },
   "devDependencies": {
-    "@anthropic-ai/sdk": "^0.59.0",
+    "@anthropic-ai/sdk": "^0.60.0",
     "@types/jest": "^30.0.0",
-    "@types/node": "^24.2.1",
-    "bun-types": "^1.2.19",
-    "tsx": "^4.20.3",
+    "@types/node": "^24.3.0",
+    "bun-types": "^1.2.20",
+    "tsx": "^4.20.4",
     "typescript": "^5.9.2",
-    "vite": "^7.1.1",
+    "vite": "^7.1.2",
     "vitest": "^3.2.4"
   },
   "type": "module"

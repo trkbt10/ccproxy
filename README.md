@@ -14,16 +14,15 @@ A multi-provider AI proxy that routes requests between Claude, OpenAI, and Gemin
 # Install and build
 bun install
 bun run build:cli
-chmod +x ./ccproxy
 
 # Start server
 
 ## Use with Claude Code
-$ ./ccproxy serve claude --port 8082
+$ ccproxy serve claude --port 8082
 $ ANTHROPIC_BASE_URL="http://localhost:8082" ANTHROPIC_AUTH_TOKEN="any-value" claude
 
 ## Use with codex
-$ ./ccproxy serve openai --config ./config/claude.config.json --port 11434
+$ ccproxy serve openai --config ./config/claude.config.json --port 11434
 $ codex --oss --model claude-sonnet-4-20250514
 
 ```
@@ -78,23 +77,23 @@ See `/config/examples/` for complete configuration examples.
 ### Server Commands
 
 ```bash
-./ccproxy serve [claude|openai|gemini] [options]
+ccproxy serve [claude|openai|gemini] [options]
   --port <number>                      Server port (default: 8082/8085/8086)
   --config <path>                      Config file path
   -c, --config-override <key=value>    Override config values at runtime
 
 # Examples
-./ccproxy serve                       # Claude API on port 8082
-./ccproxy serve openai --port 9000    # OpenAI API on port 9000
-./ccproxy serve gemini                # Gemini API on port 8086
+ccproxy serve                       # Claude API on port 8082
+ccproxy serve openai --port 9000    # OpenAI API on port 9000
+ccproxy serve gemini                # Gemini API on port 8086
 ```
 
 ### Configuration Commands
 
 ```bash
-./ccproxy config init [--config <path>] [--force]
-./ccproxy config show [--config <path>] [--expanded]
-./ccproxy config list [--config <path>]
-./ccproxy config get <path> [--config <path>]
-./ccproxy config set <path> <value> [--config <path>]
+ccproxy config init [--config <path>] [--force]
+ccproxy config show [--config <path>] [--expanded]
+ccproxy config list [--config <path>]
+ccproxy config get <path> [--config <path>]
+ccproxy config set <path> <value> [--config <path>]
 ```
